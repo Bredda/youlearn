@@ -5,6 +5,7 @@ import { getUserGroups } from "../lib/groups";
 import { adminEventRoutes } from "./admin/events";
 import { adminGroupRoutes } from "./admin/groups";
 import { adminUserRoutes } from "./admin/users";
+import { writerCourseRoutes } from "./writer/courses";
 
 export const routes: FastifyPluginAsync = async (app) => {
 	app.get("/health", async () => ({ status: "ok" }));
@@ -31,4 +32,5 @@ export const routes: FastifyPluginAsync = async (app) => {
 	await app.register(adminEventRoutes);
 	await app.register(adminGroupRoutes);
 	await app.register(adminUserRoutes);
+	await app.register(writerCourseRoutes);
 };

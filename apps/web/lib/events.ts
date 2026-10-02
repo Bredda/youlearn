@@ -7,6 +7,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 export const FEATURE_LABELS: Record<EventFeature, string> = {
 	user: "Utilisateurs",
 	group: "Groupes",
+	course: "Cours",
 };
 
 export const EVENT_LABELS: Record<EventType, string> = {
@@ -21,6 +22,10 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"group.create": "Création",
 	"group.update": "Renommage",
 	"group.delete": "Suppression",
+	"course.create": "Création",
+	"course.update": "Modification",
+	"course.delete": "Suppression",
+	"course.set-groups": "Changement de groupes",
 };
 
 /** Self-sufficient wording for the table, where the feature is not shown next to the badge. */
@@ -36,6 +41,10 @@ export const EVENT_BADGE_LABELS: Record<EventType, string> = {
 	"group.create": "Création de groupe",
 	"group.update": "Renommage de groupe",
 	"group.delete": "Suppression de groupe",
+	"course.create": "Création de cours",
+	"course.update": "Modification de cours",
+	"course.delete": "Suppression de cours",
+	"course.set-groups": "Changement de groupes d'un cours",
 };
 
 /** Rows may carry a type that no longer exists in the registry: show it as is. */
@@ -51,7 +60,13 @@ export function eventFullLabel(type: EventType) {
 	return `${FEATURE_LABELS[feature]} · ${EVENT_LABELS[type]}`;
 }
 
-const FIELD_LABELS: Record<string, string> = { name: "Nom", email: "Email" };
+const FIELD_LABELS: Record<string, string> = {
+	name: "Nom",
+	email: "Email",
+	slug: "Slug",
+	description: "Description",
+	categories: "Catégories",
+};
 
 const strings = (value: unknown): string[] =>
 	Array.isArray(value) ? value.map(String) : [];
@@ -59,6 +74,9 @@ const roles = (value: unknown) =>
 	strings(value)
 		.map((role) => (ROLE_LABELS as Record<string, string>)[role] ?? role)
 		.join(", ") || "aucun";
+/** Event values are strings, or string lists (categories). */
+const display = (value: unknown) =>
+	(Array.isArray(value) ? value.join(", ") : value) || "—";
 const names = (value: unknown) => strings(value).join(", ") || "aucun";
 
 /** One-line summary of what an event changed, from its metadata. Null when the type says it all. */
@@ -70,7 +88,8 @@ export function describeEvent({
 	switch (type) {
 		case "user.create":
 			return `Rôles : ${roles(data.roles)}`;
-		case "user.update": {
+		case "user.update":
+		case "course.update": {
 			const changes = Object.entries(
 				(data.changes ?? {}) as Record<
 					string,
@@ -81,7 +100,7 @@ export function describeEvent({
 				changes
 					.map(
 						([field, { from, to }]) =>
-							`${FIELD_LABELS[field] ?? field} : ${from ?? "—"} → ${to ?? "—"}`,
+							`${FIELD_LABELS[field] ?? field} : ${display(from)} → ${display(to)}`,
 					)
 					.join(" ; ") || null
 			);
@@ -89,6 +108,7 @@ export function describeEvent({
 		case "user.set-role":
 			return `Rôles : ${roles(data.from)} → ${roles(data.to)}`;
 		case "user.set-groups":
+		case "course.set-groups":
 			return `Groupes : ${names(data.from)} → ${names(data.to)}`;
 		case "group.update":
 			return `Nom : ${data.from ?? "—"} → ${data.to ?? "—"}`;

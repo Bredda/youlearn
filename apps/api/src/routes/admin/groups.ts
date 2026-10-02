@@ -2,9 +2,9 @@ import { asc, count, db, eq, inArray, schema, sql } from "@youlearn/db";
 import { recordEvent } from "@youlearn/events/server";
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { isUniqueViolation } from "../../lib/groups";
+import { isForeignKeyViolation, isUniqueViolation } from "../../lib/groups";
 
-const { group, userGroup, user } = schema;
+const { courseGroup, group, userGroup, user } = schema;
 
 const nameBody = z.object({ name: z.string().trim().min(1).max(64) });
 const idParams = z.object({ id: z.string().min(1) });
@@ -28,6 +28,7 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 			.select({
 				id: group.id,
 				name: group.name,
+				system: group.system,
 				memberCount: count(userGroup.userId),
 			})
 			.from(group)
@@ -65,9 +66,13 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 		const { name } = nameBody.parse(request.body);
 		try {
 			const [previous] = await db
-				.select({ name: group.name })
+				.select({ name: group.name, system: group.system })
 				.from(group)
 				.where(eq(group.id, id));
+			if (previous?.system)
+				return reply
+					.code(409)
+					.send({ error: "This group is managed by the system" });
 			const [updated] = await db
 				.update(group)
 				.set({ name })
@@ -96,11 +101,35 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 
 	app.delete("/api/admin/groups/:id", async (request, reply) => {
 		const { id } = idParams.parse(request.params);
-		const deleted = await db
-			.delete(group)
-			.where(eq(group.id, id))
-			.returning({ id: group.id, name: group.name });
-		const [removed] = deleted;
+		const [existing] = await db
+			.select({ system: group.system })
+			.from(group)
+			.where(eq(group.id, id));
+		if (!existing) return reply.code(404).send({ error: "Group not found" });
+		if (existing.system)
+			return reply
+				.code(409)
+				.send({ error: "This group is managed by the system" });
+
+		// Courses are tagged with groups: deleting one in use would leave them without audience.
+		const inUse = await db.$count(courseGroup, eq(courseGroup.groupId, id));
+		const inUseMessage = `This group is used by ${inUse} course(s): remove it from them first`;
+		if (inUse > 0) return reply.code(409).send({ error: inUseMessage });
+
+		let removed: { id: string; name: string } | undefined;
+		try {
+			[removed] = await db
+				.delete(group)
+				.where(eq(group.id, id))
+				.returning({ id: group.id, name: group.name });
+		} catch (error) {
+			// A course took the group between the check and the delete.
+			if (isForeignKeyViolation(error))
+				return reply
+					.code(409)
+					.send({ error: "This group is used by a course" });
+			throw error;
+		}
 		if (!removed) return reply.code(404).send({ error: "Group not found" });
 		await recordEvent(
 			{
@@ -138,12 +167,17 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 
 		const known = groupIds.length
 			? await db
-					.select({ id: group.id, name: group.name })
+					.select({ id: group.id, name: group.name, system: group.system })
 					.from(group)
 					.where(inArray(group.id, groupIds))
 			: [];
 		if (known.length !== groupIds.length)
 			return reply.code(400).send({ error: "Unknown group id" });
+		// "Commun" applies to everyone implicitly: a membership row would be meaningless.
+		if (known.some((g) => g.system))
+			return reply
+				.code(400)
+				.send({ error: "System groups cannot be assigned to a user" });
 
 		const previous = await db
 			.select({ id: group.id, name: group.name })
@@ -177,6 +211,10 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 			);
 		}
 
-		return { groups: known.sort((a, b) => a.name.localeCompare(b.name)) };
+		return {
+			groups: known
+				.map(({ id, name }) => ({ id, name }))
+				.sort((a, b) => a.name.localeCompare(b.name)),
+		};
 	});
 };

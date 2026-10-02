@@ -16,6 +16,7 @@ export const EVENTS = {
 		"set-groups",
 	],
 	group: ["create", "update", "delete"],
+	course: ["create", "update", "delete", "set-groups"],
 } as const;
 
 export type EventFeature = keyof typeof EVENTS;

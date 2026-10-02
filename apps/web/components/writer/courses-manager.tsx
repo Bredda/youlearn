@@ -1,9 +1,8 @@
 "use client";
 
-import type { GroupWithMemberCount } from "@youlearn/types";
+import type { CourseGroupTag, WriterCourse } from "@youlearn/types";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { GroupFormDialog } from "@/components/admin/group-form-dialog";
 import { FormError } from "@/components/form-error";
 import {
 	AlertDialog,
@@ -25,15 +24,22 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { CourseFormDialog } from "@/components/writer/course-form-dialog";
 import { callApi } from "@/lib/api-client";
 
-// `undefined` = closed, `null` = creating, a group = renaming it.
-type Editing = GroupWithMemberCount | null | undefined;
+// `undefined` = closed, `null` = creating, a course = editing it.
+type Editing = WriterCourse | null | undefined;
 
-export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
+export function CoursesManager({
+	courses,
+	assignableGroups,
+}: {
+	courses: WriterCourse[];
+	assignableGroups: CourseGroupTag[];
+}) {
 	const router = useRouter();
 	const [editing, setEditing] = useState<Editing>(undefined);
-	const [deleting, setDeleting] = useState<GroupWithMemberCount>();
+	const [deleting, setDeleting] = useState<WriterCourse>();
 	const [error, setError] = useState<string>();
 	const [pending, setPending] = useState(false);
 
@@ -45,7 +51,10 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 	async function onDelete() {
 		if (!deleting) return;
 		setPending(true);
-		const message = await callApi("DELETE", `/api/admin/groups/${deleting.id}`);
+		const message = await callApi(
+			"DELETE",
+			`/api/writer/courses/${deleting.id}`,
+		);
 		setPending(false);
 		setDeleting(undefined);
 		if (message) return setError(message);
@@ -56,71 +65,92 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="font-semibold text-xl">Groupes</h1>
+					<h1 className="font-semibold text-xl">Cours</h1>
 					<p className="text-muted-foreground text-sm">
-						Les groupes déterminent les cours et programmes visibles par chaque
-						utilisateur.
+						Un cours est visible des utilisateurs qui partagent au moins un de
+						ses groupes.
 					</p>
 				</div>
-				<Button onClick={() => setEditing(null)}>Nouveau groupe</Button>
+				<Button
+					onClick={() => setEditing(null)}
+					disabled={assignableGroups.length === 0}
+				>
+					Nouveau cours
+				</Button>
 			</div>
 
+			{assignableGroups.length === 0 && (
+				<FormError>
+					Vous n'appartenez à aucun groupe : demandez à un administrateur de
+					vous en attribuer un pour pouvoir créer des cours.
+				</FormError>
+			)}
 			{error && <FormError>{error}</FormError>}
 
 			<Table className="table-fixed">
 				<TableHeader>
 					<TableRow>
 						<TableHead>Nom</TableHead>
-						<TableHead className="w-48">Membres</TableHead>
+						<TableHead>Catégories</TableHead>
+						<TableHead>Groupes</TableHead>
 						<TableHead className="w-48 text-right">Actions</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{groups.length === 0 && (
+					{courses.length === 0 && (
 						<TableRow>
 							<TableCell
-								colSpan={3}
+								colSpan={4}
 								className="text-center text-muted-foreground"
 							>
-								Aucun groupe.
+								Aucun cours.
 							</TableCell>
 						</TableRow>
 					)}
-					{groups.map((group) => (
-						<TableRow key={group.id}>
-							<TableCell className="truncate font-medium">
-								{group.name}
-								{group.system && (
-									<Badge variant="secondary" className="ml-2">
-										Système
-									</Badge>
-								)}
+					{courses.map((course) => (
+						<TableRow key={course.id}>
+							<TableCell className="whitespace-normal">
+								<div className="truncate font-medium">{course.name}</div>
+								<div className="truncate text-muted-foreground text-xs">
+									{course.slug}
+								</div>
 							</TableCell>
-							<TableCell>
-								{group.system ? "Tous les utilisateurs" : group.memberCount}
+							<TableCell className="whitespace-normal">
+								<div className="flex flex-wrap gap-1">
+									{course.categories.map((category) => (
+										<Badge key={category} variant="outline">
+											{category}
+										</Badge>
+									))}
+								</div>
+							</TableCell>
+							<TableCell className="whitespace-normal">
+								<div className="flex flex-wrap gap-1">
+									{course.groups.map((group) => (
+										<Badge key={group.id} variant="secondary">
+											{group.name}
+										</Badge>
+									))}
+								</div>
 							</TableCell>
 							<TableCell className="space-x-2 text-right">
-								{!group.system && (
-									<>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => setEditing(group)}
-										>
-											Renommer
-										</Button>
-										<Button
-											variant="destructive"
-											size="sm"
-											onClick={() => {
-												setError(undefined);
-												setDeleting(group);
-											}}
-										>
-											Supprimer
-										</Button>
-									</>
-								)}
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setEditing(course)}
+								>
+									Modifier
+								</Button>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => {
+										setError(undefined);
+										setDeleting(course);
+									}}
+								>
+									Supprimer
+								</Button>
 							</TableCell>
 						</TableRow>
 					))}
@@ -128,8 +158,9 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 			</Table>
 
 			{editing !== undefined && (
-				<GroupFormDialog
-					group={editing ?? undefined}
+				<CourseFormDialog
+					course={editing ?? undefined}
+					assignableGroups={assignableGroups}
 					onClose={() => setEditing(undefined)}
 					onDone={done}
 				/>
@@ -142,12 +173,9 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>
-							Supprimer le groupe « {deleting?.name} » ?
+							Supprimer le cours « {deleting?.name} » ?
 						</AlertDialogTitle>
 						<AlertDialogDescription>
-							{deleting?.memberCount
-								? `${deleting.memberCount} utilisateur(s) en font partie et le perdront. `
-								: ""}
 							Cette action est définitive.
 						</AlertDialogDescription>
 					</AlertDialogHeader>

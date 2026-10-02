@@ -3,13 +3,14 @@ import { env } from "@youlearn/config";
 import { pool } from "@youlearn/db";
 import { ensureBucket } from "@youlearn/storage";
 import { buildApp } from "./app";
-import { ensureDefaultGroups } from "./lib/groups";
+import { ensureCommonGroup, ensureDefaultGroups } from "./lib/groups";
 
 const app = await buildApp();
 
 // First install: create the admin described by ADMIN_* env vars (no-op when unset or already present).
 await ensureAdminUser(app.log);
 await ensureDefaultGroups(app.log);
+await ensureCommonGroup(app.log);
 await ensureBucket(app.log);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import {
+	boolean,
 	index,
 	pgTable,
 	primaryKey,
@@ -18,6 +19,8 @@ export const group = pgTable(
 			.primaryKey()
 			.$defaultFn(() => randomUUID()),
 		name: text().notNull(),
+		/** The built-in "Commun" group: visible to everyone, never listed on a user, cannot be renamed or deleted. */
+		system: boolean().notNull().default(false),
 		createdAt: timestamp().notNull().defaultNow(),
 		updatedAt: timestamp()
 			.notNull()

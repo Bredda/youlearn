@@ -26,9 +26,11 @@ export default async function AdminUsersPage({
 	}
 
 	const users = (await usersResponse.json()) as AdminUserPage;
-	const { groups } = (await groupsResponse.json()) as {
+	const { groups: allGroups } = (await groupsResponse.json()) as {
 		groups: GroupWithMemberCount[];
 	};
+	// "Commun" applies to everyone implicitly: it is neither assigned nor a useful filter.
+	const groups = allGroups.filter((group) => !group.system);
 
 	// The last page no longer exists (e.g. its only user was deleted): go to the new last one.
 	const pageCount = Math.max(1, Math.ceil(users.total / query.pageSize));

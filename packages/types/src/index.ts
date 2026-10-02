@@ -34,7 +34,11 @@ export type PublicUser = Pick<
 	groups: PublicGroup[];
 };
 
-export type GroupWithMemberCount = PublicGroup & { memberCount: number };
+export type GroupWithMemberCount = PublicGroup & {
+	memberCount: number;
+	/** The built-in "Commun" group: implicit for everyone, cannot be renamed or deleted. */
+	system: boolean;
+};
 
 /** A user as listed in the admin UI (dates serialized by JSON). */
 export type AdminUser = Pick<
@@ -104,3 +108,25 @@ export type AdminEventQuery = {
 	page: number;
 	pageSize: number;
 };
+
+export type Course = typeof schema.course.$inferSelect;
+export type NewCourse = typeof schema.course.$inferInsert;
+
+export type CourseGroup = typeof schema.courseGroup.$inferSelect;
+export type NewCourseGroup = typeof schema.courseGroup.$inferInsert;
+
+/** A group as attached to a course (`system` = "Commun"). */
+export type CourseGroupTag = PublicGroup & { system: boolean };
+
+/** A course as listed in the writer area (dates serialized by JSON). */
+export type WriterCourse = Pick<
+	Course,
+	"id" | "name" | "slug" | "description" | "categories"
+> & {
+	createdAt: string;
+	updatedAt: string;
+	groups: CourseGroupTag[];
+};
+
+/** Groups the current user may put on a course: their own for a writer, every group for an admin. */
+export type AssignableGroups = { groups: CourseGroupTag[] };
