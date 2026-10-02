@@ -5,8 +5,8 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import {
 	assignableGroups,
+	authorizeCourse,
 	type CourseActor,
-	canEditCourse,
 	findCourse,
 	getCourseActor,
 	listCourses,
@@ -82,12 +82,9 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 
 	app.get("/api/writer/courses/:id", async (request, reply) => {
 		const { id } = idParams.parse(request.params);
-		const actor = await getCourseActor(request);
-		const found = await findCourse(id);
-		if (!found) return reply.code(404).send({ error: "Course not found" });
-		if (!canEditCourse(actor, found))
-			return reply.code(403).send({ error: "Forbidden" });
-		return { course: found };
+		const access = await authorizeCourse(request, reply, id);
+		if (!access) return;
+		return { course: access.course };
 	});
 
 	app.post("/api/writer/courses", async (request, reply) => {
@@ -147,12 +144,19 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 	app.patch("/api/writer/courses/:id", async (request, reply) => {
 		const { id } = idParams.parse(request.params);
 		const body = updateBody.parse(request.body);
-		const actor = await getCourseActor(request);
+		const access = await authorizeCourse(request, reply, id);
+		if (!access) return;
+		const { actor, course: previous } = access;
 
-		const previous = await findCourse(id);
-		if (!previous) return reply.code(404).send({ error: "Course not found" });
-		if (!canEditCourse(actor, previous))
-			return reply.code(403).send({ error: "Forbidden" });
+		// Published once: the slug is part of links learners may have.
+		if (
+			body.slug !== undefined &&
+			body.slug !== previous.slug &&
+			previous.everPublished
+		)
+			return reply
+				.code(409)
+				.send({ error: "The slug of a published course cannot change" });
 
 		let groupIds: string[] | undefined;
 		if (body.groupIds) {
@@ -241,22 +245,40 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 		return { course: updated satisfies WriterCourse };
 	});
 
-	// Hard delete for now: once revisions can be published, deleting such a course becomes an admin-only archive.
+	// A course published once is archived (admin only) to keep what learners did; the others are really deleted.
 	app.delete("/api/writer/courses/:id", async (request, reply) => {
 		const { id } = idParams.parse(request.params);
-		const actor = await getCourseActor(request);
-		const found = await findCourse(id);
-		if (!found) return reply.code(404).send({ error: "Course not found" });
-		if (!canEditCourse(actor, found))
-			return reply.code(403).send({ error: "Forbidden" });
+		const access = await authorizeCourse(request, reply, id);
+		if (!access) return;
+		const { actor, course: found } = access;
 
-		await db.delete(course).where(eq(course.id, id));
+		const archived = found.everPublished;
+		if (archived && !actor.admin)
+			return reply
+				.code(403)
+				.send({ error: "Only an admin can archive a published course" });
+
+		if (archived)
+			// An archived course has no audience left, so its groups can be deleted again.
+			await db.transaction(async (tx) => {
+				await tx
+					.update(course)
+					.set({ deletedAt: new Date() })
+					.where(eq(course.id, id));
+				await tx.delete(courseGroup).where(eq(courseGroup.courseId, id));
+			});
+		else await db.delete(course).where(eq(course.id, id));
+
 		await recordEvent(
 			{
 				type: "course.delete",
 				actor: eventActor(actor),
 				target: { type: "course", id, label: found.name },
-				metadata: { slug: found.slug },
+				metadata: {
+					slug: found.slug,
+					archived,
+					...(archived && { groups: names(found.groups) }),
+				},
 			},
 			request.log,
 		);

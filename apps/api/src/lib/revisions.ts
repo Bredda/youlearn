@@ -1,0 +1,267 @@
+import { and, asc, db, eq, inArray, schema } from "@youlearn/db";
+import type { RevisionStatus, WriterRevision } from "@youlearn/types";
+import {
+	adjectives,
+	animals,
+	uniqueNamesGenerator,
+} from "unique-names-generator";
+import type { CourseActor } from "./courses";
+
+const { course, courseRevision, revisionContributor } = schema;
+
+/** Docker-like business id: `whispering_toucan`. */
+export const generateRevisionKey = () =>
+	uniqueNamesGenerator({
+		dictionaries: [adjectives, animals],
+		separator: "_",
+		length: 2,
+		style: "lowerCase",
+	});
+
+/**
+ * The workflow: draft -> preview -> published -> deprecated, with preview -> draft to rework. There is no way
+ * back from deprecated: restoring an old revision means cloning it into a new draft.
+ */
+const TRANSITIONS: Record<RevisionStatus, RevisionStatus[]> = {
+	draft: ["preview"],
+	preview: ["draft", "published"],
+	published: ["deprecated"],
+	deprecated: [],
+};
+
+type Revision = typeof courseRevision.$inferSelect;
+type Ref = Pick<Revision, "id" | "key">;
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Locks the course row so concurrent status changes on its revisions are serialized. */
+async function lockCourse(tx: Tx, courseId: string) {
+	await tx
+		.select({ id: course.id })
+		.from(course)
+		.where(eq(course.id, courseId))
+		.for("update");
+}
+
+/** Records that `actor` changed the revision (the creator counts as the first contributor). */
+export async function addContributor(
+	tx: Tx,
+	revisionId: string,
+	actor: Pick<CourseActor, "id" | "name">,
+) {
+	await tx
+		.insert(revisionContributor)
+		.values({ revisionId, userId: actor.id, userLabel: actor.name })
+		.onConflictDoUpdate({
+			target: [revisionContributor.revisionId, revisionContributor.userId],
+			// Keep the label fresh and bump `updatedAt` (the `$onUpdate` hook only runs on `update()`).
+			set: { userLabel: actor.name, updatedAt: new Date() },
+		});
+}
+
+async function toWriterRevisions(rows: Revision[]): Promise<WriterRevision[]> {
+	if (rows.length === 0) return [];
+	const contributors = await db
+		.select()
+		.from(revisionContributor)
+		.where(
+			inArray(
+				revisionContributor.revisionId,
+				rows.map((row) => row.id),
+			),
+		)
+		.orderBy(asc(revisionContributor.createdAt));
+	return rows.map((row) => ({
+		id: row.id,
+		courseId: row.courseId,
+		key: row.key,
+		status: row.status,
+		parentId: row.parentId,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+		contributors: contributors
+			.filter((c) => c.revisionId === row.id)
+			.map((c) => ({ userId: c.userId, name: c.userLabel })),
+	}));
+}
+
+/** Newest first. */
+export async function listRevisions(courseId: string) {
+	const rows = await db
+		.select()
+		.from(courseRevision)
+		.where(eq(courseRevision.courseId, courseId))
+		.orderBy(asc(courseRevision.createdAt));
+	return (await toWriterRevisions(rows)).reverse();
+}
+
+export async function findRevision(courseId: string, revisionId: string) {
+	const [row] = await db
+		.select()
+		.from(courseRevision)
+		.where(
+			and(
+				eq(courseRevision.courseId, courseId),
+				eq(courseRevision.id, revisionId),
+			),
+		);
+	return row && (await toWriterRevisions([row]))[0];
+}
+
+export type Failure = { error: string; status: 400 | 404 | 409; code?: string };
+type Outcome<T> = ({ ok: true } & T) | ({ ok: false } & Failure);
+
+/** Creates a draft, optionally cloned from another revision of the same course. */
+export async function createRevision(
+	courseId: string,
+	actor: CourseActor,
+	input: { key?: string; parentId?: string },
+): Promise<Outcome<{ revisionId: string }>> {
+	return db.transaction(async (tx) => {
+		await lockCourse(tx, courseId);
+		const existing = await tx
+			.select()
+			.from(courseRevision)
+			.where(eq(courseRevision.courseId, courseId));
+
+		const draft = existing.find((r) => r.status === "draft");
+		if (draft)
+			return {
+				ok: false,
+				status: 409,
+				error: `Revision ${draft.key} is already a draft: finish or delete it first`,
+			};
+		if (input.parentId && !existing.some((r) => r.id === input.parentId))
+			return {
+				ok: false,
+				status: 400,
+				error: "The revision to clone does not belong to this course",
+			};
+
+		const taken = new Set(existing.map((r) => r.key));
+		let key = input.key;
+		if (key && taken.has(key))
+			return {
+				ok: false,
+				status: 409,
+				error: "A revision with this id already exists",
+			};
+		for (let attempt = 0; !key && attempt < 20; attempt++) {
+			const candidate = generateRevisionKey();
+			if (!taken.has(candidate)) key = candidate;
+		}
+		if (!key)
+			return {
+				ok: false,
+				status: 409,
+				error: "Could not generate a free revision id, set one",
+			};
+
+		const [created] = await tx
+			.insert(courseRevision)
+			.values({ courseId, key, parentId: input.parentId ?? null })
+			.returning({ id: courseRevision.id });
+		if (!created) throw new Error("Revision insert returned no row");
+		await addContributor(tx, created.id, actor);
+		return { ok: true, revisionId: created.id };
+	});
+}
+
+/**
+ * Moves a revision along the workflow. Whatever gets deprecated on the way (the previous published revision
+ * when publishing, the revision itself when deprecating) must be acknowledged with `confirm`.
+ */
+export async function changeStatus(
+	courseId: string,
+	revisionId: string,
+	to: RevisionStatus,
+	confirm: boolean,
+): Promise<
+	Outcome<{ from: RevisionStatus; key: string; deprecated: Ref | null }>
+> {
+	return db.transaction(async (tx) => {
+		await lockCourse(tx, courseId);
+		const rows = await tx
+			.select()
+			.from(courseRevision)
+			.where(eq(courseRevision.courseId, courseId));
+		const revision = rows.find((r) => r.id === revisionId);
+		if (!revision)
+			return { ok: false, status: 404, error: "Revision not found" };
+
+		if (!TRANSITIONS[revision.status].includes(to))
+			return {
+				ok: false,
+				status: 409,
+				error: `A ${revision.status} revision cannot become ${to}`,
+			};
+
+		const occupant = rows.find((r) => r.status === to && r.id !== revision.id);
+		let deprecated: Revision | null = null;
+		if (to === "published") deprecated = occupant ?? null;
+		else if (to === "deprecated") deprecated = revision;
+		else if (occupant)
+			return {
+				ok: false,
+				status: 409,
+				error: `Revision ${occupant.key} is already ${to}`,
+			};
+
+		if (deprecated && !confirm)
+			return {
+				ok: false,
+				status: 409,
+				code: "CONFIRM_REQUIRED",
+				error: `Revision ${deprecated.key} will be deprecated: confirmation required`,
+			};
+
+		// The old published revision goes first: only one revision can hold the status at a time.
+		if (to === "published" && deprecated)
+			await tx
+				.update(courseRevision)
+				.set({ status: "deprecated" })
+				.where(eq(courseRevision.id, deprecated.id));
+		await tx
+			.update(courseRevision)
+			.set({ status: to })
+			.where(eq(courseRevision.id, revision.id));
+
+		return {
+			ok: true,
+			from: revision.status,
+			key: revision.key,
+			deprecated:
+				to === "published" && deprecated
+					? { id: deprecated.id, key: deprecated.key }
+					: null,
+		};
+	});
+}
+
+/** Only revisions that were never published can go away: the others are history. */
+export async function deleteRevision(
+	courseId: string,
+	revisionId: string,
+): Promise<Outcome<{ key: string }>> {
+	return db.transaction(async (tx) => {
+		await lockCourse(tx, courseId);
+		const [revision] = await tx
+			.select()
+			.from(courseRevision)
+			.where(
+				and(
+					eq(courseRevision.courseId, courseId),
+					eq(courseRevision.id, revisionId),
+				),
+			);
+		if (!revision)
+			return { ok: false, status: 404, error: "Revision not found" };
+		if (revision.status !== "draft" && revision.status !== "preview")
+			return {
+				ok: false,
+				status: 409,
+				error: "Only a draft or preview revision can be deleted",
+			};
+		await tx.delete(courseRevision).where(eq(courseRevision.id, revision.id));
+		return { ok: true, key: revision.key };
+	});
+}

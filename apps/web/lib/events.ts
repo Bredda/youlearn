@@ -1,5 +1,6 @@
 import type { EventFeature, EventType } from "@youlearn/events";
-import type { AdminEvent } from "@youlearn/types";
+import type { AdminEvent, RevisionStatus } from "@youlearn/types";
+import { REVISION_STATUS_LABELS } from "@/lib/revisions";
 import { ROLE_LABELS } from "@/lib/roles";
 
 // Adding an event type to `@youlearn/events` makes these records fail to compile until it is labelled.
@@ -8,6 +9,7 @@ export const FEATURE_LABELS: Record<EventFeature, string> = {
 	user: "Utilisateurs",
 	group: "Groupes",
 	course: "Cours",
+	revision: "Révisions",
 };
 
 export const EVENT_LABELS: Record<EventType, string> = {
@@ -26,6 +28,9 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"course.update": "Modification",
 	"course.delete": "Suppression",
 	"course.set-groups": "Changement de groupes",
+	"revision.create": "Création",
+	"revision.set-status": "Changement de statut",
+	"revision.delete": "Suppression",
 };
 
 /** Self-sufficient wording for the table, where the feature is not shown next to the badge. */
@@ -45,6 +50,9 @@ export const EVENT_BADGE_LABELS: Record<EventType, string> = {
 	"course.update": "Modification de cours",
 	"course.delete": "Suppression de cours",
 	"course.set-groups": "Changement de groupes d'un cours",
+	"revision.create": "Création de révision",
+	"revision.set-status": "Changement de statut de révision",
+	"revision.delete": "Suppression de révision",
 };
 
 /** Rows may carry a type that no longer exists in the registry: show it as is. */
@@ -110,6 +118,19 @@ export function describeEvent({
 		case "user.set-groups":
 		case "course.set-groups":
 			return `Groupes : ${names(data.from)} → ${names(data.to)}`;
+		case "revision.set-status": {
+			const label = (status: unknown) =>
+				REVISION_STATUS_LABELS[status as RevisionStatus] ?? String(status);
+			const replacedBy =
+				typeof data.replacedBy === "string"
+					? ` (remplacée par ${data.replacedBy})`
+					: "";
+			return `Statut : ${label(data.from)} → ${label(data.to)}${replacedBy}`;
+		}
+		case "revision.create":
+			return typeof data.clonedFrom === "string"
+				? `Clonée depuis ${data.clonedFrom}`
+				: null;
 		case "group.update":
 			return `Nom : ${data.from ?? "—"} → ${data.to ?? "—"}`;
 		case "user.ban":

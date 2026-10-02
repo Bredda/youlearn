@@ -118,6 +118,21 @@ export type NewCourseGroup = typeof schema.courseGroup.$inferInsert;
 /** A group as attached to a course (`system` = "Commun"). */
 export type CourseGroupTag = PublicGroup & { system: boolean };
 
+export type CourseRevision = typeof schema.courseRevision.$inferSelect;
+export type NewCourseRevision = typeof schema.courseRevision.$inferInsert;
+
+export type RevisionStatus = (typeof schema.revisionStatus.enumValues)[number];
+
+/** A revision of a course as listed in the writer area (dates serialized by JSON). */
+export type WriterRevision = Pick<
+	CourseRevision,
+	"id" | "courseId" | "key" | "status" | "parentId"
+> & {
+	createdAt: string;
+	updatedAt: string;
+	contributors: { userId: string; name: string }[];
+};
+
 /** A course as listed in the writer area (dates serialized by JSON). */
 export type WriterCourse = Pick<
 	Course,
@@ -126,6 +141,12 @@ export type WriterCourse = Pick<
 	createdAt: string;
 	updatedAt: string;
 	groups: CourseGroupTag[];
+	/** The draft, preview and published revisions of the course (at most one each). */
+	current: Partial<
+		Record<Exclude<RevisionStatus, "deprecated">, { id: string; key: string }>
+	>;
+	/** Published at least once: the slug is then frozen and only an admin can archive the course. */
+	everPublished: boolean;
 };
 
 /** Groups the current user may put on a course: their own for a writer, every group for an admin. */

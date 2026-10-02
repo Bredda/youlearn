@@ -1,6 +1,7 @@
 "use client";
 
 import type { CourseGroupTag, WriterCourse } from "@youlearn/types";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FormError } from "@/components/form-error";
@@ -26,6 +27,10 @@ import {
 } from "@/components/ui/table";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
 import { callApi } from "@/lib/api-client";
+import {
+	REVISION_STATUS_LABELS,
+	REVISION_STATUS_VARIANTS,
+} from "@/lib/revisions";
 
 // `undefined` = closed, `null` = creating, a course = editing it.
 type Editing = WriterCourse | null | undefined;
@@ -93,6 +98,7 @@ export function CoursesManager({
 						<TableHead>Nom</TableHead>
 						<TableHead>Catégories</TableHead>
 						<TableHead>Groupes</TableHead>
+						<TableHead>Révisions</TableHead>
 						<TableHead className="w-48 text-right">Actions</TableHead>
 					</TableRow>
 				</TableHeader>
@@ -100,7 +106,7 @@ export function CoursesManager({
 					{courses.length === 0 && (
 						<TableRow>
 							<TableCell
-								colSpan={4}
+								colSpan={5}
 								className="text-center text-muted-foreground"
 							>
 								Aucun cours.
@@ -110,7 +116,12 @@ export function CoursesManager({
 					{courses.map((course) => (
 						<TableRow key={course.id}>
 							<TableCell className="whitespace-normal">
-								<div className="truncate font-medium">{course.name}</div>
+								<Link
+									href={`/writer/courses/${course.id}`}
+									className="block truncate font-medium hover:underline"
+								>
+									{course.name}
+								</Link>
 								<div className="truncate text-muted-foreground text-xs">
 									{course.slug}
 								</div>
@@ -131,6 +142,22 @@ export function CoursesManager({
 											{group.name}
 										</Badge>
 									))}
+								</div>
+							</TableCell>
+							<TableCell className="whitespace-normal">
+								<div className="flex flex-wrap gap-1">
+									{(["published", "preview", "draft"] as const).map(
+										(status) =>
+											course.current[status] && (
+												<Badge
+													key={status}
+													variant={REVISION_STATUS_VARIANTS[status]}
+												>
+													{REVISION_STATUS_LABELS[status]} ·{" "}
+													{course.current[status].key}
+												</Badge>
+											),
+									)}
 								</div>
 							</TableCell>
 							<TableCell className="space-x-2 text-right">
@@ -176,6 +203,9 @@ export function CoursesManager({
 							Supprimer le cours « {deleting?.name} » ?
 						</AlertDialogTitle>
 						<AlertDialogDescription>
+							{deleting?.everPublished
+								? "Ce cours a déjà été publié : il sera archivé (seul un administrateur peut le faire) et ne sera plus visible. "
+								: "Ses révisions seront supprimées avec lui. "}
 							Cette action est définitive.
 						</AlertDialogDescription>
 					</AlertDialogHeader>

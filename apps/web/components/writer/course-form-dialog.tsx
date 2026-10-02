@@ -171,9 +171,12 @@ export function CourseFormDialog({
 											onChange={(e) => field.handleChange(e.target.value)}
 											aria-invalid={isInvalid}
 											placeholder="généré à partir du nom"
+											disabled={course?.everPublished}
 										/>
 										<FieldDescription>
-											Identifiant dans l'URL du cours, unique.
+											{course?.everPublished
+												? "Figé : le cours a déjà été publié."
+												: "Identifiant dans l'URL du cours, unique."}
 										</FieldDescription>
 										{isInvalid && (
 											<FieldError errors={field.state.meta.errors} />

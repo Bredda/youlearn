@@ -6,15 +6,16 @@ import {
 	eq,
 	ilike,
 	inArray,
+	isNull,
 	or,
 	schema,
 	sql,
 } from "@youlearn/db";
 import type { CourseGroupTag, WriterCourse } from "@youlearn/types";
-import type { FastifyRequest } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { escapeLike } from "./sql";
 
-const { course, courseGroup, group, userGroup } = schema;
+const { course, courseGroup, courseRevision, group, userGroup } = schema;
 
 /**
  * Who is acting on courses. `groupIds` are the groups the user explicitly belongs to: "Commun" is implicit
@@ -22,7 +23,9 @@ const { course, courseGroup, group, userGroup } = schema;
  */
 export type CourseActor = {
 	id: string;
+	/** Email, used as the actor label of events. */
 	label: string;
+	name: string;
 	admin: boolean;
 	groupIds: string[];
 };
@@ -39,6 +42,7 @@ export async function getCourseActor(
 	return {
 		id: user.id,
 		label: user.email,
+		name: user.name,
 		admin: isAdmin(parseRoles(user.role)),
 		groupIds: groups.map((g) => g.id),
 	};
@@ -81,22 +85,51 @@ async function withGroups(rows: CourseRow[]): Promise<WriterCourse[]> {
 		)
 		.orderBy(asc(sql`lower(${group.name})`));
 
-	return rows.map((row) => ({
-		id: row.id,
-		name: row.name,
-		slug: row.slug,
-		description: row.description,
-		categories: row.categories,
-		createdAt: row.createdAt.toISOString(),
-		updatedAt: row.updatedAt.toISOString(),
-		groups: links
-			.filter((link) => link.courseId === row.id)
-			.map(({ id, name, system }) => ({ id, name, system })),
-	}));
+	const revisions = await db
+		.select({
+			courseId: courseRevision.courseId,
+			id: courseRevision.id,
+			key: courseRevision.key,
+			status: courseRevision.status,
+		})
+		.from(courseRevision)
+		.where(
+			inArray(
+				courseRevision.courseId,
+				rows.map((row) => row.id),
+			),
+		);
+
+	return rows.map((row) => {
+		const own = revisions.filter((revision) => revision.courseId === row.id);
+		const current: WriterCourse["current"] = {};
+		for (const { id, key, status } of own)
+			if (status !== "deprecated") current[status] = { id, key };
+		return {
+			id: row.id,
+			name: row.name,
+			slug: row.slug,
+			description: row.description,
+			categories: row.categories,
+			createdAt: row.createdAt.toISOString(),
+			updatedAt: row.updatedAt.toISOString(),
+			groups: links
+				.filter((link) => link.courseId === row.id)
+				.map(({ id, name, system }) => ({ id, name, system })),
+			current,
+			everPublished: own.some(
+				(revision) =>
+					revision.status === "published" || revision.status === "deprecated",
+			),
+		};
+	});
 }
 
 export async function findCourse(id: string) {
-	const [row] = await db.select().from(course).where(eq(course.id, id));
+	const [row] = await db
+		.select()
+		.from(course)
+		.where(and(eq(course.id, id), isNull(course.deletedAt)));
 	return row && (await withGroups([row]))[0];
 }
 
@@ -109,6 +142,7 @@ export async function listCourses(actor: CourseActor, q?: string) {
 		.from(course)
 		.where(
 			and(
+				isNull(course.deletedAt),
 				search
 					? or(ilike(course.name, search), ilike(course.slug, search))
 					: undefined,
@@ -125,6 +159,28 @@ export async function listCourses(actor: CourseActor, q?: string) {
 		)
 		.orderBy(asc(sql`lower(${course.name})`));
 	return withGroups(rows);
+}
+
+/**
+ * Loads a course for a request on it, or answers 404 / 403 itself (then `reply.sent` is true).
+ * Hidden from writers outside its groups only as far as the id goes: they get a 403, not the data.
+ */
+export async function authorizeCourse(
+	request: FastifyRequest,
+	reply: FastifyReply,
+	id: string,
+) {
+	const actor = await getCourseActor(request);
+	const found = await findCourse(id);
+	if (!found) {
+		reply.code(404).send({ error: "Course not found" });
+		return;
+	}
+	if (!canEditCourse(actor, found)) {
+		reply.code(403).send({ error: "Forbidden" });
+		return;
+	}
+	return { actor, course: found };
 }
 
 /** "Développement Web 101" -> "developpement-web-101". */
