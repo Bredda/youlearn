@@ -2,6 +2,7 @@ import { parseRoles } from "@youlearn/auth/roles";
 import type { PublicUser } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { getUserGroups } from "../lib/groups";
+import { adminEventRoutes } from "./admin/events";
 import { adminGroupRoutes } from "./admin/groups";
 import { adminUserRoutes } from "./admin/users";
 
@@ -27,6 +28,7 @@ export const routes: FastifyPluginAsync = async (app) => {
 		},
 	);
 
+	await app.register(adminEventRoutes);
 	await app.register(adminGroupRoutes);
 	await app.register(adminUserRoutes);
 };

@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
 		"@youlearn/auth",
 		"@youlearn/config",
 		"@youlearn/db",
+		"@youlearn/events",
 		"@youlearn/types",
 	],
 	// The browser only talks to the web origin; `/api/*` (Better Auth, ...) is proxied to the Fastify API.

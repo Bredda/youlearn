@@ -1,5 +1,5 @@
 {
-	"name": "@youlearn/types",
+	"name": "@youlearn/events",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -8,9 +8,7 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@youlearn/auth": "workspace:*",
-		"@youlearn/db": "workspace:*",
-		"@youlearn/events": "workspace:*"
+		"@youlearn/db": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.3",
@@ -19,6 +17,7 @@
 		"typescript": "^7.0.2"
 	},
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./server": "./src/record.ts"
 	}
 }

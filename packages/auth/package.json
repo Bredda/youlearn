@@ -11,6 +11,7 @@
 	"dependencies": {
 		"@youlearn/config": "workspace:*",
 		"@youlearn/db": "workspace:*",
+		"@youlearn/events": "workspace:*",
 		"better-auth": "^1.7.7"
 	},
 	"devDependencies": {

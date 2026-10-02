@@ -15,6 +15,7 @@ import {
 import type { AdminUser, AdminUserPage } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { escapeLike } from "../../lib/sql";
 
 const { user, group, userGroup } = schema;
 
@@ -35,10 +36,6 @@ const sortColumns = {
 	role: user.role,
 	createdAt: user.createdAt,
 };
-
-/** Escapes LIKE wildcards so the search term is matched literally. */
-const escapeLike = (value: string) =>
-	value.replace(/[\\%_]/g, (char) => `\\${char}`);
 
 /** User listing for the admin UI: Better Auth's `list-users` knows nothing about our groups. */
 export const adminUserRoutes: FastifyPluginAsync = async (app) => {

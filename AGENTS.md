@@ -44,11 +44,12 @@ pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 | `apps/api` | Fastify 5. Mounts Better Auth on `/api/auth/*`, exposes `/api/me` and `/api/admin/*`. |
 | `packages/config` | Loads the root `.env`, validates it with zod, exports `env`. |
 | `packages/db` | Drizzle client (`pg`), schema, migrations (`drizzle/`). |
+| `packages/events` | Event log registry (`feature.action` types, pure) and `recordEvent` (`@youlearn/events/server`). |
 | `packages/auth` | Better Auth instance (+ admin plugin), browser client (`@youlearn/auth/client`), admin seed. |
 | `packages/types` | Type-only: row types inferred from the schema and API response shapes. |
 | `packages/typescript-config`, `packages/biome-config` | Shared configs (`node.json` for packages and API, `nextjs.json` for web). |
 
-Dependency direction: `config` <- `db` <- `auth` <- `types` (type-only imports) <- `api` / `web`. Do not create cycles.
+Dependency direction: `config` <- `db` <- `events` <- `auth` <- `types` (type-only imports) <- `api` / `web`. Do not create cycles.
 
 ## Architecture rules
 
@@ -59,6 +60,7 @@ Dependency direction: `config` <- `db` <- `auth` <- `types` (type-only imports) 
 - **Auth**: the browser only talks to the web origin; Next rewrites `/api/*` to the API, so cookies are first-party and there is no CORS to manage. Sign-up is disabled (`disableSignUp`). Users are created by admins (Better Auth admin plugin, called from the UI) or by the startup seed. A user holds **several roles at once** (`user`, `writer`, `admin`): Better Auth stores them comma separated in `user.role`, the rest of the code uses `Role[]` through `@youlearn/auth/roles` (`parseRoles`, `isAdmin`, `canWrite`: the writer area is open to writers and admins). Never compare `user.role` as a plain string; add a role in `roles.ts` (it is declared to the admin plugin on both server and client). Better Auth `databaseHooks` enforce `ALLOWED_EMAIL_DOMAINS` on user creation and email change: keep business rules there so every path is covered.
 - **API**: one plugin per area under `apps/api/src/routes`. Admin routes must use `app.requireAdmin`, writer-area routes `app.requireWriter`, other authenticated ones `app.requireAuth`. Validate every body/query/params with zod (a `ZodError` becomes a 400). Map unique violations to 409 (`isUniqueViolation`). Prefer Better Auth endpoints for account operations (create, role, ban, password, delete) and add our own routes only for what it does not know (groups, listings joined with groups).
 - **Startup seeds** (idempotent, in `apps/api/src/index.ts`): `ensureAdminUser` from `ADMIN_*`, `ensureDefaultGroups` from `DEFAULT_GROUPS` (only while the group table is empty, so deleted groups do not come back).
+- **Events** (audit log): every notable action is recorded in the `event` table with `recordEvent` (who = actor, what = `feature.action` type + target, when). Types are declared in `packages/events/src/index.ts` (`EVENTS`); adding one also requires a label in `apps/web/lib/events.ts` (compile-checked). User mutations are captured in one place, the Better Auth hooks in `packages/auth/src/user-events.ts` (the browser calls the admin plugin directly); other features call `recordEvent` after their change is committed. It never throws, and never put secrets in `metadata`. Listing: `GET /api/admin/events`, UI at `/admin/events`.
 - **Groups** are the visibility mechanism: a user belongs to 0..n groups, `/api/me` returns them, and courses/programs will be tagged with groups the same way (tables not created yet).
 
 ## Code style

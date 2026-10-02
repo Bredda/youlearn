@@ -1,5 +1,6 @@
 import type { Role } from "@youlearn/auth/roles";
 import type { schema } from "@youlearn/db";
+import type { EventFilter } from "@youlearn/events";
 
 // Row types derived from the drizzle schema. Type-only: importing this package never loads the db client.
 
@@ -62,6 +63,43 @@ export type AdminUserQuery = {
 	status?: "active" | "banned";
 	groupId?: string;
 	sort: AdminUserSort;
+	order: "asc" | "desc";
+	page: number;
+	pageSize: number;
+};
+
+export type Event = typeof schema.event.$inferSelect;
+export type NewEvent = typeof schema.event.$inferInsert;
+
+/** An event as listed in the admin UI (dates serialized by JSON). `type` is a plain string: old rows may use a type that no longer exists. */
+export type AdminEvent = Pick<
+	Event,
+	| "id"
+	| "type"
+	| "actorId"
+	| "actorLabel"
+	| "targetType"
+	| "targetId"
+	| "targetLabel"
+	| "metadata"
+> & { createdAt: string };
+
+export type AdminEventPage = {
+	events: AdminEvent[];
+	total: number;
+	page: number;
+	pageSize: number;
+};
+
+export type AdminEventSort = "createdAt" | "type" | "actor" | "target";
+
+/** Query of the admin events listing (filters, sorting, pagination), shared by the API and the web app. */
+export type AdminEventQuery = {
+	/** Searches the actor and target labels. */
+	q?: string;
+	/** A feature ("user") or a single event type ("user.create"). */
+	type?: EventFilter;
+	sort: AdminEventSort;
 	order: "asc" | "desc";
 	page: number;
 	pageSize: number;

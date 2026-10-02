@@ -133,6 +133,9 @@ importers:
       '@youlearn/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@youlearn/events':
+        specifier: workspace:*
+        version: link:../../packages/events
       '@youlearn/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -191,6 +194,9 @@ importers:
       '@youlearn/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@youlearn/events':
+        specifier: workspace:*
+        version: link:../../packages/events
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -255,6 +261,9 @@ importers:
       '@youlearn/db':
         specifier: workspace:*
         version: link:../db
+      '@youlearn/events':
+        specifier: workspace:*
+        version: link:../events
       better-auth:
         specifier: ^1.7.7
         version: 1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@types/pg@8.23.1)(kysely@0.29.6)(pg@8.23.1))(next@16.3.4(@types/node@26.6.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -327,6 +336,25 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  packages/events:
+    dependencies:
+      '@youlearn/db':
+        specifier: workspace:*
+        version: link:../db
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.3
+        version: 26.6.3
+      '@youlearn/biome-config':
+        specifier: workspace:^
+        version: link:../biome-config
+      '@youlearn/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   packages/types:
     dependencies:
       '@youlearn/auth':
@@ -335,6 +363,9 @@ importers:
       '@youlearn/db':
         specifier: workspace:*
         version: link:../db
+      '@youlearn/events':
+        specifier: workspace:*
+        version: link:../events
     devDependencies:
       '@types/node':
         specifier: ^26.6.3

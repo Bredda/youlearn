@@ -1,5 +1,6 @@
 import { env } from "@youlearn/config";
 import { db, eq, schema } from "@youlearn/db";
+import { recordEvent } from "@youlearn/events/server";
 import { auth } from "./auth";
 import { isAdmin, parseRoles, serializeRoles } from "./roles";
 
@@ -43,6 +44,11 @@ export async function ensureAdminUser(
 			.update(schema.user)
 			.set({ role: serializeRoles([...roles, "admin"]) })
 			.where(eq(schema.user.id, existing.id));
+		await recordEvent({
+			type: "user.set-role",
+			target: { type: "user", id: existing.id, label: existing.email },
+			metadata: { from: roles, to: [...roles, "admin"] },
+		});
 		logger.info(`Existing user promoted to admin (${email})`);
 		return "promoted";
 	}

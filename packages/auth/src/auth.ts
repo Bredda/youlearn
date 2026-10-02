@@ -9,6 +9,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { admin } from "better-auth/plugins";
 import { accessControl, roleDefinitions } from "./roles";
+import { afterUserEvent, beforeUserEvent } from "./user-events";
 
 export const AUTH_BASE_PATH = "/api/auth";
 
@@ -48,6 +49,7 @@ export const auth = betterAuth({
 			},
 		},
 	},
+	hooks: { before: beforeUserEvent, after: afterUserEvent },
 	plugins: [admin({ ac: accessControl, roles: roleDefinitions })],
 });
 

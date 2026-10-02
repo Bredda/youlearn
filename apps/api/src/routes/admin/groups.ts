@@ -1,4 +1,5 @@
 import { asc, count, db, eq, inArray, schema, sql } from "@youlearn/db";
+import { recordEvent } from "@youlearn/events/server";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { isUniqueViolation } from "../../lib/groups";
@@ -92,7 +93,7 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 		const groupIds = [...new Set(userGroupsBody.parse(request.body).groupIds)];
 
 		const [target] = await db
-			.select({ id: user.id })
+			.select({ id: user.id, email: user.email })
 			.from(user)
 			.where(eq(user.id, userId))
 			.limit(1);
@@ -107,6 +108,12 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 		if (known.length !== groupIds.length)
 			return reply.code(400).send({ error: "Unknown group id" });
 
+		const previous = await db
+			.select({ id: group.id, name: group.name })
+			.from(userGroup)
+			.innerJoin(group, eq(group.id, userGroup.groupId))
+			.where(eq(userGroup.userId, userId));
+
 		await db.transaction(async (tx) => {
 			await tx.delete(userGroup).where(eq(userGroup.userId, userId));
 			if (groupIds.length)
@@ -114,6 +121,27 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 					.insert(userGroup)
 					.values(groupIds.map((groupId) => ({ userId, groupId })));
 		});
+
+		const names = (groups: { name: string }[]) =>
+			groups.map((g) => g.name).sort((a, b) => a.localeCompare(b));
+		// The user form always saves the groups: only log real changes.
+		if (
+			previous.length !== known.length ||
+			previous.some((p) => !groupIds.includes(p.id))
+		) {
+			await recordEvent(
+				{
+					type: "user.set-groups",
+					actor: request.auth && {
+						id: request.auth.user.id,
+						label: request.auth.user.email,
+					},
+					target: { type: "user", id: userId, label: target.email },
+					metadata: { from: names(previous), to: names(known) },
+				},
+				request.log,
+			);
+		}
 
 		return { groups: known.sort((a, b) => a.name.localeCompare(b.name)) };
 	});
