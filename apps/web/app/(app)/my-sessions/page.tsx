@@ -1,3 +1,3 @@
 export default function MySessionsPage() {
-  return <div>My sessions</div>;
+	return <div>My sessions</div>;
 }

@@ -112,9 +112,6 @@ importers:
       '@biomejs/biome':
         specifier: 2.5.12
         version: 2.5.12
-      prettier:
-        specifier: 3.9.6
-        version: 3.9.6
       turbo:
         specifier: ^2.11.6
         version: 2.11.6
@@ -3315,11 +3312,6 @@ packages:
     resolution: {integrity: sha512-C+y9x90UElAddDZmV4qOx9W53B61PO7cIqWz2dQsWlwswuq4mr8NEwytdGKboYbQlGZ3awrkTeNvcZiZNHnQ8A==}
     engines: {node: '>=20'}
 
-  prettier@3.9.6:
-    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   pretty-ms@9.3.1:
     resolution: {integrity: sha512-HzMy3Geq23nVALD/M2LliU+F+M+gVNsvkQWWqeBZ8HDiCgzo6YPJ/Omrmtq24EFrIsk0a3EkQGEd7bDOo+IhGA==}
     engines: {node: '>=18'}
@@ -6161,8 +6153,6 @@ snapshots:
       xtend: 4.0.2
 
   powershell-utils@0.2.1: {}
-
-  prettier@3.9.6: {}
 
   pretty-ms@9.3.1:
     dependencies:

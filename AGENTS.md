@@ -8,3 +8,69 @@ Read `docs/README.md` inside that installed package first, then read the relevan
 
 This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
 <!-- END:turborepo-agent-rules -->
+
+# YouLearn
+
+Learning platform: courses and programs whose visibility depends on the **groups** (tags) an admin gives each user.
+pnpm + Turborepo monorepo, TypeScript everywhere. Users never sign up: admins create the accounts.
+
+## Commands
+
+Node >= 24, pnpm 12 (run everything from the repo root).
+
+```sh
+cp .env.example .env     # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
+pnpm install
+pnpm db:up               # postgres 18 (docker/compose.yml, reads .env)
+pnpm db:migrate          # apply drizzle migrations
+pnpm dev                 # web :3000 + api :3001 (turbo TUI)
+
+pnpm check-types         # tsc in every package (web runs `next typegen` first)
+pnpm --filter <pkg> exec biome check --write <paths>   # lint + format the files you touched
+pnpm build
+pnpm db:generate         # after editing packages/db/src/schema -> commit the new migration
+pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
+```
+
+- Format and lint with **Biome** only (tabs, no Prettier): `pnpm format` formats the repo, and while working run `pnpm --filter <pkg> exec biome check --write <paths>` on the files you touched. `apps/web/components/ui` (shadcn-generated) is excluded from Biome on purpose; CSS uses Biome's Tailwind parser.
+- Known failures that are not yours: `check-types` fails on `components/ui/spinner.tsx` (generated, type error), and `pnpm lint` reports a few issues in `web` (e.g. the unused shadcn sample `components/layout/login-form.tsx`). Do not "fix" them as a side effect, but make sure you introduce no new error.
+- There is no test suite yet. Verify with `check-types`, Biome on touched files, and by exercising pages/endpoints (e.g. `curl` with a session cookie).
+
+## Layout
+
+| Path | Role |
+|---|---|
+| `apps/web` | Next.js 16 App Router + shadcn (base-ui) + Tailwind 4. See `apps/web/AGENTS.md`. |
+| `apps/api` | Fastify 5. Mounts Better Auth on `/api/auth/*`, exposes `/api/me` and `/api/admin/*`. |
+| `packages/config` | Loads the root `.env`, validates it with zod, exports `env`. |
+| `packages/db` | Drizzle client (`pg`), schema, migrations (`drizzle/`). |
+| `packages/auth` | Better Auth instance (+ admin plugin), browser client (`@youlearn/auth/client`), admin seed. |
+| `packages/types` | Type-only: row types inferred from the schema and API response shapes. |
+| `packages/typescript-config`, `packages/biome-config` | Shared configs (`node.json` for packages and API, `nextjs.json` for web). |
+
+Dependency direction: `config` <- `db` <- `auth` / `types` <- `api` / `web`. Do not create cycles.
+
+## Architecture rules
+
+- **Packages ship TypeScript sources** (no build step): `exports` point to `src/*.ts`. `web` consumes them through `transpilePackages` in `next.config.ts` (add new packages there), `api` bundles them with tsdown (`noExternal: [/^@youlearn\//]`). A new package needs `exports`, a `tsconfig.json` extending `node.json`, and a `biome.json` extending `@youlearn/biome-config/base`.
+- **Env**: one `.env` at the repo root, read only through `@youlearn/config`. Never touch `process.env` elsewhere. A new variable goes in `packages/config/src/schema.ts` **and** `.env.example`. Client components may import only the pure `@youlearn/config/email-domain`, never the main entry (it validates the server env and reads the filesystem).
+- **Database**: schema in `packages/db/src/schema/*`, columns are camelCase in code and snake_case in SQL (`casing: "snake_case"`). Never edit an applied migration. The `group` table is an SQL reserved word: always go through drizzle, never hand-written SQL. Import query helpers (`eq`, `and`, `sql`, ...) from `@youlearn/db`, which re-exports them; do not add `drizzle-orm` to other packages (pnpm resolves a broken peer copy).
+- **Types**: derive from the schema (`typeof schema.x.$inferSelect`), keep `@youlearn/types` free of runtime code. API responses that cross to the web app are typed there (`PublicUser`, `AdminUser`, `AdminUserPage`...); JSON dates are strings.
+- **Auth**: the browser only talks to the web origin; Next rewrites `/api/*` to the API, so cookies are first-party and there is no CORS to manage. Sign-up is disabled (`disableSignUp`). Users are created by admins (Better Auth admin plugin, called from the UI) or by the startup seed. Roles are `"admin"` | `"user"`. Better Auth `databaseHooks` enforce `ALLOWED_EMAIL_DOMAINS` on user creation and email change: keep business rules there so every path is covered.
+- **API**: one plugin per area under `apps/api/src/routes`. Admin routes must use `app.requireAdmin`, authenticated ones `app.requireAuth`. Validate every body/query/params with zod (a `ZodError` becomes a 400). Map unique violations to 409 (`isUniqueViolation`). Prefer Better Auth endpoints for account operations (create, role, ban, password, delete) and add our own routes only for what it does not know (groups, listings joined with groups).
+- **Startup seeds** (idempotent, in `apps/api/src/index.ts`): `ensureAdminUser` from `ADMIN_*`, `ensureDefaultGroups` from `DEFAULT_GROUPS` (only while the group table is empty, so deleted groups do not come back).
+- **Groups** are the visibility mechanism: a user belongs to 0..n groups, `/api/me` returns them, and courses/programs will be tagged with groups the same way (tables not created yet).
+
+## Code style
+
+- TypeScript strict with `noUncheckedIndexedAccess`; no `any`. Imports are sorted by Biome.
+- Match the surrounding code (names, comment density). Comments explain *why*, not what.
+- Keep changes scoped: do not reformat or "clean up" generated files (`components/ui`, `drizzle/`) beyond the task.
+- Commits follow Conventional Commits (`feat:`, `fix:`...). Never commit `.env`.
+
+## Gotchas
+
+- pnpm 12 blocks dependency build scripts: allow them in `allowBuilds` (`pnpm-workspace.yaml`), as done for `esbuild`.
+- Postgres' host port comes from `POSTGRES_PORT` (5432 may already be taken); keep `DATABASE_URL` in sync.
+- `.env` is read at process start: restart `dev` after changing it. Do not leave your own `tsx watch` / `next dev` processes running: ports 3000/3001 are the user's.
+- `turbo` and `next` are recent majors whose behavior differs from older docs: read the docs bundled in the installed packages (see the blocks below / in `apps/web/AGENTS.md`). The same goes for `@tanstack/react-table` (v9: `useTable`, explicit features), see its `skills/` folder.
