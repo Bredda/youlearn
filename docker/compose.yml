@@ -1,0 +1,25 @@
+name: youlearn
+services:
+  database:
+    image: pgvector/pgvector:pg18-trixie
+    restart: always
+    ports:
+      - ${POSTGRES_PORT:-5432}:5432
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-youlearn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev}
+    volumes:
+      - pgdata:/var/lib/postgresql/18/docker
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-dev} -d ${POSTGRES_DB:-youlearn}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

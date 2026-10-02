@@ -1,0 +1,23 @@
+{
+	"name": "@youlearn/config",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"lint": "biome check",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"zod": "^4.6.5"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.3",
+		"@youlearn/biome-config": "workspace:^",
+		"@youlearn/typescript-config": "workspace:*",
+		"typescript": "^7.0.2"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./email-domain": "./src/email-domain.ts"
+	}
+}

@@ -1,0 +1,31 @@
+{
+	"name": "api",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"build": "tsdown",
+		"start": "node dist/index.mjs",
+		"lint": "biome check",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@fastify/cors": "^11.3.0",
+		"@youlearn/auth": "workspace:*",
+		"@youlearn/config": "workspace:*",
+		"@youlearn/db": "workspace:*",
+		"@youlearn/types": "workspace:*",
+		"fastify": "^5.12.5",
+		"fastify-plugin": "^6.0.0",
+		"zod": "^4.6.5"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.3",
+		"@youlearn/biome-config": "workspace:^",
+		"@youlearn/typescript-config": "workspace:*",
+		"tsdown": "^0.23.0",
+		"tsx": "^4.23.15",
+		"typescript": "^7.0.2"
+	}
+}

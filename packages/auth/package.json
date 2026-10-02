@@ -1,0 +1,27 @@
+{
+	"name": "@youlearn/auth",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"lint": "biome check",
+		"check-types": "tsc --noEmit",
+		"seed:admin": "tsx scripts/seed-admin.ts"
+	},
+	"dependencies": {
+		"@youlearn/config": "workspace:*",
+		"@youlearn/db": "workspace:*",
+		"better-auth": "^1.7.7"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.3",
+		"@youlearn/biome-config": "workspace:^",
+		"@youlearn/typescript-config": "workspace:*",
+		"tsx": "^4.23.15",
+		"typescript": "^7.0.2"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./client": "./src/client.ts"
+	}
+}
