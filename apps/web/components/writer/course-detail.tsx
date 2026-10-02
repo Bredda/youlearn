@@ -21,7 +21,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Table,
 	TableBody,
@@ -31,6 +31,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
+import { assetUrl } from "@/components/writer/markdown";
 import { RevisionFormDialog } from "@/components/writer/revision-form-dialog";
 import { callApi } from "@/lib/api-client";
 import {
@@ -111,6 +112,14 @@ export function CourseDetail({
 		<div className="flex flex-col gap-6">
 			<div className="flex items-start justify-between gap-4">
 				<div className="flex flex-col gap-2">
+					{course.imageAssetId && (
+						// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
+						<img
+							src={assetUrl(course.id, course.imageAssetId)}
+							alt=""
+							className="h-32 w-56 rounded-md border object-cover"
+						/>
+					)}
 					<Link
 						href="/writer/courses"
 						className="text-muted-foreground text-sm hover:underline"
@@ -202,6 +211,15 @@ export function CourseDetail({
 									{dateFormat.format(new Date(revision.updatedAt))}
 								</TableCell>
 								<TableCell className="space-x-2 whitespace-normal text-right">
+									<Link
+										href={`/writer/courses/${course.id}/revisions/${revision.id}`}
+										className={buttonVariants({
+											variant: "outline",
+											size: "sm",
+										})}
+									>
+										{revision.status === "draft" ? "Éditer" : "Voir"}
+									</Link>
 									{revision.status === "draft" && (
 										<Button
 											variant="outline"

@@ -26,6 +26,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
+import { assetUrl } from "@/components/writer/markdown";
 import { callApi } from "@/lib/api-client";
 import {
 	REVISION_STATUS_LABELS,
@@ -116,14 +117,26 @@ export function CoursesManager({
 					{courses.map((course) => (
 						<TableRow key={course.id}>
 							<TableCell className="whitespace-normal">
-								<Link
-									href={`/writer/courses/${course.id}`}
-									className="block truncate font-medium hover:underline"
-								>
-									{course.name}
-								</Link>
-								<div className="truncate text-muted-foreground text-xs">
-									{course.slug}
+								<div className="flex items-center gap-3">
+									{course.imageAssetId && (
+										// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
+										<img
+											src={assetUrl(course.id, course.imageAssetId)}
+											alt=""
+											className="size-10 shrink-0 rounded object-cover"
+										/>
+									)}
+									<div className="min-w-0">
+										<Link
+											href={`/writer/courses/${course.id}`}
+											className="block truncate font-medium hover:underline"
+										>
+											{course.name}
+										</Link>
+										<div className="truncate text-muted-foreground text-xs">
+											{course.slug}
+										</div>
+									</div>
 								</div>
 							</TableCell>
 							<TableCell className="whitespace-normal">

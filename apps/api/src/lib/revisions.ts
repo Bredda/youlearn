@@ -1,5 +1,10 @@
 import { and, asc, db, eq, inArray, schema } from "@youlearn/db";
-import type { RevisionStatus, WriterRevision } from "@youlearn/types";
+import type {
+	CourseContent,
+	RevisionStatus,
+	WriterRevision,
+	WriterRevisionDetail,
+} from "@youlearn/types";
 import {
 	adjectives,
 	animals,
@@ -107,6 +112,23 @@ export async function findRevision(courseId: string, revisionId: string) {
 	return row && (await toWriterRevisions([row]))[0];
 }
 
+export async function findRevisionDetail(
+	courseId: string,
+	revisionId: string,
+): Promise<WriterRevisionDetail | undefined> {
+	const [row] = await db
+		.select()
+		.from(courseRevision)
+		.where(
+			and(
+				eq(courseRevision.courseId, courseId),
+				eq(courseRevision.id, revisionId),
+			),
+		);
+	const revision = row && (await toWriterRevisions([row]))[0];
+	return revision && row && { ...revision, content: row.content };
+}
+
 export type Failure = { error: string; status: 400 | 404 | 409; code?: string };
 type Outcome<T> = ({ ok: true } & T) | ({ ok: false } & Failure);
 
@@ -137,6 +159,7 @@ export async function createRevision(
 				error: "The revision to clone does not belong to this course",
 			};
 
+		const parent = existing.find((r) => r.id === input.parentId);
 		const taken = new Set(existing.map((r) => r.key));
 		let key = input.key;
 		if (key && taken.has(key))
@@ -158,7 +181,13 @@ export async function createRevision(
 
 		const [created] = await tx
 			.insert(courseRevision)
-			.values({ courseId, key, parentId: input.parentId ?? null })
+			.values({
+				courseId,
+				key,
+				parentId: input.parentId ?? null,
+				// Cloning copies the lessons; the files they refer to are shared (assets are immutable).
+				...(parent && { content: parent.content }),
+			})
 			.returning({ id: courseRevision.id });
 		if (!created) throw new Error("Revision insert returned no row");
 		await addContributor(tx, created.id, actor);
@@ -263,5 +292,53 @@ export async function deleteRevision(
 			};
 		await tx.delete(courseRevision).where(eq(courseRevision.id, revision.id));
 		return { ok: true, key: revision.key };
+	});
+}
+
+/**
+ * Saves the lessons of a draft. `expectedUpdatedAt` is the `updatedAt` the editor loaded: when somebody saved
+ * (or changed the status) since, the save is refused instead of silently overwriting their work.
+ */
+export async function saveContent(
+	courseId: string,
+	revisionId: string,
+	content: CourseContent,
+	expectedUpdatedAt: string,
+	actor: CourseActor,
+): Promise<Outcome<Record<never, never>>> {
+	return db.transaction(async (tx) => {
+		const [revision] = await tx
+			.select()
+			.from(courseRevision)
+			.where(
+				and(
+					eq(courseRevision.courseId, courseId),
+					eq(courseRevision.id, revisionId),
+				),
+			)
+			.for("update");
+		if (!revision)
+			return { ok: false, status: 404, error: "Revision not found" };
+		if (revision.status !== "draft")
+			return {
+				ok: false,
+				status: 409,
+				error: "Only a draft can be edited: clone this revision to change it",
+			};
+		if (revision.updatedAt.getTime() !== new Date(expectedUpdatedAt).getTime())
+			return {
+				ok: false,
+				status: 409,
+				code: "STALE",
+				error:
+					"This revision was modified since you opened it: reload to get the latest version",
+			};
+
+		await tx
+			.update(courseRevision)
+			.set({ content })
+			.where(eq(courseRevision.id, revision.id));
+		await addContributor(tx, revision.id, actor);
+		return { ok: true };
 	});
 }

@@ -121,6 +121,11 @@ export type CourseGroupTag = PublicGroup & { system: boolean };
 export type CourseRevision = typeof schema.courseRevision.$inferSelect;
 export type NewCourseRevision = typeof schema.courseRevision.$inferInsert;
 
+export type CourseContent = schema.CourseContent;
+export type CourseLesson = schema.CourseLesson;
+
+export type CourseAsset = typeof schema.courseAsset.$inferSelect;
+
 export type RevisionStatus = (typeof schema.revisionStatus.enumValues)[number];
 
 /** A revision of a course as listed in the writer area (dates serialized by JSON). */
@@ -133,10 +138,21 @@ export type WriterRevision = Pick<
 	contributors: { userId: string; name: string }[];
 };
 
+/** A revision with its content, as opened in the editor. */
+export type WriterRevisionDetail = WriterRevision & {
+	content: CourseContent;
+};
+
+/** An uploaded file, as returned by the upload route. */
+export type WriterAsset = Pick<
+	CourseAsset,
+	"id" | "courseId" | "contentType" | "size" | "filename"
+>;
+
 /** A course as listed in the writer area (dates serialized by JSON). */
 export type WriterCourse = Pick<
 	Course,
-	"id" | "name" | "slug" | "description" | "categories"
+	"id" | "name" | "slug" | "description" | "categories" | "imageAssetId"
 > & {
 	createdAt: string;
 	updatedAt: string;

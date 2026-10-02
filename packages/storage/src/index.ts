@@ -1,8 +1,10 @@
+import type { Readable } from "node:stream";
 import {
 	CreateBucketCommand,
 	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadBucketCommand,
+	HeadObjectCommand,
 	PutObjectCommand,
 	S3Client,
 } from "@aws-sdk/client-s3";
@@ -56,6 +58,50 @@ export async function putObject(
 			ContentType: contentType,
 		}),
 	);
+}
+
+export async function objectExists(key: string) {
+	try {
+		await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+		return true;
+	} catch (error) {
+		if (
+			(error as { $metadata?: { httpStatusCode?: number } }).$metadata
+				?.httpStatusCode === 404
+		)
+			return false;
+		throw error;
+	}
+}
+
+export type StoredObject = {
+	body: Readable;
+	contentType: string | undefined;
+	/** Bytes in `body` (the requested range when there is one). */
+	contentLength: number | undefined;
+	/** Set when a `Range` was requested, e.g. `bytes 0-99/1000`. */
+	contentRange: string | undefined;
+};
+
+/** Streams an object, honouring an HTTP `Range` header (video playback seeks with it). */
+export async function getObject(
+	key: string,
+	range?: string,
+): Promise<StoredObject | undefined> {
+	try {
+		const result = await s3.send(
+			new GetObjectCommand({ Bucket: S3_BUCKET, Key: key, Range: range }),
+		);
+		return {
+			body: result.Body as Readable,
+			contentType: result.ContentType,
+			contentLength: result.ContentLength,
+			contentRange: result.ContentRange,
+		};
+	} catch (error) {
+		if ((error as { name?: string }).name === "NoSuchKey") return undefined;
+		throw error;
+	}
 }
 
 export async function deleteObject(key: string) {

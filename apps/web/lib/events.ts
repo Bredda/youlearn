@@ -74,6 +74,7 @@ const FIELD_LABELS: Record<string, string> = {
 	slug: "Slug",
 	description: "Description",
 	categories: "Catégories",
+	image: "Image",
 };
 
 const strings = (value: unknown): string[] =>
@@ -82,9 +83,13 @@ const roles = (value: unknown) =>
 	strings(value)
 		.map((role) => (ROLE_LABELS as Record<string, string>)[role] ?? role)
 		.join(", ") || "aucun";
-/** Event values are strings, or string lists (categories). */
+/** Event values are strings, string lists (categories) or flags (image). */
 const display = (value: unknown) =>
-	(Array.isArray(value) ? value.join(", ") : value) || "—";
+	typeof value === "boolean"
+		? value
+			? "oui"
+			: "non"
+		: (Array.isArray(value) ? value.join(", ") : value) || "—";
 const names = (value: unknown) => strings(value).join(", ") || "aucun";
 
 /** One-line summary of what an event changed, from its metadata. Null when the type says it all. */

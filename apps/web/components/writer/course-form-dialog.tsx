@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import type { CourseGroupTag, WriterCourse } from "@youlearn/types";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import z from "zod";
 import { GroupsCombobox } from "@/components/admin/groups-combobox";
 import { FormError } from "@/components/form-error";
@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { assetUrl } from "@/components/writer/markdown";
 import { callApi } from "@/lib/api-client";
 
 const formSchema = z.object({
@@ -70,6 +71,34 @@ export function CourseFormDialog({
 }) {
 	const [error, setError] = useState<string>();
 	const [pending, setPending] = useState(false);
+	// Cover image: uploaded as soon as it is picked, attached to the course on submit. Only for an existing course
+	// (the files belong to it); `null` = removed.
+	const [imageAssetId, setImageAssetId] = useState(
+		course?.imageAssetId ?? null,
+	);
+	const [uploading, setUploading] = useState(false);
+	const fileRef = useRef<HTMLInputElement>(null);
+
+	async function uploadImage(file: File) {
+		if (!course) return;
+		setUploading(true);
+		setError(undefined);
+		const data = new FormData();
+		data.append("file", file);
+		const response = await fetch(`/api/writer/courses/${course.id}/assets`, {
+			method: "POST",
+			body: data,
+		});
+		setUploading(false);
+		if (!response.ok) {
+			const body = (await response.json().catch(() => null)) as {
+				error?: string;
+			} | null;
+			return setError(body?.error ?? "Échec de l'envoi de l'image");
+		}
+		const { asset } = (await response.json()) as { asset: { id: string } };
+		setImageAssetId(asset.id);
+	}
 
 	// Groups of the course this user cannot manage (other teams, "Commun" for a writer): kept as they are.
 	const assignableIds = new Set(assignableGroups.map((group) => group.id));
@@ -99,6 +128,7 @@ export function CourseFormDialog({
 				description: value.description,
 				categories: parseCategories(value.categories),
 				groupIds: value.groups.map((group) => group.id),
+				...(course && { imageAssetId }),
 			};
 			const message = course
 				? await callApi("PATCH", `/api/writer/courses/${course.id}`, body)
@@ -212,6 +242,59 @@ export function CourseFormDialog({
 								);
 							}}
 						/>
+						{course && (
+							<Field>
+								<FieldLabel>Image</FieldLabel>
+								<div className="flex items-center gap-3">
+									{imageAssetId ? (
+										// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
+										<img
+											src={assetUrl(course.id, imageAssetId)}
+											alt=""
+											className="h-16 w-28 rounded-md border object-cover"
+										/>
+									) : (
+										<span className="text-muted-foreground text-sm">
+											Aucune image
+										</span>
+									)}
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										disabled={uploading}
+										onClick={() => fileRef.current?.click()}
+									>
+										{uploading && <Spinner />}
+										{imageAssetId ? "Remplacer" : "Ajouter"}
+									</Button>
+									{imageAssetId && (
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											onClick={() => setImageAssetId(null)}
+										>
+											Retirer
+										</Button>
+									)}
+									<input
+										ref={fileRef}
+										type="file"
+										accept="image/png,image/jpeg,image/gif,image/webp"
+										className="hidden"
+										onChange={(e) => {
+											const file = e.target.files?.[0];
+											e.target.value = "";
+											if (file) uploadImage(file);
+										}}
+									/>
+								</div>
+								<FieldDescription>
+									PNG, JPEG, GIF ou WebP, 5 Mo maximum.
+								</FieldDescription>
+							</Field>
+						)}
 						<form.Field
 							name="categories"
 							// biome-ignore lint/correctness/noChildrenProp: shadcn pattern

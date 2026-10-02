@@ -5,6 +5,7 @@ import { getUserGroups } from "../lib/groups";
 import { adminEventRoutes } from "./admin/events";
 import { adminGroupRoutes } from "./admin/groups";
 import { adminUserRoutes } from "./admin/users";
+import { assetRoutes } from "./assets";
 import { writerCourseRoutes } from "./writer/courses";
 import { writerRevisionRoutes } from "./writer/revisions";
 
@@ -35,4 +36,5 @@ export const routes: FastifyPluginAsync = async (app) => {
 	await app.register(adminUserRoutes);
 	await app.register(writerCourseRoutes);
 	await app.register(writerRevisionRoutes);
+	await app.register(assetRoutes);
 };

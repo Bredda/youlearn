@@ -2,14 +2,17 @@ import { schema } from "@youlearn/db";
 import { recordEvent } from "@youlearn/events/server";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { contentSchema } from "../../lib/content";
 import { authorizeCourse } from "../../lib/courses";
 import {
 	changeStatus,
 	createRevision,
 	deleteRevision,
 	findRevision,
+	findRevisionDetail,
 	generateRevisionKey,
 	listRevisions,
+	saveContent,
 } from "../../lib/revisions";
 
 const courseParams = z.object({ id: z.string().min(1) });
@@ -25,6 +28,12 @@ const createBody = z.object({
 		.optional(),
 	/** The revision to start from (its content is cloned). */
 	parentId: z.string().min(1).optional(),
+});
+
+const contentBody = z.object({
+	content: contentSchema,
+	/** `updatedAt` of the revision as the editor loaded it (optimistic locking). */
+	expectedUpdatedAt: z.string().min(1),
 });
 
 const statusBody = z.object({
@@ -48,6 +57,43 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 		if (!access) return;
 		return { revisions: await listRevisions(id) };
 	});
+
+	app.get(
+		"/api/writer/courses/:id/revisions/:revisionId",
+		async (request, reply) => {
+			const { id, revisionId } = revisionParams.parse(request.params);
+			const access = await authorizeCourse(request, reply, id);
+			if (!access) return;
+			const revision = await findRevisionDetail(id, revisionId);
+			if (!revision)
+				return reply.code(404).send({ error: "Revision not found" });
+			return { revision };
+		},
+	);
+
+	// No event per save: contributors record who worked on the revision, the log keeps the milestones.
+	app.put(
+		"/api/writer/courses/:id/revisions/:revisionId/content",
+		async (request, reply) => {
+			const { id, revisionId } = revisionParams.parse(request.params);
+			const { content, expectedUpdatedAt } = contentBody.parse(request.body);
+			const access = await authorizeCourse(request, reply, id);
+			if (!access) return;
+
+			const result = await saveContent(
+				id,
+				revisionId,
+				content,
+				expectedUpdatedAt,
+				access.actor,
+			);
+			if (!result.ok)
+				return reply
+					.code(result.status)
+					.send({ error: result.error, code: result.code });
+			return { revision: await findRevisionDetail(id, revisionId) };
+		},
+	);
 
 	app.post("/api/writer/courses/:id/revisions", async (request, reply) => {
 		const { id } = courseParams.parse(request.params);

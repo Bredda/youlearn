@@ -1,8 +1,10 @@
-import { db, eq, schema } from "@youlearn/db";
+import { and, db, eq, schema } from "@youlearn/db";
 import { recordEvent } from "@youlearn/events/server";
+import { deleteObject } from "@youlearn/storage";
 import type { AssignableGroups, WriterCourse } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { assetKey } from "../../lib/assets";
 import {
 	assignableGroups,
 	authorizeCourse,
@@ -16,7 +18,7 @@ import {
 } from "../../lib/courses";
 import { isUniqueViolation } from "../../lib/groups";
 
-const { course, courseGroup } = schema;
+const { course, courseAsset, courseGroup } = schema;
 
 const idParams = z.object({ id: z.string().min(1) });
 const listQuery = z.object({ q: z.string().trim().max(100).optional() });
@@ -32,6 +34,8 @@ const fields = {
 	description: z.string().trim().max(5000),
 	categories: z.array(z.string().trim().max(40)).max(20),
 	groupIds: z.array(z.string().min(1)).max(200),
+	/** One of the course's uploaded images, or null to remove the cover. */
+	imageAssetId: z.string().min(1).nullable(),
 };
 
 const createBody = z.object({
@@ -49,6 +53,7 @@ const updateBody = z.object({
 	description: fields.description.optional(),
 	categories: fields.categories.optional(),
 	groupIds: fields.groupIds.optional(),
+	imageAssetId: fields.imageAssetId.optional(),
 });
 
 const SLUG_TAKEN = "A course with this slug already exists";
@@ -172,7 +177,24 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 			groupIds = resolved.ids;
 		}
 
+		if (body.imageAssetId) {
+			const owned = await db.$count(
+				courseAsset,
+				and(
+					eq(courseAsset.id, body.imageAssetId),
+					eq(courseAsset.courseId, id),
+				),
+			);
+			if (!owned)
+				return reply
+					.code(400)
+					.send({ error: "The image does not belong to this course" });
+		}
+
 		const values = {
+			...(body.imageAssetId !== undefined && {
+				imageAssetId: body.imageAssetId,
+			}),
 			...(body.name !== undefined && { name: body.name }),
 			...(body.slug !== undefined && { slug: body.slug }),
 			...(body.description !== undefined && { description: body.description }),
@@ -211,6 +233,11 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 			changes.description = {
 				from: clip(previous.description),
 				to: clip(updated.description),
+			};
+		if (updated.imageAssetId !== previous.imageAssetId)
+			changes.image = {
+				from: previous.imageAssetId !== null,
+				to: updated.imageAssetId !== null,
 			};
 		if (updated.categories.join() !== previous.categories.join())
 			changes.categories = {
@@ -267,7 +294,18 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 					.where(eq(course.id, id));
 				await tx.delete(courseGroup).where(eq(courseGroup.courseId, id));
 			});
-		else await db.delete(course).where(eq(course.id, id));
+		else {
+			const assets = await db
+				.select({ sha256: courseAsset.sha256 })
+				.from(courseAsset)
+				.where(eq(courseAsset.courseId, id));
+			await db.delete(course).where(eq(course.id, id));
+			// The rows are gone with the course (cascade): remove the blobs too, best effort.
+			for (const { sha256 } of assets)
+				await deleteObject(assetKey(id, sha256)).catch((error) =>
+					request.log.error(error, "Could not delete a course file"),
+				);
+		}
 
 		await recordEvent(
 			{

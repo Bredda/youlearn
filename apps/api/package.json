@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@fastify/cors": "^11.3.0",
+		"@fastify/multipart": "^10.1.2",
 		"@youlearn/auth": "workspace:*",
 		"@youlearn/config": "workspace:*",
 		"@youlearn/db": "workspace:*",

@@ -52,6 +52,14 @@ export async function getCourseActor(
 export const canEditCourse = (actor: CourseActor, target: WriterCourse) =>
 	actor.admin || target.groups.some((g) => actor.groupIds.includes(g.id));
 
+/**
+ * Who may read a course (and its files): its editors, the members of one of its groups, and everybody when it is
+ * tagged "Commun". Whether a revision is published is the caller's business.
+ */
+export const canViewCourse = (actor: CourseActor, target: WriterCourse) =>
+	canEditCourse(actor, target) ||
+	target.groups.some((g) => g.system || actor.groupIds.includes(g.id));
+
 /** Groups the actor may add to / remove from a course: all of them for an admin, their own for a writer. */
 export async function assignableGroups(
 	actor: CourseActor,
@@ -111,6 +119,7 @@ async function withGroups(rows: CourseRow[]): Promise<WriterCourse[]> {
 			slug: row.slug,
 			description: row.description,
 			categories: row.categories,
+			imageAssetId: row.imageAssetId,
 			createdAt: row.createdAt.toISOString(),
 			updatedAt: row.updatedAt.toISOString(),
 			groups: links

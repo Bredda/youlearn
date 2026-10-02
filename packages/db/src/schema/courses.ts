@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import {
 	type AnyPgColumn,
+	bigint,
 	index,
+	jsonb,
 	pgEnum,
 	pgTable,
 	primaryKey,
@@ -27,6 +29,10 @@ export const course = pgTable(
 		slug: text().notNull(),
 		description: text().notNull().default(""),
 		categories: text().array().notNull().default([]),
+		/** Optional cover, one of the course's assets. */
+		imageAssetId: text().references((): AnyPgColumn => courseAsset.id, {
+			onDelete: "set null",
+		}),
 		deletedAt: timestamp(),
 		createdAt: timestamp().notNull().defaultNow(),
 		updatedAt: timestamp()
@@ -61,6 +67,49 @@ export const courseGroup = pgTable(
 	],
 );
 
+/**
+ * A file uploaded for a course (images now, videos and documents later). The blob lives in object storage under a
+ * key derived from `sha256`, so identical uploads are stored once and a stored blob never changes; revisions refer
+ * to assets by `id`, which makes cloning a revision free.
+ */
+export const courseAsset = pgTable(
+	"course_asset",
+	{
+		id: text()
+			.primaryKey()
+			.$defaultFn(() => randomUUID()),
+		courseId: text()
+			.notNull()
+			.references(() => course.id, { onDelete: "cascade" }),
+		sha256: text().notNull(),
+		contentType: text().notNull(),
+		size: bigint({ mode: "number" }).notNull(),
+		filename: text().notNull(),
+		createdAt: timestamp().notNull().defaultNow(),
+	},
+	(table) => [
+		uniqueIndex("course_asset_hash_idx").on(table.courseId, table.sha256),
+	],
+);
+
+/**
+ * What a revision teaches: an ordered list of lessons. Versioned so the shape can evolve (sections, videos,
+ * quizzes...) with old revisions still readable. Markdown bodies are inline for now.
+ */
+export type CourseContent = {
+	version: 1;
+	lessons: CourseLesson[];
+};
+
+export type CourseLesson = {
+	id: string;
+	title: string;
+	type: "markdown";
+	body: string;
+};
+
+export const EMPTY_COURSE_CONTENT: CourseContent = { version: 1, lessons: [] };
+
 export const revisionStatus = pgEnum("revision_status", [
 	"draft",
 	"preview",
@@ -84,6 +133,10 @@ export const courseRevision = pgTable(
 		/** The business id (e.g. `whispering_toucan`), unique per course and immutable. */
 		key: text().notNull(),
 		status: revisionStatus().notNull().default("draft"),
+		content: jsonb()
+			.$type<CourseContent>()
+			.notNull()
+			.default(EMPTY_COURSE_CONTENT),
 		/** The revision this one was cloned from, if any. */
 		parentId: text().references((): AnyPgColumn => courseRevision.id, {
 			onDelete: "set null",
