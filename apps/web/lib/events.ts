@@ -6,6 +6,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 
 export const FEATURE_LABELS: Record<EventFeature, string> = {
 	user: "Utilisateurs",
+	group: "Groupes",
 };
 
 export const EVENT_LABELS: Record<EventType, string> = {
@@ -17,11 +18,31 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"user.ban": "Bannissement",
 	"user.unban": "Levée de bannissement",
 	"user.set-groups": "Changement de groupes",
+	"group.create": "Création",
+	"group.update": "Renommage",
+	"group.delete": "Suppression",
+};
+
+/** Self-sufficient wording for the table, where the feature is not shown next to the badge. */
+export const EVENT_BADGE_LABELS: Record<EventType, string> = {
+	"user.create": "Création d'utilisateur",
+	"user.update": "Modification d'utilisateur",
+	"user.delete": "Suppression d'utilisateur",
+	"user.set-role": "Changement de rôles",
+	"user.set-password": "Changement de mot de passe",
+	"user.ban": "Bannissement d'utilisateur",
+	"user.unban": "Levée de bannissement",
+	"user.set-groups": "Changement de groupes",
+	"group.create": "Création de groupe",
+	"group.update": "Renommage de groupe",
+	"group.delete": "Suppression de groupe",
 };
 
 /** Rows may carry a type that no longer exists in the registry: show it as is. */
-export function eventLabel(type: string) {
-	return (EVENT_LABELS as Record<string, string | undefined>)[type] ?? type;
+export function eventBadgeLabel(type: string) {
+	return (
+		(EVENT_BADGE_LABELS as Record<string, string | undefined>)[type] ?? type
+	);
 }
 
 /** "Utilisateurs · Création" */
@@ -69,6 +90,8 @@ export function describeEvent({
 			return `Rôles : ${roles(data.from)} → ${roles(data.to)}`;
 		case "user.set-groups":
 			return `Groupes : ${names(data.from)} → ${names(data.to)}`;
+		case "group.update":
+			return `Nom : ${data.from ?? "—"} → ${data.to ?? "—"}`;
 		case "user.ban":
 			return typeof data.reason === "string" ? `Motif : ${data.reason}` : null;
 		default:

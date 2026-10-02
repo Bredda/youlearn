@@ -1,5 +1,7 @@
 "use client";
 
+import { Refresh01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	type OnChangeFn,
 	type PaginationState,
@@ -38,8 +40,9 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { authError } from "@/lib/api-client";
-import { usersQueryToSearchParams } from "@/lib/users-query";
+import { DEFAULT_PAGE_SIZE, usersQueryToSearchParams } from "@/lib/users-query";
 
 type Dialog =
 	| { type: "create" }
@@ -172,9 +175,23 @@ export function UsersManager({
 						Comptes, rôles et groupes.
 					</p>
 				</div>
-				<Button onClick={() => setDialog({ type: "create" })}>
-					Nouvel utilisateur
-				</Button>
+				<div className="flex items-center gap-2">
+					<Button
+						variant="outline"
+						disabled={isPending}
+						onClick={() => startTransition(() => router.refresh())}
+					>
+						{isPending ? (
+							<Spinner />
+						) : (
+							<HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} />
+						)}
+						Actualiser
+					</Button>
+					<Button onClick={() => setDialog({ type: "create" })}>
+						Nouvel utilisateur
+					</Button>
+				</div>
 			</div>
 
 			<UsersToolbar
@@ -188,6 +205,9 @@ export function UsersManager({
 						role: undefined,
 						status: undefined,
 						groupId: undefined,
+						sort: "createdAt",
+						order: "desc",
+						pageSize: DEFAULT_PAGE_SIZE,
 					})
 				}
 			/>

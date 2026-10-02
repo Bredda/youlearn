@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { EVENT_FEATURES, EVENTS, type EventType } from "@youlearn/events";
 import type { AdminEventQuery } from "@youlearn/types";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { EVENT_LABELS, eventFullLabel, FEATURE_LABELS } from "@/lib/events";
+import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
 const ALL = "all";
 
@@ -45,7 +46,16 @@ export function EventsToolbar({
 		defaultValues: { q: query.q ?? "" },
 		onSubmit: ({ value }) => onChange({ q: value.q.trim() || undefined }),
 	});
-	const hasFilters = Boolean(query.q || query.type);
+	const typed = useStore(form.store, (state) => state.values.q);
+	// Also covers a search term typed but not submitted yet, and the sorting / page size, not only the filters.
+	const canReset = Boolean(
+		typed ||
+			query.q ||
+			query.type ||
+			query.sort !== "createdAt" ||
+			query.order !== "desc" ||
+			query.pageSize !== DEFAULT_PAGE_SIZE,
+	);
 
 	return (
 		<div className="flex flex-wrap items-center gap-2">
@@ -113,11 +123,16 @@ export function EventsToolbar({
 				</SelectContent>
 			</Select>
 
-			{hasFilters && (
-				<Button variant="ghost" onClick={onReset}>
-					Réinitialiser
-				</Button>
-			)}
+			<Button
+				variant="ghost"
+				disabled={!canReset}
+				onClick={() => {
+					form.reset();
+					onReset();
+				}}
+			>
+				Réinitialiser
+			</Button>
 		</div>
 	);
 }

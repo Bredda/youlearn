@@ -15,6 +15,7 @@ export const EVENTS = {
 		"unban",
 		"set-groups",
 	],
+	group: ["create", "update", "delete"],
 } as const;
 
 export type EventFeature = keyof typeof EVENTS;

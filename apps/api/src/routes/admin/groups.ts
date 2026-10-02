@@ -1,6 +1,6 @@
 import { asc, count, db, eq, inArray, schema, sql } from "@youlearn/db";
 import { recordEvent } from "@youlearn/events/server";
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { isUniqueViolation } from "../../lib/groups";
 
@@ -16,6 +16,12 @@ const userGroupsBody = z.object({
 /** Group CRUD and assignment, admin only. */
 export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 	app.addHook("preHandler", app.requireAdmin);
+
+	const actorOf = (request: FastifyRequest) =>
+		request.auth && {
+			id: request.auth.user.id,
+			label: request.auth.user.email,
+		};
 
 	app.get("/api/admin/groups", async () => {
 		const groups = await db
@@ -35,6 +41,15 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 		const { name } = nameBody.parse(request.body);
 		try {
 			const [created] = await db.insert(group).values({ name }).returning();
+			if (created)
+				await recordEvent(
+					{
+						type: "group.create",
+						actor: actorOf(request),
+						target: { type: "group", id: created.id, label: created.name },
+					},
+					request.log,
+				);
 			return reply.code(201).send({ group: created });
 		} catch (error) {
 			if (isUniqueViolation(error))
@@ -49,12 +64,26 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 		const { id } = idParams.parse(request.params);
 		const { name } = nameBody.parse(request.body);
 		try {
+			const [previous] = await db
+				.select({ name: group.name })
+				.from(group)
+				.where(eq(group.id, id));
 			const [updated] = await db
 				.update(group)
 				.set({ name })
 				.where(eq(group.id, id))
 				.returning();
 			if (!updated) return reply.code(404).send({ error: "Group not found" });
+			if (previous?.name !== updated.name)
+				await recordEvent(
+					{
+						type: "group.update",
+						actor: actorOf(request),
+						target: { type: "group", id, label: updated.name },
+						metadata: { from: previous?.name ?? null, to: updated.name },
+					},
+					request.log,
+				);
 			return { group: updated };
 		} catch (error) {
 			if (isUniqueViolation(error))
@@ -70,9 +99,17 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 		const deleted = await db
 			.delete(group)
 			.where(eq(group.id, id))
-			.returning({ id: group.id });
-		if (deleted.length === 0)
-			return reply.code(404).send({ error: "Group not found" });
+			.returning({ id: group.id, name: group.name });
+		const [removed] = deleted;
+		if (!removed) return reply.code(404).send({ error: "Group not found" });
+		await recordEvent(
+			{
+				type: "group.delete",
+				actor: actorOf(request),
+				target: { type: "group", id, label: removed.name },
+			},
+			request.log,
+		);
 		return reply.code(204).send();
 	});
 
@@ -132,10 +169,7 @@ export const adminGroupRoutes: FastifyPluginAsync = async (app) => {
 			await recordEvent(
 				{
 					type: "user.set-groups",
-					actor: request.auth && {
-						id: request.auth.user.id,
-						label: request.auth.user.email,
-					},
+					actor: actorOf(request),
 					target: { type: "user", id: userId, label: target.email },
 					metadata: { from: names(previous), to: names(known) },
 				},

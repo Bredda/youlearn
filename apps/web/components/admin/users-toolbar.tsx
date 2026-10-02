@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { ROLES } from "@youlearn/auth/roles";
 import type { AdminUserQuery, GroupWithMemberCount } from "@youlearn/types";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { ROLE_LABELS } from "@/lib/roles";
+import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
 const ALL = "all";
 
@@ -70,8 +71,17 @@ export function UsersToolbar({
 		defaultValues: { q: query.q ?? "" },
 		onSubmit: ({ value }) => onChange({ q: value.q.trim() || undefined }),
 	});
-	const hasFilters = Boolean(
-		query.q || query.role || query.status || query.groupId,
+	const typed = useStore(form.store, (state) => state.values.q);
+	// Also covers a search term typed but not submitted yet, and the sorting / page size, not only the filters.
+	const canReset = Boolean(
+		typed ||
+			query.q ||
+			query.role ||
+			query.status ||
+			query.groupId ||
+			query.sort !== "createdAt" ||
+			query.order !== "desc" ||
+			query.pageSize !== DEFAULT_PAGE_SIZE,
 	);
 
 	return (
@@ -139,11 +149,16 @@ export function UsersToolbar({
 				onChange={(groupId) => onChange({ groupId })}
 			/>
 
-			{hasFilters && (
-				<Button variant="ghost" onClick={onReset}>
-					Réinitialiser
-				</Button>
-			)}
+			<Button
+				variant="ghost"
+				disabled={!canReset}
+				onClick={() => {
+					form.reset();
+					onReset();
+				}}
+			>
+				Réinitialiser
+			</Button>
 		</div>
 	);
 }

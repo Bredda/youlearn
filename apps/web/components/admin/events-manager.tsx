@@ -19,6 +19,7 @@ import { dataTableFeatures } from "@/components/data-table/features";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { eventsQueryToSearchParams } from "@/lib/events-query";
+import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
 type Props = AdminEventPage & {
 	/** Table state, read from the URL by the page. */
@@ -109,7 +110,15 @@ export function EventsManager({ events, total, query }: Props) {
 				key={query.q ?? ""}
 				query={query}
 				onChange={navigate}
-				onReset={() => navigate({ q: undefined, type: undefined })}
+				onReset={() =>
+					navigate({
+						q: undefined,
+						type: undefined,
+						sort: "createdAt",
+						order: "desc",
+						pageSize: DEFAULT_PAGE_SIZE,
+					})
+				}
 			/>
 
 			<div className={isPending ? "opacity-60 transition-opacity" : undefined}>
