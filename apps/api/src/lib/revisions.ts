@@ -1,4 +1,5 @@
-import { and, asc, db, eq, inArray, schema } from "@youlearn/db";
+import { randomBytes } from "node:crypto";
+import { and, asc, db, eq, inArray, isNull, schema } from "@youlearn/db";
 import type {
 	CourseContent,
 	RevisionStatus,
@@ -13,6 +14,9 @@ import {
 import type { CourseActor } from "./courses";
 
 const { course, courseRevision, revisionContributor } = schema;
+
+/** Secret of a review link (256 bits, URL-safe). */
+const newPreviewToken = () => randomBytes(32).toString("base64url");
 
 /** Docker-like business id: `whispering_toucan`. */
 export const generateRevisionKey = () =>
@@ -81,6 +85,7 @@ async function toWriterRevisions(rows: Revision[]): Promise<WriterRevision[]> {
 		key: row.key,
 		status: row.status,
 		parentId: row.parentId,
+		previewToken: row.previewToken,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 		contributors: contributors
@@ -249,9 +254,13 @@ export async function changeStatus(
 				.update(courseRevision)
 				.set({ status: "deprecated" })
 				.where(eq(courseRevision.id, deprecated.id));
+		// The review link lives exactly as long as the revision stays in preview.
 		await tx
 			.update(courseRevision)
-			.set({ status: to })
+			.set({
+				status: to,
+				previewToken: to === "preview" ? newPreviewToken() : null,
+			})
 			.where(eq(courseRevision.id, revision.id));
 
 		return {
@@ -341,4 +350,56 @@ export async function saveContent(
 		await addContributor(tx, revision.id, actor);
 		return { ok: true };
 	});
+}
+
+/** Replaces (or, with `revoke`, removes) the review link of a revision in preview. */
+export async function resetPreviewToken(
+	courseId: string,
+	revisionId: string,
+	revoke: boolean,
+): Promise<Outcome<{ key: string }>> {
+	return db.transaction(async (tx) => {
+		await lockCourse(tx, courseId);
+		const [revision] = await tx
+			.select()
+			.from(courseRevision)
+			.where(
+				and(
+					eq(courseRevision.courseId, courseId),
+					eq(courseRevision.id, revisionId),
+				),
+			);
+		if (!revision)
+			return { ok: false, status: 404, error: "Revision not found" };
+		if (revision.status !== "preview")
+			return {
+				ok: false,
+				status: 409,
+				error: "Only a revision in preview has a review link",
+			};
+		await tx
+			.update(courseRevision)
+			.set({ previewToken: revoke ? null : newPreviewToken() })
+			.where(eq(courseRevision.id, revision.id));
+		return { ok: true, key: revision.key };
+	});
+}
+
+/** The revision a review link points to, as long as that revision is still in preview. */
+export async function findRevisionByToken(token: string) {
+	const [row] = await db
+		.select({
+			revision: courseRevision,
+			course: schema.course,
+		})
+		.from(courseRevision)
+		.innerJoin(course, eq(course.id, courseRevision.courseId))
+		.where(
+			and(
+				eq(courseRevision.previewToken, token),
+				eq(courseRevision.status, "preview"),
+				isNull(course.deletedAt),
+			),
+		);
+	return row;
 }

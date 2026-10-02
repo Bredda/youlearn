@@ -31,6 +31,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"revision.create": "Création",
 	"revision.set-status": "Changement de statut",
 	"revision.delete": "Suppression",
+	"revision.new-link": "Nouveau lien de relecture",
+	"revision.revoke-link": "Lien de relecture révoqué",
 };
 
 /** Self-sufficient wording for the table, where the feature is not shown next to the badge. */
@@ -53,6 +55,8 @@ export const EVENT_BADGE_LABELS: Record<EventType, string> = {
 	"revision.create": "Création de révision",
 	"revision.set-status": "Changement de statut de révision",
 	"revision.delete": "Suppression de révision",
+	"revision.new-link": "Nouveau lien de relecture",
+	"revision.revoke-link": "Lien de relecture révoqué",
 };
 
 /** Rows may carry a type that no longer exists in the registry: show it as is. */

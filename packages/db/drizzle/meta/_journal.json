@@ -50,6 +50,13 @@
       "when": 1790979320132,
       "tag": "0006_mute_post",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790979583130,
+      "tag": "0007_real_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

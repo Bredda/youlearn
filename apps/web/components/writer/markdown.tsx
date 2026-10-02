@@ -3,8 +3,15 @@
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 
 /** Lessons refer to uploaded files as `asset:<id>`: they are served by the API, checked against the course's groups. */
-export const assetUrl = (courseId: string, assetId: string) =>
-	`/api/courses/${courseId}/assets/${assetId}`;
+export const assetUrl = (
+	courseId: string,
+	assetId: string,
+	/** Token of a review link: lets a reader without access to the course load the files of the revision. */
+	reviewToken?: string,
+) =>
+	`/api/courses/${courseId}/assets/${assetId}${
+		reviewToken ? `?review=${encodeURIComponent(reviewToken)}` : ""
+	}`;
 
 /**
  * Renders the markdown of a lesson. react-markdown does not render raw HTML, so lesson authors cannot inject
@@ -12,16 +19,18 @@ export const assetUrl = (courseId: string, assetId: string) =>
  */
 export function Markdown({
 	courseId,
+	reviewToken,
 	children,
 }: {
 	courseId: string;
+	reviewToken?: string;
 	children: string;
 }) {
 	return (
 		<ReactMarkdown
 			urlTransform={(url) =>
 				url.startsWith("asset:")
-					? assetUrl(courseId, url.slice("asset:".length))
+					? assetUrl(courseId, url.slice("asset:".length), reviewToken)
 					: defaultUrlTransform(url)
 			}
 			components={{

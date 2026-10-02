@@ -12,6 +12,7 @@ import {
 	findRevisionDetail,
 	generateRevisionKey,
 	listRevisions,
+	resetPreviewToken,
 	saveContent,
 } from "../../lib/revisions";
 
@@ -182,6 +183,39 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 			return { revision: await findRevision(id, revisionId) };
 		},
 	);
+
+	// The review link: replace it (the old one stops working) or revoke it.
+	for (const revoke of [false, true]) {
+		app.route({
+			method: revoke ? "DELETE" : "POST",
+			url: "/api/writer/courses/:id/revisions/:revisionId/preview-link",
+			handler: async (request, reply) => {
+				const { id, revisionId } = revisionParams.parse(request.params);
+				const access = await authorizeCourse(request, reply, id);
+				if (!access) return;
+				const { actor, course } = access;
+
+				const result = await resetPreviewToken(id, revisionId, revoke);
+				if (!result.ok)
+					return reply.code(result.status).send({ error: result.error });
+
+				await recordEvent(
+					{
+						type: revoke ? "revision.revoke-link" : "revision.new-link",
+						actor: { id: actor.id, label: actor.label },
+						target: {
+							type: "revision",
+							id: revisionId,
+							label: `${course.name} · ${result.key}`,
+						},
+						metadata: { courseId: id },
+					},
+					request.log,
+				);
+				return { revision: await findRevision(id, revisionId) };
+			},
+		});
+	}
 
 	app.delete(
 		"/api/writer/courses/:id/revisions/:revisionId",

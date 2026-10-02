@@ -131,7 +131,7 @@ export type RevisionStatus = (typeof schema.revisionStatus.enumValues)[number];
 /** A revision of a course as listed in the writer area (dates serialized by JSON). */
 export type WriterRevision = Pick<
 	CourseRevision,
-	"id" | "courseId" | "key" | "status" | "parentId"
+	"id" | "courseId" | "key" | "status" | "parentId" | "previewToken"
 > & {
 	createdAt: string;
 	updatedAt: string;
@@ -167,3 +167,15 @@ export type WriterCourse = Pick<
 
 /** Groups the current user may put on a course: their own for a writer, every group for an admin. */
 export type AssignableGroups = { groups: CourseGroupTag[] };
+
+/** What a review link shows: the revision being proofread, read-only. */
+export type ReviewView = {
+	course: Pick<
+		Course,
+		"id" | "name" | "description" | "categories" | "imageAssetId"
+	>;
+	revision: Pick<CourseRevision, "id" | "key">;
+	content: CourseContent;
+	/** The token of the link, needed to load the files of the revision. */
+	token: string;
+};

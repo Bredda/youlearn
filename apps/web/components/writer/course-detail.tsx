@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
 import { assetUrl } from "@/components/writer/markdown";
+import { ReviewLinkDialog } from "@/components/writer/review-link-dialog";
 import { RevisionFormDialog } from "@/components/writer/revision-form-dialog";
 import { callApi } from "@/lib/api-client";
 import {
@@ -64,6 +65,7 @@ export function CourseDetail({
 	const [editing, setEditing] = useState(false);
 	// `undefined` = closed, otherwise the revision to start from (`null` = default).
 	const [creating, setCreating] = useState<{ baseId?: string }>();
+	const [linking, setLinking] = useState<WriterRevision>();
 	const [confirming, setConfirming] = useState<Confirmation>();
 	const [error, setError] = useState<string>();
 	const [pending, setPending] = useState(false);
@@ -235,6 +237,13 @@ export function CourseDetail({
 											<Button
 												variant="outline"
 												size="sm"
+												onClick={() => setLinking(revision)}
+											>
+												Lien de relecture
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
 												disabled={pending || draft !== undefined}
 												onClick={() => changeStatus(revision, "draft")}
 											>
@@ -315,6 +324,16 @@ export function CourseDetail({
 						setCreating(undefined);
 						router.refresh();
 					}}
+				/>
+			)}
+
+			{linking && (
+				<ReviewLinkDialog
+					courseId={course.id}
+					// Read from the refreshed list so a regenerated link is not shown stale.
+					revision={revisions.find((r) => r.id === linking.id) ?? linking}
+					onClose={() => setLinking(undefined)}
+					onChanged={() => router.refresh()}
 				/>
 			)}
 
