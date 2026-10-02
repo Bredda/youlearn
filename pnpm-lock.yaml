@@ -329,6 +329,9 @@ importers:
 
   packages/types:
     dependencies:
+      '@youlearn/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@youlearn/db':
         specifier: workspace:*
         version: link:../db

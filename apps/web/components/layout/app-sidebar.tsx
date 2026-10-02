@@ -7,6 +7,7 @@ import {
 	UsersIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { canWrite, isAdmin } from "@youlearn/auth/roles";
 import Link from "next/link";
 import type * as React from "react";
 import { NavAdmin } from "@/components/layout/nav-admin";
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useUser } from "@/components/user-provider";
 import type { IconSvgObject } from "@/lib/types";
+import { NavWriter } from "./nav-writer";
 
 const userItems: {
 	name: string;
@@ -43,7 +45,14 @@ const adminItems: {
 	{ name: "Groupes", url: "/admin/groups", icon: UsersIcon },
 	{ name: "Utilisateurs", url: "/admin/users", icon: UsersIcon },
 ];
-
+const writerItems: {
+	name: string;
+	url: string;
+	icon: IconSvgObject;
+}[] = [
+	{ name: "Parcours", url: "/writer/programs", icon: UsersIcon },
+	{ name: "Cours", url: "/writer/courses", icon: UsersIcon },
+];
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const user = useUser();
 
@@ -66,7 +75,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			</SidebarHeader>
 			<SidebarContent>
 				<NavMain items={userItems} />
-				{user.role === "admin" && <NavAdmin items={adminItems} />}
+				{isAdmin(user.roles) && <NavAdmin items={adminItems} />}
+				{canWrite(user.roles) && <NavWriter items={writerItems} />}
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser />

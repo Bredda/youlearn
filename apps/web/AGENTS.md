@@ -15,7 +15,7 @@ UI copy is **French**; code, identifiers and comments are English.
 ## Data and auth in the UI
 
 - Server components/layouts call the API with `apiFetch` (`lib/api.ts`, forwards the visitor's cookies). `getCurrentUser()` (`lib/session.ts`) is the single source for the current user and is deduplicated per request.
-- `(auth)` routes are for anonymous visitors, `(app)` for signed-in ones; each layout redirects the other case. `(app)/admin/*` is guarded by `admin/layout.tsx` (the API enforces it too: never rely on the UI alone).
+- `(auth)` routes are for anonymous visitors, `(app)` for signed-in ones; each layout redirects the other case. `(app)/admin/*` is guarded by `admin/layout.tsx` and `(app)/writer/*` by `writer/layout.tsx` (menus use `isAdmin` / `canWrite` from `@youlearn/auth/roles`; the `writer` role is shown as "Formateur", see `lib/roles.ts`) (the API enforces it too: never rely on the UI alone).
 - The `(app)` layout puts the user in `UserProvider`: client components read it with `useUser()` instead of fetching it. After a change, call `router.refresh()` so the layout reloads it.
 - Client mutations: Better Auth calls through `authClient` (`@youlearn/auth/client`) or `callApi` (`lib/api-client.ts`) for our own routes, then `router.refresh()`. Turn Better Auth results into messages with `authError`.
 

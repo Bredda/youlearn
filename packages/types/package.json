@@ -8,6 +8,7 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@youlearn/auth": "workspace:*",
 		"@youlearn/db": "workspace:*"
 	},
 	"devDependencies": {

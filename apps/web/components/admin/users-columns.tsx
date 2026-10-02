@@ -9,6 +9,7 @@ import {
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import type { DataTableFeatures } from "@/components/data-table/features";
 import { Badge } from "@/components/ui/badge";
+import { ROLE_LABELS } from "@/lib/roles";
 
 const helper = createColumnHelper<DataTableFeatures, AdminUser>();
 
@@ -41,18 +42,21 @@ export function createUserColumns({
 			),
 			meta: { className: "w-[28%]" },
 		}),
-		helper.accessor("role", {
+		helper.accessor("roles", {
 			id: "role",
 			header: ({ column }) => (
-				<DataTableColumnHeader column={column} title="Rôle" />
+				<DataTableColumnHeader column={column} title="Rôles" />
 			),
 			cell: ({ row }) => (
 				<div className="flex flex-wrap gap-1">
-					<Badge
-						variant={row.original.role === "admin" ? "default" : "secondary"}
-					>
-						{row.original.role === "admin" ? "Admin" : "Utilisateur"}
-					</Badge>
+					{row.original.roles.map((role) => (
+						<Badge
+							key={role}
+							variant={role === "admin" ? "default" : "secondary"}
+						>
+							{ROLE_LABELS[role]}
+						</Badge>
+					))}
 					{row.original.banned && (
 						<Badge
 							variant="destructive"
@@ -63,7 +67,7 @@ export function createUserColumns({
 					)}
 				</div>
 			),
-			meta: { className: "w-44" },
+			meta: { className: "w-52" },
 		}),
 		helper.display({
 			id: "groups",

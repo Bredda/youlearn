@@ -1,3 +1,4 @@
+import { parseRoles } from "@youlearn/auth/roles";
 import type { PublicUser } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { getUserGroups } from "../lib/groups";
@@ -19,7 +20,7 @@ export const routes: FastifyPluginAsync = async (app) => {
 				email,
 				emailVerified,
 				image: image ?? null,
-				role: role ?? "user",
+				roles: parseRoles(role),
 				groups: await getUserGroups(id),
 			};
 			return { user };

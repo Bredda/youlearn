@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { ROLES } from "@youlearn/auth/roles";
 import type { AdminUserQuery, GroupWithMemberCount } from "@youlearn/types";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -12,6 +13,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { ROLE_LABELS } from "@/lib/roles";
 
 const ALL = "all";
 
@@ -108,10 +110,10 @@ export function UsersToolbar({
 				label="Tous les rôles"
 				className="w-40"
 				value={query.role}
-				options={[
-					{ value: "admin", label: "Admin" },
-					{ value: "user", label: "Utilisateur" },
-				]}
+				options={ROLES.map((role) => ({
+					value: role,
+					label: ROLE_LABELS[role],
+				}))}
 				onChange={(role) => onChange({ role: role as AdminUserQuery["role"] })}
 			/>
 			<FilterSelect

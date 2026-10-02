@@ -1,3 +1,4 @@
+import { parseRoles, ROLES } from "@youlearn/auth/roles";
 import {
 	and,
 	asc,
@@ -19,7 +20,7 @@ const { user, group, userGroup } = schema;
 
 const query = z.object({
 	q: z.string().trim().max(100).optional(),
-	role: z.enum(["admin", "user"]).optional(),
+	role: z.enum(ROLES).optional(),
 	status: z.enum(["active", "banned"]).optional(),
 	groupId: z.string().min(1).optional(),
 	sort: z.enum(["name", "email", "role", "createdAt"]).default("createdAt"),
@@ -51,7 +52,8 @@ export const adminUserRoutes: FastifyPluginAsync = async (app) => {
 			search
 				? or(ilike(user.name, search), ilike(user.email, search))
 				: undefined,
-			role ? eq(user.role, role) : undefined,
+			// `role` holds a comma separated list ("admin,writer"): match any of them.
+			role ? sql`${role} = ANY(string_to_array(${user.role}, ','))` : undefined,
 			status ? eq(user.banned, status === "banned") : undefined,
 			groupId
 				? inArray(
@@ -103,8 +105,9 @@ export const adminUserRoutes: FastifyPluginAsync = async (app) => {
 					.orderBy(asc(sql`lower(${group.name})`))
 			: [];
 
-		const users: AdminUser[] = rows.map((row) => ({
+		const users: AdminUser[] = rows.map(({ role, ...row }) => ({
 			...row,
+			roles: parseRoles(role),
 			createdAt: row.createdAt.toISOString(),
 			groups: memberships
 				.filter((m) => m.userId === row.id)

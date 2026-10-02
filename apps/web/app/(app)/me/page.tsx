@@ -11,6 +11,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { UserAvatar } from "@/components/user-avatar";
+import { ROLE_LABELS } from "@/lib/roles";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Mon profil" };
@@ -57,10 +58,17 @@ export default async function MePage() {
 								</span>
 							)}
 						</Row>
-						<Row label="Rôle">
-							<Badge variant={user.role === "admin" ? "default" : "secondary"}>
-								{user.role === "admin" ? "Admin" : "Utilisateur"}
-							</Badge>
+						<Row label="Rôles">
+							<div className="flex flex-wrap gap-1">
+								{user.roles.map((role) => (
+									<Badge
+										key={role}
+										variant={role === "admin" ? "default" : "secondary"}
+									>
+										{ROLE_LABELS[role]}
+									</Badge>
+								))}
+							</div>
 						</Row>
 						<Row label="Groupes">
 							<div className="flex flex-wrap gap-1">
