@@ -16,6 +16,7 @@
 		"@youlearn/config": "workspace:*",
 		"@youlearn/db": "workspace:*",
 		"@youlearn/events": "workspace:*",
+		"@youlearn/storage": "workspace:*",
 		"@youlearn/types": "workspace:*",
 		"fastify": "^5.12.5",
 		"fastify-plugin": "^6.0.0",
