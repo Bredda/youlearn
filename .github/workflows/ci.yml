@@ -1,6 +1,8 @@
 name: CI
 
 # The same checks as the pre-push hook, so a push that skipped it (--no-verify) or a pull request is still verified.
+# The Docker images are built here only on pull requests that touch what goes into them, and for real (pushed) by
+# release.yml: never again on a push to main, whose content a pull request already built.
 on:
   push:
     branches: [main, dev]
@@ -15,6 +17,29 @@ permissions:
   contents: read
 
 jobs:
+  # Which parts of a pull request matter to the images (a documentation or workflow-free change builds nothing).
+  changes:
+    name: Changed files
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      images: ${{ steps.filter.outputs.images }}
+    steps:
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            images:
+              - 'apps/**'
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.dockerignore'
+              - '.github/workflows/ci.yml'
+
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -64,9 +89,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # The images must keep building; they are only pushed by the release workflow.
+  # The images must keep building; they are only pushed by the release workflow. Skipped on pushes (nothing to
+  # compare with), when no file that goes into an image changed, and on the release pull request (version and
+  # changelog only: release.yml builds the images when it is merged).
   docker:
     name: Docker image (${{ matrix.image }})
+    needs: changes
+    if: ${{ needs.changes.outputs.images == 'true' && !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -85,3 +114,21 @@ jobs:
           push: false
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # The only check to require on main. A skipped job (no image change, a push...) reports "skipped", and a skipped
+  # matrix job would leave its templated name pending forever, so the required check is this one, not the jobs above.
+  ci:
+    name: CI
+    if: ${{ always() }}
+    needs: [check, pr-title, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail when a job failed or was cancelled
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "* | *" cancelled "*) exit 1 ;;
+          esac

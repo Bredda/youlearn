@@ -80,12 +80,14 @@ then `pnpm check-types` and `pnpm test` must pass. When a hook fails, fix the ca
 placeholder environment values (no secret, database or storage needed):
 
 - `check`: the same three checks as the pre-push hook (`lint:ci`, `check-types`, `test`);
-- `docker`: both images must still build (not pushed);
+- `docker` (pull requests only): both images must still build, not pushed. It runs only when a file that goes into an
+  image changed (`apps/`, `packages/`, the lockfile, `.dockerignore`, the workflow itself) and not on the release pull
+  request. A merge to `main` builds nothing: the pull request already did, and `release.yml` builds the images when a
+  release is created;
 - `pr-title` (pull requests only): the title must be a Conventional Commit, because pull requests are squash-merged and
-  the title becomes the commit message read by the release tooling.
-
-These four checks (`check`, `Docker image (api)`, `Docker image (web)`, `Pull request title`) are the ones to require on
-`main`, together with squash merging.
+  the title becomes the commit message read by the release tooling;
+- `CI`: a last job that passes when none of the above failed. **It is the one check to require on `main`**, together
+  with squash merging: it also passes when `docker` was skipped, which a required `Docker image (...)` check would not.
 
 ### Releases
 
