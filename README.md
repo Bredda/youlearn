@@ -8,9 +8,9 @@ each user. There is no sign-up: administrators create the accounts.
 | Feature | Status |
 |---|---|
 | Accounts, roles (user, writer, admin), groups, event log | available |
-| Writer area: courses, revisions (draft → preview → published → deprecated), Markdown lesson editor, images, review link | available |
+| Writer area: courses, revisions (draft → preview → published → deprecated), Markdown lesson editor, images, review link, estimated chapter durations, certifying courses with a final exam | available |
 | Learner catalog: published courses visible to the user, with search, filters, sorting and pagination | available (cards have no action yet) |
-| Reading a course, enrollment and progress, programs, videos and large files | planned |
+| Reading a course, quizzes, enrollment and progress, certificates, programs, videos and large files | planned |
 
 User documentation (in French) lives in [`docs/`](docs/README.md).
 

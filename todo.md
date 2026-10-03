@@ -26,22 +26,24 @@ Un plan contient : un but, un « où on en est », des **Décisions** (chacune a
 - Le web lit `API_URL` à la **construction** (les `rewrites` de `apps/web/next.config.ts` sont figés dans le build) ; l'API est empaquetée par tsdown, ses dépendances tierces restent externes.
 - Les migrations s'appliquent avec `pnpm db:migrate` (drizzle-kit, une dépendance de développement) : rien ne sait les lancer dans une image de production.
 - `.github/workflows/ci.yml` vérifie lint, types et tests sur `main`, `dev` et les pull requests. Aucune release, aucun tag ; le `package.json` racine n'a pas de `version`.
-- La branche `feat/graduation` (durées et examen final) est terminée mais pas encore commitée ni fusionnée : la committer avant d'ouvrir la branche de ce plan.
+- La branche `feat/graduation` (durées et examen final) est fusionnée dans `main` (#4).
 
 ### Décisions
+
+Toutes confirmées avec l'utilisateur ; l'ajustement de la 6 est noté dedans.
 
 1. **Nombre d'images.** Recommandation : deux images, `youlearn-web` et `youlearn-api`, en multi-étapes, plutôt qu'une seule. Elles n'ont ni le même cycle de vie ni les mêmes dépendances. L'image web utilise `output: "standalone"` de Next (avec `outputFileTracingRoot` pour le monorepo) ; l'image API embarque ses dépendances de production via `pnpm deploy --filter api --prod`.
 2. **`API_URL` du web.** Recommandation : le garder figé à la construction, avec un argument de build dont la valeur par défaut est `http://api:3001` (le nom du service dans le compose), et le documenter. Rendre l'adresse configurable à l'exécution (une route proxy qui lit l'environnement) va au backlog tant qu'un second environnement ne l'impose pas.
 3. **Migrations en production.** Recommandation : un service compose `migrate` à usage unique, basé sur l'image API, qui s'exécute avant `api` (`depends_on` avec `service_completed_successfully`). Pas de migration au démarrage de l'API : elle se ferait en concurrence dès qu'il y a plusieurs instances. Il faut donc un petit script de migration utilisant le migrateur de drizzle-orm, empaqueté dans l'image, car drizzle-kit n'y est pas.
 4. **Registre.** Recommandation : GitHub Container Registry (`ghcr.io/bredda/youlearn-web` et `youlearn-api`), publication uniquement à la création d'une release, avec les tags `x.y.z`, `x.y` et `latest`.
 5. **Versionnage.** Recommandation : une seule version pour tout le monorepo (le produit), `release-type: node` en mode manifeste sur le paquet racine, tags `vX.Y.Z`, `CHANGELOG.md` généré à partir des Conventional Commits déjà utilisés, démarrage en `0.1.0` avec `bump-minor-pre-major`. Les paquets internes ne sont pas publiés, ils n'ont pas à être versionnés séparément.
-6. **Jeton de release-please.** Recommandation : commencer avec `GITHUB_TOKEN` et publier les images dans le même workflow (sortie `release_created`). Limite connue : les événements créés avec `GITHUB_TOKEN` ne déclenchent pas d'autres workflows, donc la CI ne tourne pas sur la pull request de release. Si une protection de branche exige ces vérifications, passer à un PAT ou à une GitHub App.
+6. **Jeton de release-please.** Un PAT stocké en secret du dépôt sous le nom `RELEASE_PLEASE_TOKEN` (créé par l'utilisateur) : sans lui, les événements créés avec `GITHUB_TOKEN` ne déclenchent pas d'autres workflows, donc la CI ne tournerait pas sur la pull request de release. `main` est protégée (vérifications obligatoires, fusion en squash uniquement) ; la publication des images a lieu dans le même workflow, sur la sortie `release_created`.
 
 ### Phase A — Suivi du travail
 
 - [x] `roadmap.md`, `todo.md` et `backlog.md` rédigés en français pour YouLearn. Fichiers : `roadmap.md`, `todo.md`, `backlog.md`. **Vérif. :** les trois fichiers existent et leurs liens relatifs pointent vers un fichier existant.
 - [x] Mentionner le mode de suivi dans les instructions des agents. Fichier : `AGENTS.md` (section « Suivi du travail »). **Vérif. :** la section nomme les trois fichiers et leur rôle.
-- [ ] Mettre à jour le statut du projet dans `README.md` (tableau « Project status ») : durées et examen final disponibles côté formateur. **Vérif. :** le tableau correspond à `roadmap.md`.
+- [x] Mettre à jour le statut du projet dans `README.md` (tableau « Project status ») : durées et examen final disponibles côté formateur. **Vérif. :** le tableau correspond à `roadmap.md`.
 
 ### Phase B — Conteneurisation
 
