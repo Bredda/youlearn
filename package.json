@@ -8,6 +8,7 @@
 		"format": "biome format --write .",
 		"lint:ci": "biome ci .",
 		"check-types": "turbo run check-types",
+		"test": "turbo run test",
 		"db:up": "docker compose -f docker/compose.yml --env-file .env up -d --wait",
 		"db:down": "docker compose -f docker/compose.yml --env-file .env down",
 		"db:generate": "turbo run db:generate",

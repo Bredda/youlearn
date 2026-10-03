@@ -61,4 +61,4 @@ Icons are centralized in `lib/icons.ts`, by meaning (`add`, `edit`, `delete`, `o
 
 ## Verifying
 
-There is no browser available to the agent and no test suite: run `pnpm check-types`, Biome on the touched files, and load the pages with `curl` and a session cookie (sign in through the API) to check they render. State clearly what was not exercised interactively.
+There is no browser available to the agent and no automated UI test (unit tests exist for the pure helpers in `lib/`, e.g. `lib/query-params.test.ts`: run `pnpm --filter web test`): run `pnpm check-types`, Biome on the touched files, and load the pages with `curl` and a session cookie (sign in through the API) to check they render. State clearly what was not exercised interactively.

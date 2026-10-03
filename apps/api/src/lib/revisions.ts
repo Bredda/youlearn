@@ -12,6 +12,7 @@ import {
 	uniqueNamesGenerator,
 } from "unique-names-generator";
 import type { CourseActor } from "./courses";
+import { TRANSITIONS } from "./revision-rules";
 
 const { course, courseRevision, revisionContributor } = schema;
 
@@ -26,17 +27,6 @@ export const generateRevisionKey = () =>
 		length: 2,
 		style: "lowerCase",
 	});
-
-/**
- * The workflow: draft -> preview -> published -> deprecated, with preview -> draft to rework. There is no way
- * back from deprecated: restoring an old revision means cloning it into a new draft.
- */
-const TRANSITIONS: Record<RevisionStatus, RevisionStatus[]> = {
-	draft: ["preview"],
-	preview: ["draft", "published"],
-	published: ["deprecated"],
-	deprecated: [],
-};
 
 type Revision = typeof courseRevision.$inferSelect;
 type Ref = Pick<Revision, "id" | "key">;

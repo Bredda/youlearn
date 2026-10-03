@@ -8,6 +8,7 @@
 		"build": "tsdown",
 		"start": "node dist/index.mjs",
 		"lint": "biome check",
+		"test": "vitest run",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -30,6 +31,7 @@
 		"@youlearn/typescript-config": "workspace:*",
 		"tsdown": "^0.23.0",
 		"tsx": "^4.23.15",
-		"typescript": "^7.0.2"
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.3"
 	}
 }

@@ -53,6 +53,7 @@ Run them all from the repository root.
 | `pnpm dev` | web and API in development mode |
 | `pnpm build` | build every project |
 | `pnpm check-types` | `tsc` in every project |
+| `pnpm test` | unit tests (Vitest) of every project that has some |
 | `pnpm lint:ci` | Biome on the whole repository, read-only |
 | `pnpm format` | format the repository with Biome |
 | `pnpm db:up` / `pnpm db:down` | start / stop PostgreSQL and the storage |
@@ -61,12 +62,17 @@ Run them all from the repository root.
 | `pnpm db:studio` | drizzle studio to browse the database |
 | `pnpm --filter @youlearn/auth seed:admin` | create the administrator from `ADMIN_*` (the API already does it at startup) |
 
-There is no test suite yet: verify with `check-types`, Biome, and by exercising the pages and routes.
+### Tests
+
+Unit tests use [Vitest](https://vitest.dev) and sit next to the code (`*.test.ts`). They cover the pure logic only
+(permission rules, slugs, content validation, image sniffing, the revision workflow, roles, URL state of the tables):
+no database, no storage, no `.env`. Routes and pages are still checked by running them (`curl` with a session cookie).
+Run one project with `pnpm --filter api test`, or watch with `pnpm --filter api exec vitest`.
 
 ### Git hooks
 
 `pnpm install` sets up the Husky hooks. On commit, Biome fixes and formats the staged files; on push, `pnpm lint:ci`
-then `pnpm check-types` must pass. When a hook fails, fix the cause rather than bypassing it.
+then `pnpm check-types` and `pnpm test` must pass. When a hook fails, fix the cause rather than bypassing it.
 
 ## Repository layout
 

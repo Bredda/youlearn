@@ -8,6 +8,7 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "biome check",
+		"test": "vitest run",
 		"check-types": "next typegen && tsc --noEmit"
 	},
 	"dependencies": {
@@ -40,6 +41,7 @@
 		"@youlearn/biome-config": "workspace:^",
 		"@youlearn/types": "workspace:*",
 		"@youlearn/typescript-config": "workspace:*",
-		"typescript": "7.0.2"
+		"typescript": "7.0.2",
+		"vitest": "^5.0.3"
 	}
 }

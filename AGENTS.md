@@ -26,8 +26,9 @@ pnpm db:migrate          # apply drizzle migrations
 pnpm dev                 # web :3000 + api :3001 (turbo TUI)
 
 pnpm check-types         # tsc in every package (web runs `next typegen` first)
+pnpm test                # Vitest unit tests (api, auth, web); one package: pnpm --filter api test
 pnpm --filter <pkg> exec biome check --write <paths>   # lint + format the files you touched
-pnpm lint:ci             # Biome on the whole repo, read-only (the pre-push hook runs it, then check-types)
+pnpm lint:ci             # Biome on the whole repo, read-only (the pre-push hook runs it, then check-types and test)
 pnpm build
 pnpm db:generate         # after editing packages/db/src/schema -> commit the new migration
 pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
@@ -35,8 +36,8 @@ pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 
 - Format and lint with **Biome** only (tabs, no Prettier): `pnpm format` formats the repo, and while working run `pnpm --filter <pkg> exec biome check --write <paths>` on the files you touched. `apps/web/components/ui` (shadcn-generated) is excluded from Biome on purpose; CSS uses Biome's Tailwind parser.
 - Lint, format and types are clean repo-wide (generated `packages/db/drizzle/` and `components/ui` are excluded from Biome): keep it that way, an error is yours. `components/ui/spinner.tsx` carries a small local fix (spread before `strokeWidth`); re-running `shadcn add spinner --overwrite` would bring the type error back.
-- **Git hooks** (Husky, installed by `pnpm install` through the `prepare` script): `pre-commit` runs `biome check --staged --write` (fixes and re-stages the staged files, blocks the commit on what it cannot fix; a partially staged file gets staged entirely), `pre-push` runs `pnpm lint:ci` then `pnpm check-types`. When a hook fails, fix the cause rather than bypassing it with `--no-verify`.
-- There is no test suite yet. Verify with `check-types`, Biome on touched files, and by exercising pages/endpoints (e.g. `curl` with a session cookie).
+- **Git hooks** (Husky, installed by `pnpm install` through the `prepare` script): `pre-commit` runs `biome check --staged --write` (fixes and re-stages the staged files, blocks the commit on what it cannot fix; a partially staged file gets staged entirely), `pre-push` runs `pnpm lint:ci`, `pnpm check-types` then `pnpm test`. When a hook fails, fix the cause rather than bypassing it with `--no-verify`.
+- **Tests**: Vitest, colocated `*.test.ts`, only for pure logic (rules, validation, parsing). Unit tests stay hermetic: they never import `@youlearn/db`, `@youlearn/config` or `@youlearn/storage` (no database, no `.env`, no mocking of those). When logic you want to test sits in a module that does, move it into a DB-free file (see `apps/api/src/lib/course-rules.ts`, `revision-rules.ts`, `image-type.ts`; the original module re-exports or imports it). Add or update tests with the rule you change. Routes and pages have no automated tests yet: verify them by exercising them (`curl` with a session cookie) and say what was not exercised.
 
 ## Layout
 
