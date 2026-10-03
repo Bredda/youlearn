@@ -1,10 +1,11 @@
 "use client";
 
-import { diffContent } from "@youlearn/content";
+import { diffContent, formatDuration } from "@youlearn/content";
 import type { ReviewView } from "@youlearn/types";
 import { useMemo, useState } from "react";
 import { ChapterView } from "@/components/content/chapter-view";
 import { DiffSummary, RevisionDiff } from "@/components/content/revision-diff";
+import { Icon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,17 @@ export function ReviewViewer({ view }: { view: ReviewView }) {
 				title={course.name}
 				description={course.description || undefined}
 			/>
+			<div className="flex flex-wrap items-center gap-2">
+				<Badge variant="outline">
+					<Icon name="duration" />
+					{formatDuration(revision.durationMinutes) || "Durée non estimée"}
+				</Badge>
+				{revision.certifying && (
+					<Badge variant="outline">
+						<Icon name="certifying" /> Certifiant
+					</Badge>
+				)}
+			</div>
 			{(course.imageAssetId || course.categories.length > 0) && (
 				<div className="flex items-start gap-4">
 					{course.imageAssetId && (

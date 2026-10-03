@@ -5,6 +5,7 @@ import {
 	editContent,
 	moveItem,
 	newChapter,
+	newFinalExam,
 	newMarkdownBlock,
 	newQuestion,
 	newVideoBlock,
@@ -257,5 +258,115 @@ describe("editContent", () => {
 			});
 		}
 		expect(contentSchema.safeParse(content).success).toBe(true);
+	});
+});
+
+describe("chapter duration", () => {
+	it("sets, replaces and clears the estimate of one chapter", () => {
+		let { content, id } = withChapter();
+		content = editContent(content, {
+			type: "setDuration",
+			chapterId: id,
+			minutes: 30,
+		});
+		expect(content.chapters[0]?.estimatedMinutes).toBe(30);
+		content = editContent(content, {
+			type: "setDuration",
+			chapterId: id,
+			minutes: 45,
+		});
+		expect(content.chapters[0]?.estimatedMinutes).toBe(45);
+		content = editContent(content, {
+			type: "setDuration",
+			chapterId: id,
+			minutes: undefined,
+		});
+		expect("estimatedMinutes" in (content.chapters[0] ?? {})).toBe(false);
+	});
+});
+
+/** Rules about the exam itself; the blank template question is not valid until the author fills it in. */
+const examIssues = (content: CourseContent) => {
+	const result = contentSchema.safeParse(content);
+	return result.success
+		? []
+		: result.error.issues.filter((i) =>
+				/final exam|certifying/.test(i.message),
+			);
+};
+
+describe("certification", () => {
+	const certifying = () => {
+		let { content } = withChapter();
+		content = editContent(content, {
+			type: "setCertifying",
+			certifying: true,
+			exam: newFinalExam("exam"),
+		});
+		return content;
+	};
+
+	it("adds a valid final exam as last chapter, and drops it when turned off", () => {
+		const content = certifying();
+		expect(content.certifying).toBe(true);
+		expect(content.chapters.map((c) => c.id)).toEqual(["c1", "exam"]);
+		expect(examIssues(content)).toEqual([]);
+
+		const off = editContent(content, {
+			type: "setCertifying",
+			certifying: false,
+		});
+		expect(off.certifying).toBeUndefined();
+		expect(off.chapters.map((c) => c.id)).toEqual(["c1"]);
+		expect(contentSchema.safeParse(off).success).toBe(true);
+	});
+
+	it("keeps the existing exam when certification is asked twice", () => {
+		const content = certifying();
+		const again = editContent(content, {
+			type: "setCertifying",
+			certifying: true,
+			exam: newFinalExam("other"),
+		});
+		expect(again.chapters.map((c) => c.id)).toEqual(["c1", "exam"]);
+	});
+
+	it("inserts new chapters before the exam", () => {
+		const content = editContent(certifying(), {
+			type: "addChapter",
+			chapter: newChapter("c2"),
+		});
+		expect(content.chapters.map((c) => c.id)).toEqual(["c1", "c2", "exam"]);
+		expect(examIssues(content)).toEqual([]);
+	});
+
+	it("never moves, removes or fills the exam", () => {
+		const content = editContent(certifying(), {
+			type: "addChapter",
+			chapter: newChapter("c2"),
+		});
+		const ids = (value: CourseContent) => value.chapters.map((c) => c.id);
+		expect(
+			ids(editContent(content, { type: "moveChapter", from: 2, to: 0 })),
+		).toEqual(["c1", "c2", "exam"]);
+		expect(
+			ids(editContent(content, { type: "moveChapter", from: 0, to: 2 })),
+		).toEqual(["c1", "c2", "exam"]);
+		expect(
+			ids(editContent(content, { type: "moveChapter", from: 0, to: 1 })),
+		).toEqual(["c2", "c1", "exam"]);
+		expect(
+			ids(editContent(content, { type: "removeChapter", chapterId: "exam" })),
+		).toEqual(["c1", "c2", "exam"]);
+		expect(
+			editContent(content, {
+				type: "addBlock",
+				chapterId: "exam",
+				block: newMarkdownBlock("b"),
+			}),
+		).toBe(content);
+		expect(
+			editContent(content, { type: "removeQuiz", chapterId: "exam" }),
+		).toBe(content);
 	});
 });

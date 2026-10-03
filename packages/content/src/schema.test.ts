@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { chapter, content, md, question, quiz, video } from "./fixtures";
+import {
+	chapter,
+	content,
+	finalExam,
+	md,
+	question,
+	quiz,
+	video,
+} from "./fixtures";
 import { contentSchema } from "./schema";
 
 const ok = (value: unknown) => contentSchema.safeParse(value).success;
@@ -163,5 +171,62 @@ describe("contentSchema", () => {
 			Array.from({ length: n }, (_, i) => md(`b${i}`));
 		expect(ok(content(chapter("c", blocks(50))))).toBe(true);
 		expect(ok(content(chapter("c", blocks(51))))).toBe(false);
+	});
+});
+
+describe("chapter duration", () => {
+	const withMinutes = (estimatedMinutes: number) =>
+		content({ ...chapter("c1"), estimatedMinutes });
+
+	it("is optional, a whole number of minutes between 1 and 1440", () => {
+		expect(contentSchema.safeParse(content(chapter("c1"))).success).toBe(true);
+		expect(contentSchema.safeParse(withMinutes(1)).success).toBe(true);
+		expect(contentSchema.safeParse(withMinutes(1440)).success).toBe(true);
+		expect(contentSchema.safeParse(withMinutes(0)).success).toBe(false);
+		expect(contentSchema.safeParse(withMinutes(1441)).success).toBe(false);
+		expect(contentSchema.safeParse(withMinutes(1.5)).success).toBe(false);
+	});
+});
+
+describe("certifying course", () => {
+	const certifying = (...chapters: ReturnType<typeof chapter>[]) => ({
+		...content(...chapters),
+		certifying: true,
+	});
+	const messages = (value: unknown) => {
+		const result = contentSchema.safeParse(value);
+		return result.success ? [] : result.error.issues.map((i) => i.message);
+	};
+
+	it("needs exactly one final exam, placed last", () => {
+		expect(
+			contentSchema.safeParse(certifying(chapter("c1"), finalExam())).success,
+		).toBe(true);
+		expect(messages(certifying(chapter("c1")))).toEqual([
+			"A certifying course needs exactly one final exam",
+		]);
+		expect(
+			messages(certifying(chapter("c1"), finalExam("e1"), finalExam("e2"))),
+		).toEqual(["A certifying course needs exactly one final exam"]);
+		expect(messages(certifying(finalExam(), chapter("c1")))).toEqual([
+			"The final exam must be the last chapter",
+		]);
+	});
+
+	it("does not allow a final exam in a course that is not certifying", () => {
+		expect(messages(content(chapter("c1"), finalExam()))).toEqual([
+			"Only a certifying course has a final exam",
+		]);
+	});
+
+	it("keeps the exam to a quiz: no blocks, quiz required", () => {
+		const exam = finalExam();
+		expect(
+			messages(certifying({ ...exam, blocks: [md("b1", "text")] })),
+		).toEqual(["A final exam holds a quiz and no content blocks"]);
+		const { quiz: _, ...noQuiz } = exam;
+		expect(messages(certifying(noQuiz))).toEqual([
+			"A final exam holds a quiz and no content blocks",
+		]);
 	});
 });

@@ -56,6 +56,10 @@ pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 
 Dependency direction: `content` (pure leaf) and `config` <- `db` (it types the `content` jsonb with `content`) <- `events` <- `auth` <- `types` (type-only imports) <- `api` / `web`; `storage` depends only on `config` and is used by `api`. Do not create cycles.
 
+## Work tracking (written in French)
+
+Three files at the repo root: `roadmap.md` (the big features to come, by axis and horizon), `todo.md` (the executable plan of the feature in progress, with decisions, phases and **Vérif.** lines; its "Mode d'emploi" explains how to work it) and `backlog.md` (unscheduled ideas). Read `todo.md` before starting a feature; do not pick from the backlog unless asked. When a plan is finished, set it to "Aucun" and update the status in `roadmap.md`.
+
 ## Skills (read before working in the area)
 
 Detailed conventions live in project skills (`.claude/skills/`), loaded when the task matches. **Invoke the matching skill before touching its area**:

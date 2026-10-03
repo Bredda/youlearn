@@ -216,11 +216,14 @@ export function QuizEditor({
 	chapterId,
 	quiz,
 	courseId,
+	exam = false,
 	dispatch,
 }: {
 	chapterId: string;
 	quiz: Quiz;
 	courseId: string;
+	/** The one-shot quiz of a final exam: always counted, nothing to lock, cannot be removed. */
+	exam?: boolean;
 	dispatch: (action: EditAction) => void;
 }) {
 	const [openId, setOpenId] = useState<string>();
@@ -230,33 +233,44 @@ export function QuizEditor({
 		<section className="flex flex-col gap-4 rounded-md border p-3">
 			<header className="flex items-center justify-between">
 				<h3 className="flex items-center gap-1.5 font-semibold text-lg">
-					<Icon name="quiz" /> Quiz de fin de chapitre
+					<Icon name="quiz" />{" "}
+					{exam ? "Quiz de l'examen" : "Quiz de fin de chapitre"}
 				</h3>
-				<ConfirmRemove
-					label="Supprimer le quiz"
-					title="Supprimer le quiz ?"
-					description="Ses questions seront perdues à l'enregistrement du brouillon."
-					onConfirm={() => dispatch({ type: "removeQuiz", chapterId })}
-				/>
+				{!exam && (
+					<ConfirmRemove
+						label="Supprimer le quiz"
+						title="Supprimer le quiz ?"
+						description="Ses questions seront perdues à l'enregistrement du brouillon."
+						onConfirm={() => dispatch({ type: "removeQuiz", chapterId })}
+					/>
+				)}
 			</header>
 
-			<div className="grid gap-3 sm:grid-cols-3">
-				<div className="flex flex-col gap-1.5">
-					<div className="flex items-center gap-2">
-						<Switch
-							id={`blocking-${chapterId}`}
-							checked={quiz.blocking}
-							onCheckedChange={(blocking) =>
-								dispatch({ type: "updateQuiz", chapterId, patch: { blocking } })
-							}
-						/>
-						<Label htmlFor={`blocking-${chapterId}`}>Quiz bloquant</Label>
+			<div
+				className={`grid gap-3 ${exam ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}
+			>
+				{!exam && (
+					<div className="flex flex-col gap-1.5">
+						<div className="flex items-center gap-2">
+							<Switch
+								id={`blocking-${chapterId}`}
+								checked={quiz.blocking}
+								onCheckedChange={(blocking) =>
+									dispatch({
+										type: "updateQuiz",
+										chapterId,
+										patch: { blocking },
+									})
+								}
+							/>
+							<Label htmlFor={`blocking-${chapterId}`}>Quiz bloquant</Label>
+						</div>
+						<p className="text-muted-foreground text-xs">
+							Bloque l'accès au chapitre suivant tant que le taux de réussite
+							n'est pas atteint.
+						</p>
 					</div>
-					<p className="text-muted-foreground text-xs">
-						Bloque l'accès au chapitre suivant tant que le taux de réussite
-						n'est pas atteint.
-					</p>
-				</div>
+				)}
 				<div className="flex flex-col gap-1.5">
 					<Label htmlFor={`rate-${chapterId}`}>
 						Taux de réussite requis (%)
@@ -266,7 +280,7 @@ export function QuizEditor({
 						type="number"
 						min={1}
 						max={100}
-						disabled={!quiz.blocking}
+						disabled={!exam && !quiz.blocking}
 						value={quiz.passRate}
 						onChange={(e) => {
 							const passRate = e.currentTarget.valueAsNumber;

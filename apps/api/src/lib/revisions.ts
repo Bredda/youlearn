@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { courseDurationMinutes } from "@youlearn/content";
 import { and, asc, db, eq, inArray, isNull, schema } from "@youlearn/db";
 import type {
 	CourseContent,
@@ -13,7 +14,7 @@ import {
 	uniqueNamesGenerator,
 } from "unique-names-generator";
 import type { CourseActor } from "./courses";
-import { TRANSITIONS } from "./revision-rules";
+import { previewBlocker, TRANSITIONS } from "./revision-rules";
 
 const { course, courseRevision, revisionContributor } = schema;
 
@@ -78,6 +79,8 @@ async function toWriterRevisions(rows: Revision[]): Promise<WriterRevision[]> {
 		parentId: row.parentId,
 		previewToken: row.previewToken,
 		purpose: row.purpose,
+		durationMinutes: row.durationMinutes,
+		certifying: row.certifying,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 		contributors: contributors
@@ -184,7 +187,11 @@ export async function createRevision(
 				parentId: input.parentId ?? null,
 				purpose: input.purpose,
 				// Cloning copies the content; the files it refers to are shared (assets are immutable).
-				...(parent && { content: parent.content }),
+				...(parent && {
+					content: parent.content,
+					durationMinutes: parent.durationMinutes,
+					certifying: parent.certifying,
+				}),
 			})
 			.returning({ id: courseRevision.id });
 		if (!created) throw new Error("Revision insert returned no row");
@@ -220,6 +227,16 @@ export async function changeStatus(
 				ok: false,
 				status: 409,
 				error: `A ${revision.status} revision cannot become ${to}`,
+			};
+
+		// A revision is proofread as it will be published: it must be complete.
+		const blocker = to === "preview" ? previewBlocker(revision.content) : null;
+		if (blocker)
+			return {
+				ok: false,
+				status: 409,
+				code: "INCOMPLETE",
+				error: blocker,
 			};
 
 		const occupant = rows.find((r) => r.status === to && r.id !== revision.id);
@@ -338,7 +355,11 @@ export async function saveContent(
 
 		await tx
 			.update(courseRevision)
-			.set({ content })
+			.set({
+				content,
+				durationMinutes: courseDurationMinutes(content),
+				certifying: content.certifying === true,
+			})
 			.where(eq(courseRevision.id, revision.id));
 		await addContributor(tx, revision.id, actor);
 		return { ok: true };

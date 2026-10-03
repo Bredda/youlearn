@@ -106,6 +106,8 @@ export async function listCatalog(
 			categories: course.categories,
 			imageAssetId: course.imageAssetId,
 			publishedAt: courseRevision.updatedAt,
+			durationMinutes: courseRevision.durationMinutes,
+			certifying: courseRevision.certifying,
 		})
 		.from(course)
 		.innerJoin(courseRevision, published)

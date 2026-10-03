@@ -125,6 +125,7 @@ export type NewCourseRevision = typeof schema.courseRevision.$inferInsert;
 export type {
 	Block,
 	Chapter,
+	ChapterKind,
 	CourseContent,
 	MarkdownBlock,
 	Question,
@@ -140,7 +141,15 @@ export type RevisionStatus = (typeof schema.revisionStatus.enumValues)[number];
 /** A revision of a course as listed in the writer area (dates serialized by JSON). */
 export type WriterRevision = Pick<
 	CourseRevision,
-	"id" | "courseId" | "key" | "status" | "parentId" | "previewToken" | "purpose"
+	| "id"
+	| "courseId"
+	| "key"
+	| "status"
+	| "parentId"
+	| "previewToken"
+	| "purpose"
+	| "durationMinutes"
+	| "certifying"
 > & {
 	createdAt: string;
 	updatedAt: string;
@@ -209,6 +218,10 @@ export type CatalogCourse = Pick<
 > & {
 	/** When the revision learners see was published. */
 	publishedAt: string;
+	/** Estimated total duration of the published revision, in minutes (0 when no chapter is estimated). */
+	durationMinutes: number;
+	/** The published revision ends with a final exam. */
+	certifying: boolean;
 };
 
 export type CatalogSort = "name" | "publishedAt";
@@ -245,7 +258,10 @@ export type ReviewView = {
 		Course,
 		"id" | "name" | "description" | "categories" | "imageAssetId"
 	>;
-	revision: Pick<CourseRevision, "id" | "key" | "purpose">;
+	revision: Pick<
+		CourseRevision,
+		"id" | "key" | "purpose" | "durationMinutes" | "certifying"
+	>;
 	content: CourseContent;
 	/**
 	 * What the revision is compared against: its parent, when that one is published or deprecated (never

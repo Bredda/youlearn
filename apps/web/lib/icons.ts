@@ -11,8 +11,10 @@ import {
 	ArrowUp01Icon,
 	ArrowUpRight01Icon,
 	Audit01Icon,
+	Award01Icon,
 	BookOpen01Icon,
 	Cancel01Icon,
+	Clock01Icon,
 	CodeIcon,
 	Copy01Icon,
 	CourseIcon,
@@ -103,6 +105,10 @@ export const icons = {
 	blocking: LockIcon,
 	/** Handle to drag an item to another position. */
 	dragHandle: DragDropVerticalIcon,
+	/** Estimated duration of a chapter or a course. */
+	duration: Clock01Icon,
+	/** A certifying course and its final exam. */
+	certifying: Award01Icon,
 	/** Compare two revisions. */
 	compare: GitCompareIcon,
 
