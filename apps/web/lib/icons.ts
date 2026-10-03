@@ -11,11 +11,14 @@ import {
 	ArrowUp01Icon,
 	ArrowUpRight01Icon,
 	Audit01Icon,
+	BookOpen01Icon,
 	Cancel01Icon,
+	CodeIcon,
 	Copy01Icon,
 	CourseIcon,
 	CrowdfundingIcon,
 	Delete02Icon,
+	DragDropVerticalIcon,
 	Edit02Icon,
 	ElearningExchangeIcon,
 	Eye,
@@ -23,20 +26,29 @@ import {
 	File01Icon,
 	FileSearchIcon,
 	FloppyDiskIcon,
+	GitCompareIcon,
+	Heading01Icon,
+	HelpCircleIcon,
 	Image01Icon,
+	LeftToRightListBulletIcon,
 	Link01Icon,
+	LockIcon,
 	LockPasswordIcon,
 	Login01Icon,
 	LogoutIcon,
 	Moon02Icon,
 	MoreHorizontalIcon,
 	NotificationIcon,
+	QuoteDownIcon,
 	Refresh01Icon,
 	Rocket01Icon,
 	RotateLeft01Icon,
 	SchoolIcon,
 	Search01Icon,
 	Sun03Icon,
+	TextBoldIcon,
+	TextIcon,
+	TextItalicIcon,
 	Tick02Icon,
 	UndoIcon,
 	UnfoldMoreIcon,
@@ -45,6 +57,7 @@ import {
 	UserCheck01Icon,
 	UserCircleIcon,
 	UsersIcon,
+	Video01Icon,
 	ViewIcon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgObject } from "@/lib/types";
@@ -79,6 +92,27 @@ export const icons = {
 	moveDown: ArrowDown01Icon,
 	show: Eye,
 	hide: EyeOff,
+
+	// Course content
+	chapter: BookOpen01Icon,
+	/** A text (markdown) block of a chapter. */
+	textBlock: TextIcon,
+	videoBlock: Video01Icon,
+	quiz: HelpCircleIcon,
+	/** A blocking quiz keeps the next chapter locked. */
+	blocking: LockIcon,
+	/** Handle to drag an item to another position. */
+	dragHandle: DragDropVerticalIcon,
+	/** Compare two revisions. */
+	compare: GitCompareIcon,
+
+	// Markdown editor toolbar
+	bold: TextBoldIcon,
+	italic: TextItalicIcon,
+	heading: Heading01Icon,
+	inlineCode: CodeIcon,
+	list: LeftToRightListBulletIcon,
+	quote: QuoteDownIcon,
 
 	// Revision workflow
 	draft: File01Icon,

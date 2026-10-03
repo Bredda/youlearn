@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
 	agentRules: false,
 	// Workspace packages ship TypeScript sources.
 	transpilePackages: [
+		"@youlearn/content",
 		"@youlearn/auth",
 		"@youlearn/config",
 		"@youlearn/db",

@@ -34,7 +34,6 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
-import { assetUrl } from "@/components/writer/markdown";
 import { ReviewLinkDialog } from "@/components/writer/review-link-dialog";
 import { RevisionFormDialog } from "@/components/writer/revision-form-dialog";
 import {
@@ -42,6 +41,7 @@ import {
 	RevisionRowActions,
 } from "@/components/writer/revision-row-actions";
 import { callApi } from "@/lib/api-client";
+import { assetUrl } from "@/lib/asset-url";
 import {
 	REVISION_STATUS_LABELS,
 	REVISION_STATUS_VARIANTS,
@@ -208,6 +208,7 @@ export function CourseDetail({
 						<TableRow>
 							<TableHead>Révision</TableHead>
 							<TableHead className="w-32">Statut</TableHead>
+							<TableHead>But</TableHead>
 							<TableHead>Contributeurs</TableHead>
 							<TableHead className="w-44">Mise à jour</TableHead>
 							<TableHead className="w-16 text-right">
@@ -219,7 +220,7 @@ export function CourseDetail({
 						{revisions.length === 0 && (
 							<TableRow>
 								<TableCell
-									colSpan={5}
+									colSpan={6}
 									className="text-center text-muted-foreground"
 								>
 									Aucune révision.
@@ -235,6 +236,12 @@ export function CourseDetail({
 									<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
 										{REVISION_STATUS_LABELS[revision.status]}
 									</Badge>
+								</TableCell>
+								<TableCell
+									className="truncate text-muted-foreground"
+									title={revision.purpose}
+								>
+									{revision.purpose}
 								</TableCell>
 								<TableCell className="truncate text-muted-foreground">
 									{revision.contributors.map((c) => c.name).join(", ")}

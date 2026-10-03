@@ -183,3 +183,14 @@
 		@apply bg-background text-foreground;
 	}
 }
+
+/* Shiki emits both themes as CSS variables on every token (see components/content/code-block.tsx). */
+@layer components {
+	.code-block .shiki span {
+		color: var(--shiki-light);
+	}
+
+	.dark .code-block .shiki span {
+		color: var(--shiki-dark);
+	}
+}

@@ -10,7 +10,7 @@ import {
 	type CourseAction,
 	CourseRowActions,
 } from "@/components/writer/course-row-actions";
-import { assetUrl } from "@/components/writer/markdown";
+import { assetUrl } from "@/lib/asset-url";
 import {
 	REVISION_STATUS_LABELS,
 	REVISION_STATUS_VARIANTS,
