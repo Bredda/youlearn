@@ -4,10 +4,12 @@ import type {
 	EnrollmentView,
 	LearnerAttempt,
 	LearnerCourse,
+	MyEnrollment,
 } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { getCourseActor } from "../lib/courses";
+import { listMyEnrollments } from "../lib/enrollments";
 import {
 	completeChapter,
 	findEnrollmentView,
@@ -52,6 +54,14 @@ const completeRefusals = {
  * `LearnerContent` (no quiz question, so no answer); the rules of what they may open live in `lib/learning.ts`.
  */
 export const learningRoutes: FastifyPluginAsync = async (app) => {
+	app.get(
+		"/api/me/enrollments",
+		{ preHandler: app.requireAuth },
+		async (request): Promise<{ enrollments: MyEnrollment[] }> => ({
+			enrollments: await listMyEnrollments(await getCourseActor(request)),
+		}),
+	);
+
 	app.get(
 		"/api/courses/:id",
 		{ preHandler: app.requireAuth },

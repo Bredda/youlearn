@@ -1,0 +1,98 @@
+"use client";
+
+import { useForm, useStore } from "@tanstack/react-form";
+import type { CourseEnrollmentQuery, EnrollmentStatus } from "@youlearn/types";
+import { FilterSelect } from "@/components/data-table/filter-select";
+import { Icon } from "@/components/icon";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { ENROLLMENT_STATUS_LABELS } from "@/lib/enrollments";
+import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
+
+// Remounted by the parent (`key`) when the search term changes from the outside, so the form follows the URL.
+export function LearnersToolbar({
+	query,
+	onChange,
+	onReset,
+}: {
+	query: CourseEnrollmentQuery;
+	onChange: (patch: Partial<CourseEnrollmentQuery>) => void;
+	onReset: () => void;
+}) {
+	const form = useForm({
+		defaultValues: { q: query.q ?? "" },
+		onSubmit: ({ value }) => onChange({ q: value.q.trim() || undefined }),
+	});
+	const typed = useStore(form.store, (state) => state.values.q);
+	const canReset = Boolean(
+		typed ||
+			query.q ||
+			query.status ||
+			query.sort !== "startedAt" ||
+			query.order !== "desc" ||
+			query.pageSize !== DEFAULT_PAGE_SIZE,
+	);
+
+	return (
+		<div className="flex flex-wrap items-center gap-2">
+			<form
+				className="flex gap-2"
+				onSubmit={(e) => {
+					e.preventDefault();
+					form.handleSubmit();
+				}}
+			>
+				<form.Field
+					name="q"
+					// biome-ignore lint/correctness/noChildrenProp: shadcn pattern
+					children={(field) => (
+						<Field className="w-64">
+							<Input
+								id="learners-search"
+								name={field.name}
+								type="search"
+								aria-label="Rechercher un apprenant"
+								placeholder="Rechercher par nom ou email"
+								value={field.state.value}
+								onBlur={field.handleBlur}
+								onChange={(e) => field.handleChange(e.target.value)}
+							/>
+						</Field>
+					)}
+				/>
+				<Button type="submit" variant="outline">
+					<Icon name="search" />
+					Rechercher
+				</Button>
+			</form>
+
+			<FilterSelect
+				label="Tous les statuts"
+				className="w-56"
+				value={query.status}
+				options={(
+					Object.keys(ENROLLMENT_STATUS_LABELS) as EnrollmentStatus[]
+				).map((status) => ({
+					value: status,
+					label: ENROLLMENT_STATUS_LABELS[status],
+				}))}
+				onChange={(status) =>
+					onChange({ status: status as EnrollmentStatus | undefined })
+				}
+			/>
+
+			<Button
+				variant="ghost"
+				disabled={!canReset}
+				onClick={() => {
+					form.reset();
+					onReset();
+				}}
+			>
+				<Icon name="reset" />
+				Réinitialiser
+			</Button>
+		</div>
+	);
+}

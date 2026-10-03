@@ -124,6 +124,8 @@ export const icons = {
 	locked: LockIcon,
 	/** A chapter or a course the learner finished. */
 	done: CheckmarkCircle02Icon,
+	/** The learners following a course (writer area). */
+	learners: UsersIcon,
 
 	// Markdown editor toolbar
 	bold: TextBoldIcon,

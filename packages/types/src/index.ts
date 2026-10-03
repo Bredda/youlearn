@@ -367,3 +367,68 @@ export type AttemptResult = {
 	/** The enrollment after this attempt: a final exam passed or failed ends it. */
 	enrollmentStatus: EnrollmentStatus;
 };
+
+/** An enrollment of the current learner, as listed in "Mes sessions" (dates serialized by JSON). */
+export type MyEnrollment = {
+	id: string;
+	status: EnrollmentStatus;
+	courseId: string;
+	courseName: string;
+	imageAssetId: string | null;
+	revisionKey: string;
+	certifying: boolean;
+	startedAt: string;
+	finishedAt: string | null;
+	/** A more recent revision has been published since. */
+	outdated: boolean;
+	completedChapters: number;
+	totalChapters: number;
+};
+
+export type CourseEnrollmentSort = "startedAt" | "learner" | "status";
+
+/** Query of the learners of a course (writer area), shared by the API and the web app. */
+export type CourseEnrollmentQuery = {
+	/** Searches the learner's name and email. */
+	q?: string;
+	status?: EnrollmentStatus;
+	sort: CourseEnrollmentSort;
+	order: "asc" | "desc";
+	page: number;
+	pageSize: number;
+};
+
+/** A learner's enrollment on a course, for the people who write it (traceability). */
+export type CourseEnrollment = {
+	id: string;
+	learner: { id: string; name: string; email: string };
+	status: EnrollmentStatus;
+	/** The revision the learner follows. */
+	revisionKey: string;
+	startedAt: string;
+	finishedAt: string | null;
+	completedChapters: number;
+	totalChapters: number;
+	/** Number of submitted quiz attempts, the final exam included. */
+	attemptCount: number;
+	/** Score of the final exam, null while it was not taken. */
+	finalExamScore: number | null;
+};
+
+export type CourseEnrollmentPage = {
+	enrollments: CourseEnrollment[];
+	total: number;
+	page: number;
+	pageSize: number;
+};
+
+export type CourseEnrollmentDetail = CourseEnrollment & {
+	chapters: {
+		id: string;
+		title: string;
+		kind: ChapterKind;
+		completed: boolean;
+	}[];
+	/** Every attempt, oldest first. */
+	attempts: (AttemptSummary & { chapterTitle: string })[];
+};
