@@ -1,7 +1,11 @@
 import { and, db, eq, schema } from "@youlearn/db";
 import { recordEvent } from "@youlearn/events/server";
 import { moveToDeprecated } from "@youlearn/storage";
-import type { AssignableGroups, WriterCourse } from "@youlearn/types";
+import type {
+	AssignableGroups,
+	WriterCourse,
+	WriterCoursePage,
+} from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { assetKey } from "../../lib/assets";
@@ -21,7 +25,16 @@ import { isUniqueViolation } from "../../lib/groups";
 const { course, courseAsset, courseGroup } = schema;
 
 const idParams = z.object({ id: z.string().min(1) });
-const listQuery = z.object({ q: z.string().trim().max(100).optional() });
+const listQuery = z.object({
+	q: z.string().trim().max(100).optional(),
+	groupId: z.string().min(1).optional(),
+	category: z.string().trim().min(1).max(40).optional(),
+	status: z.enum(["draft", "preview", "published", "none"]).optional(),
+	sort: z.enum(["name", "createdAt", "updatedAt"]).default("updatedAt"),
+	order: z.enum(["asc", "desc"]).default("desc"),
+	page: z.coerce.number().int().min(1).default(1),
+	pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
 
 const fields = {
 	name: z.string().trim().min(1).max(120),
@@ -79,11 +92,14 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 		return { groups: await assignableGroups(actor) };
 	});
 
-	app.get("/api/writer/courses", async (request) => {
-		const { q } = listQuery.parse(request.query);
-		const actor = await getCourseActor(request);
-		return { courses: await listCourses(actor, q) };
-	});
+	app.get(
+		"/api/writer/courses",
+		async (request): Promise<WriterCoursePage> =>
+			listCourses(
+				await getCourseActor(request),
+				listQuery.parse(request.query),
+			),
+	);
 
 	app.get("/api/writer/courses/:id", async (request, reply) => {
 		const { id } = idParams.parse(request.params);

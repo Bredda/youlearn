@@ -165,6 +165,34 @@ export type WriterCourse = Pick<
 	everPublished: boolean;
 };
 
+export type WriterCourseSort = "name" | "createdAt" | "updatedAt";
+
+/** Courses that have a revision in this status, or no active revision at all (`none`). */
+export type WriterCourseStatus = "draft" | "preview" | "published" | "none";
+
+/** Query of the writer courses listing (filters, sorting, pagination), shared by the API and the web app. */
+export type WriterCourseQuery = {
+	/** Searches the name and the slug. */
+	q?: string;
+	groupId?: string;
+	category?: string;
+	status?: WriterCourseStatus;
+	sort: WriterCourseSort;
+	order: "asc" | "desc";
+	page: number;
+	pageSize: number;
+};
+
+export type WriterCoursePage = {
+	courses: WriterCourse[];
+	total: number;
+	page: number;
+	pageSize: number;
+	/** Options of the filters: what the courses of this user use, whatever the current filters are. */
+	categories: string[];
+	groups: CourseGroupTag[];
+};
+
 /** Groups the current user may put on a course: their own for a writer, every group for an admin. */
 export type AssignableGroups = { groups: CourseGroupTag[] };
 

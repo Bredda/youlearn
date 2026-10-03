@@ -1,25 +1,26 @@
 "use client";
 
 import { useForm, useStore } from "@tanstack/react-form";
-import { ROLES } from "@youlearn/auth/roles";
-import type { AdminUserQuery, GroupWithMemberCount } from "@youlearn/types";
+import type { CourseGroupTag, WriterCourseQuery } from "@youlearn/types";
 import { FilterSelect } from "@/components/data-table/filter-select";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ROLE_LABELS } from "@/lib/roles";
 import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
 // Remounted by the parent (`key`) when the search term changes from the outside, so the form follows the URL.
-export function UsersToolbar({
+export function CoursesToolbar({
 	query,
 	groups,
+	categories,
 	onChange,
 	onReset,
 }: {
-	query: AdminUserQuery;
-	groups: GroupWithMemberCount[];
-	onChange: (patch: Partial<AdminUserQuery>) => void;
+	query: WriterCourseQuery;
+	/** Groups and categories used by the courses of the user. */
+	groups: CourseGroupTag[];
+	categories: string[];
+	onChange: (patch: Partial<WriterCourseQuery>) => void;
 	onReset: () => void;
 }) {
 	const form = useForm({
@@ -31,10 +32,10 @@ export function UsersToolbar({
 	const canReset = Boolean(
 		typed ||
 			query.q ||
-			query.role ||
 			query.status ||
 			query.groupId ||
-			query.sort !== "createdAt" ||
+			query.category ||
+			query.sort !== "updatedAt" ||
 			query.order !== "desc" ||
 			query.pageSize !== DEFAULT_PAGE_SIZE,
 	);
@@ -54,11 +55,11 @@ export function UsersToolbar({
 					children={(field) => (
 						<Field className="w-64">
 							<Input
-								id="users-search"
+								id="courses-search"
 								name={field.name}
 								type="search"
-								aria-label="Rechercher un utilisateur"
-								placeholder="Rechercher par nom ou email"
+								aria-label="Rechercher un cours"
+								placeholder="Rechercher par nom ou slug"
 								value={field.state.value}
 								onBlur={field.handleBlur}
 								onChange={(e) => field.handleChange(e.target.value)}
@@ -72,25 +73,17 @@ export function UsersToolbar({
 			</form>
 
 			<FilterSelect
-				label="Tous les rôles"
-				className="w-40"
-				value={query.role}
-				options={ROLES.map((role) => ({
-					value: role,
-					label: ROLE_LABELS[role],
-				}))}
-				onChange={(role) => onChange({ role: role as AdminUserQuery["role"] })}
-			/>
-			<FilterSelect
 				label="Tous les statuts"
-				className="w-40"
+				className="w-48"
 				value={query.status}
 				options={[
-					{ value: "active", label: "Actif" },
-					{ value: "banned", label: "Banni" },
+					{ value: "published", label: "Avec une révision publiée" },
+					{ value: "preview", label: "En relecture" },
+					{ value: "draft", label: "Avec un brouillon" },
+					{ value: "none", label: "Sans révision active" },
 				]}
 				onChange={(status) =>
-					onChange({ status: status as AdminUserQuery["status"] })
+					onChange({ status: status as WriterCourseQuery["status"] })
 				}
 			/>
 			<FilterSelect
@@ -102,6 +95,16 @@ export function UsersToolbar({
 					label: group.name,
 				}))}
 				onChange={(groupId) => onChange({ groupId })}
+			/>
+			<FilterSelect
+				label="Toutes les catégories"
+				className="w-48"
+				value={query.category}
+				options={categories.map((category) => ({
+					value: category,
+					label: category,
+				}))}
+				onChange={(category) => onChange({ category })}
 			/>
 
 			<Button

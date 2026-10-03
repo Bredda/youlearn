@@ -2,16 +2,25 @@ import { isAdmin, parseRoles } from "@youlearn/auth/roles";
 import {
 	and,
 	asc,
+	count,
 	db,
+	desc,
 	eq,
+	exists,
 	ilike,
 	inArray,
 	isNull,
+	not,
 	or,
 	schema,
 	sql,
 } from "@youlearn/db";
-import type { CourseGroupTag, WriterCourse } from "@youlearn/types";
+import type {
+	CourseGroupTag,
+	WriterCourse,
+	WriterCoursePage,
+	WriterCourseQuery,
+} from "@youlearn/types";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { escapeLike } from "./sql";
 
@@ -142,32 +151,126 @@ export async function findCourse(id: string) {
 	return row && (await withGroups([row]))[0];
 }
 
-/** Courses the actor can edit, filtered by a name/slug search. */
-export async function listCourses(actor: CourseActor, q?: string) {
-	if (!actor.admin && actor.groupIds.length === 0) return [];
+const sortColumns = {
+	name: sql`lower(${course.name})`,
+	createdAt: course.createdAt,
+	updatedAt: course.updatedAt,
+};
+
+/** Courses the actor can edit (an admin: all of them), not archived. */
+function scopeOf(actor: CourseActor) {
+	return and(
+		isNull(course.deletedAt),
+		actor.admin
+			? undefined
+			: inArray(
+					course.id,
+					db
+						.select({ id: courseGroup.courseId })
+						.from(courseGroup)
+						.where(inArray(courseGroup.groupId, actor.groupIds)),
+				),
+	);
+}
+
+const hasRevision = (status: "draft" | "preview" | "published") =>
+	exists(
+		db
+			.select({ one: sql`1` })
+			.from(courseRevision)
+			.where(
+				and(
+					eq(courseRevision.courseId, course.id),
+					eq(courseRevision.status, status),
+				),
+			),
+	);
+
+/** Paginated, filtered and sorted courses the actor can edit, plus the options of the filters. */
+export async function listCourses(
+	actor: CourseActor,
+	query: WriterCourseQuery,
+): Promise<WriterCoursePage> {
+	const { q, groupId, category, status, sort, order, page, pageSize } = query;
+	const empty = {
+		courses: [],
+		total: 0,
+		page,
+		pageSize,
+		categories: [],
+		groups: [],
+	};
+	if (!actor.admin && actor.groupIds.length === 0) return empty;
+
+	const scope = scopeOf(actor);
 	const search = q ? `%${escapeLike(q)}%` : undefined;
+	const where = and(
+		scope,
+		search
+			? or(ilike(course.name, search), ilike(course.slug, search))
+			: undefined,
+		groupId
+			? inArray(
+					course.id,
+					db
+						.select({ id: courseGroup.courseId })
+						.from(courseGroup)
+						.where(eq(courseGroup.groupId, groupId)),
+				)
+			: undefined,
+		// Categories are stored lower-cased.
+		category
+			? sql`${category.toLowerCase()} = any(${course.categories})`
+			: undefined,
+		status === "none"
+			? and(
+					not(hasRevision("draft")),
+					not(hasRevision("preview")),
+					not(hasRevision("published")),
+				)
+			: status
+				? hasRevision(status)
+				: undefined,
+	);
+	const direction = order === "asc" ? asc : desc;
+
+	const [{ total = 0 } = {}] = await db
+		.select({ total: count() })
+		.from(course)
+		.where(where);
 	const rows = await db
 		.select()
 		.from(course)
-		.where(
-			and(
-				isNull(course.deletedAt),
-				search
-					? or(ilike(course.name, search), ilike(course.slug, search))
-					: undefined,
-				actor.admin
-					? undefined
-					: inArray(
-							course.id,
-							db
-								.select({ id: courseGroup.courseId })
-								.from(courseGroup)
-								.where(inArray(courseGroup.groupId, actor.groupIds)),
-						),
-			),
-		)
-		.orderBy(asc(sql`lower(${course.name})`));
-	return withGroups(rows);
+		.where(where)
+		.orderBy(direction(sortColumns[sort]), asc(course.id))
+		.limit(pageSize)
+		.offset((page - 1) * pageSize);
+
+	const scoped = db.select({ id: course.id }).from(course).where(scope);
+	const [courses, categories, groups] = await Promise.all([
+		withGroups(rows),
+		db
+			.selectDistinct({ category: sql<string>`unnest(${course.categories})` })
+			.from(course)
+			.where(scope)
+			.orderBy(sql`1`),
+		db
+			.select({ id: group.id, name: group.name, system: group.system })
+			.from(courseGroup)
+			.innerJoin(group, eq(group.id, courseGroup.groupId))
+			.where(inArray(courseGroup.courseId, scoped))
+			.groupBy(group.id)
+			.orderBy(asc(sql`lower(${group.name})`)),
+	]);
+
+	return {
+		courses,
+		total,
+		page,
+		pageSize,
+		categories: categories.map((row) => row.category),
+		groups,
+	};
 }
 
 /**

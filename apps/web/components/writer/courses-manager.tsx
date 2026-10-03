@@ -1,53 +1,129 @@
 "use client";
 
-import type { CourseGroupTag, WriterCourse } from "@youlearn/types";
-import Link from "next/link";
+import { Refresh01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+	type OnChangeFn,
+	type PaginationState,
+	type SortingState,
+	useTable,
+} from "@tanstack/react-table";
+import type {
+	CourseGroupTag,
+	WriterCourse,
+	WriterCoursePage,
+	WriterCourseQuery,
+} from "@youlearn/types";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { dataTableFeatures } from "@/components/data-table/features";
 import { FormError } from "@/components/form-error";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
+import { Spinner } from "@/components/ui/spinner";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
-import { CourseRowActions } from "@/components/writer/course-row-actions";
-import { assetUrl } from "@/components/writer/markdown";
+import type { CourseAction } from "@/components/writer/course-row-actions";
+import { createCourseColumns } from "@/components/writer/courses-columns";
+import { CoursesToolbar } from "@/components/writer/courses-toolbar";
 import { callApi } from "@/lib/api-client";
-import {
-	REVISION_STATUS_LABELS,
-	REVISION_STATUS_VARIANTS,
-} from "@/lib/revisions";
+import { coursesQueryToSearchParams } from "@/lib/courses-query";
+import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
 // `undefined` = closed, `null` = creating, a course = editing it.
 type Editing = WriterCourse | null | undefined;
 
+type Props = WriterCoursePage & {
+	/** Table state, read from the URL by the page. */
+	query: WriterCourseQuery;
+	assignableGroups: CourseGroupTag[];
+};
+
 export function CoursesManager({
 	courses,
+	total,
+	categories,
+	groups,
+	query,
 	assignableGroups,
-}: {
-	courses: WriterCourse[];
-	assignableGroups: CourseGroupTag[];
-}) {
+}: Props) {
 	const router = useRouter();
+	const [isPending, startTransition] = useTransition();
 	const [editing, setEditing] = useState<Editing>(undefined);
 	const [deleting, setDeleting] = useState<WriterCourse>();
 	const [error, setError] = useState<string>();
+
+	const sorting: SortingState = [
+		{ id: query.sort, desc: query.order === "desc" },
+	];
+	const pagination: PaginationState = {
+		pageIndex: query.page - 1,
+		pageSize: query.pageSize,
+	};
+
+	/** Sorting, filtering and pagination are done by the API: the table state lives in the URL. */
+	function navigate(patch: Partial<WriterCourseQuery>) {
+		const next = { ...query, ...patch };
+		if (!("page" in patch)) next.page = 1; // any other change goes back to the first page
+		const params = coursesQueryToSearchParams(next);
+		startTransition(() =>
+			router.push(`/writer/courses${params.size ? `?${params}` : ""}`),
+		);
+	}
+
+	const onSortingChange: OnChangeFn<SortingState> = (updater) => {
+		const [sort] = typeof updater === "function" ? updater(sorting) : updater;
+		if (sort) {
+			navigate({
+				sort: sort.id as WriterCourseQuery["sort"],
+				order: sort.desc ? "desc" : "asc",
+			});
+		}
+	};
+
+	const onPaginationChange: OnChangeFn<PaginationState> = (updater) => {
+		const next = typeof updater === "function" ? updater(pagination) : updater;
+		if (next.pageSize !== pagination.pageSize) {
+			navigate({ pageSize: next.pageSize, page: 1 });
+		} else {
+			navigate({ page: next.pageIndex + 1 });
+		}
+	};
 
 	function done() {
 		setEditing(undefined);
 		router.refresh();
 	}
 
+	const onAction = useCallback((action: CourseAction, course: WriterCourse) => {
+		setError(undefined);
+		if (action === "edit") setEditing(course);
+		else setDeleting(course);
+	}, []);
+
+	// Columns must keep a stable reference between renders.
+	const columns = useMemo(() => createCourseColumns({ onAction }), [onAction]);
+
+	const table = useTable({
+		features: dataTableFeatures,
+		columns,
+		data: courses,
+		getRowId: (course) => course.id,
+		manualSorting: true,
+		manualPagination: true,
+		rowCount: total,
+		enableMultiSort: false,
+		enableSortingRemoval: false,
+		autoResetPageIndex: false,
+		state: { sorting, pagination },
+		onSortingChange,
+		onPaginationChange,
+	});
+
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between">
+			<div className="flex items-center justify-between gap-4">
 				<div>
 					<h1 className="font-semibold text-xl">Cours</h1>
 					<p className="text-muted-foreground text-sm">
@@ -55,12 +131,26 @@ export function CoursesManager({
 						ses groupes.
 					</p>
 				</div>
-				<Button
-					onClick={() => setEditing(null)}
-					disabled={assignableGroups.length === 0}
-				>
-					Nouveau cours
-				</Button>
+				<div className="flex items-center gap-2">
+					<Button
+						variant="outline"
+						disabled={isPending}
+						onClick={() => startTransition(() => router.refresh())}
+					>
+						{isPending ? (
+							<Spinner />
+						) : (
+							<HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} />
+						)}
+						Actualiser
+					</Button>
+					<Button
+						onClick={() => setEditing(null)}
+						disabled={assignableGroups.length === 0}
+					>
+						Nouveau cours
+					</Button>
+				</div>
 			</div>
 
 			{assignableGroups.length === 0 && (
@@ -69,104 +159,33 @@ export function CoursesManager({
 					vous en attribuer un pour pouvoir créer des cours.
 				</FormError>
 			)}
+
+			<CoursesToolbar
+				key={query.q ?? ""}
+				query={query}
+				groups={groups}
+				categories={categories}
+				onChange={navigate}
+				onReset={() =>
+					navigate({
+						q: undefined,
+						status: undefined,
+						groupId: undefined,
+						category: undefined,
+						sort: "updatedAt",
+						order: "desc",
+						pageSize: DEFAULT_PAGE_SIZE,
+					})
+				}
+			/>
+
 			{error && <FormError>{error}</FormError>}
 
-			<Table className="table-fixed">
-				<TableHeader>
-					<TableRow>
-						<TableHead>Nom</TableHead>
-						<TableHead>Catégories</TableHead>
-						<TableHead>Groupes</TableHead>
-						<TableHead>Révisions</TableHead>
-						<TableHead className="w-16 text-right">
-							<span className="sr-only">Actions</span>
-						</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{courses.length === 0 && (
-						<TableRow>
-							<TableCell
-								colSpan={5}
-								className="text-center text-muted-foreground"
-							>
-								Aucun cours.
-							</TableCell>
-						</TableRow>
-					)}
-					{courses.map((course) => (
-						<TableRow key={course.id}>
-							<TableCell className="whitespace-normal">
-								<div className="flex items-center gap-3">
-									{course.imageAssetId && (
-										// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
-										<img
-											src={assetUrl(course.id, course.imageAssetId)}
-											alt=""
-											className="size-10 shrink-0 rounded object-cover"
-										/>
-									)}
-									<div className="min-w-0">
-										<Link
-											href={`/writer/courses/${course.id}`}
-											className="block truncate font-medium hover:underline"
-										>
-											{course.name}
-										</Link>
-										<div className="truncate text-muted-foreground text-xs">
-											{course.slug}
-										</div>
-									</div>
-								</div>
-							</TableCell>
-							<TableCell className="whitespace-normal">
-								<div className="flex flex-wrap gap-1">
-									{course.categories.map((category) => (
-										<Badge key={category} variant="outline">
-											{category}
-										</Badge>
-									))}
-								</div>
-							</TableCell>
-							<TableCell className="whitespace-normal">
-								<div className="flex flex-wrap gap-1">
-									{course.groups.map((group) => (
-										<Badge key={group.id} variant="secondary">
-											{group.name}
-										</Badge>
-									))}
-								</div>
-							</TableCell>
-							<TableCell className="whitespace-normal">
-								<div className="flex flex-wrap gap-1">
-									{(["published", "preview", "draft"] as const).map(
-										(status) =>
-											course.current[status] && (
-												<Badge
-													key={status}
-													variant={REVISION_STATUS_VARIANTS[status]}
-												>
-													{REVISION_STATUS_LABELS[status]} ·{" "}
-													{course.current[status].key}
-												</Badge>
-											),
-									)}
-								</div>
-							</TableCell>
-							<TableCell className="text-right">
-								<CourseRowActions
-									course={course}
-									onAction={(action, target) => {
-										if (action === "edit") return setEditing(target);
-										setError(undefined);
-										setDeleting(target);
-									}}
-								/>
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
-			</Table>
+			<div className={isPending ? "opacity-60 transition-opacity" : undefined}>
+				<DataTable table={table} emptyMessage="Aucun cours." />
+			</div>
+
+			<DataTablePagination table={table} />
 
 			{editing !== undefined && (
 				<CourseFormDialog
