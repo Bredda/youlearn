@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Icon } from "@/components/icon";
 import {
 	SidebarGroup,
@@ -23,7 +24,10 @@ export function NavMain({
 			<SidebarMenu>
 				{items.map((item) => (
 					<SidebarMenuItem key={item.name}>
-						<SidebarMenuButton render={<a href={item.url} />}>
+						<SidebarMenuButton
+							render={<Link href={item.url} />}
+							tooltip={item.name}
+						>
 							<Icon name={item.icon} />
 							<span>{item.name}</span>
 						</SidebarMenuButton>
