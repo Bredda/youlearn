@@ -4,6 +4,7 @@ import type { GroupWithMemberCount } from "@youlearn/types";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { GroupFormDialog } from "@/components/admin/group-form-dialog";
+import { GroupRowActions } from "@/components/admin/group-row-actions";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
 import { Icon } from "@/components/icon";
@@ -53,7 +54,9 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 					<TableRow>
 						<TableHead>Nom</TableHead>
 						<TableHead className="w-44">Membres</TableHead>
-						<TableHead className="w-64 text-right">Actions</TableHead>
+						<TableHead className="w-16 text-right">
+							<span className="sr-only">Actions</span>
+						</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -80,30 +83,15 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 							<TableCell>
 								{group.system ? "Tous les utilisateurs" : group.memberCount}
 							</TableCell>
-							<TableCell className="space-x-2 whitespace-nowrap text-right">
-								{!group.system && (
-									<>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => setEditing(group)}
-										>
-											<Icon name="edit" />
-											Renommer
-										</Button>
-										<Button
-											variant="destructive"
-											size="sm"
-											onClick={() => {
-												setError(undefined);
-												setDeleting(group);
-											}}
-										>
-											<Icon name="delete" />
-											Supprimer
-										</Button>
-									</>
-								)}
+							<TableCell className="text-right">
+								<GroupRowActions
+									group={group}
+									onAction={(action, target) => {
+										if (action === "rename") return setEditing(target);
+										setError(undefined);
+										setDeleting(target);
+									}}
+								/>
 							</TableCell>
 						</TableRow>
 					))}
