@@ -26,26 +26,32 @@ const sortColumns = {
 
 /**
  * What a learner sees: living courses with a published revision that are tagged "Commun" or with one of the
- * user's own groups. Everyone gets the same rule, editors and admins included: their own view is the writer area.
+ * user's own groups. An admin sees every one of them, whatever its groups. Writers get the learner rule: their
+ * view of unpublished work is the writer area.
  */
 function visibleTo(actor: CourseActor) {
 	return and(
 		isNull(course.deletedAt),
 		eq(courseRevision.status, "published"),
-		exists(
-			db
-				.select({ one: sql`1` })
-				.from(courseGroup)
-				.innerJoin(group, eq(group.id, courseGroup.groupId))
-				.where(
-					and(
-						eq(courseGroup.courseId, course.id),
-						actor.groupIds.length > 0
-							? or(eq(group.system, true), inArray(group.id, actor.groupIds))
-							: eq(group.system, true),
-					),
+		actor.admin
+			? undefined
+			: exists(
+					db
+						.select({ one: sql`1` })
+						.from(courseGroup)
+						.innerJoin(group, eq(group.id, courseGroup.groupId))
+						.where(
+							and(
+								eq(courseGroup.courseId, course.id),
+								actor.groupIds.length > 0
+									? or(
+											eq(group.system, true),
+											inArray(group.id, actor.groupIds),
+										)
+									: eq(group.system, true),
+							),
+						),
 				),
-		),
 	);
 }
 
@@ -71,9 +77,9 @@ export async function listCatalog(
 		category
 			? sql`${category.toLowerCase()} = any(${course.categories})`
 			: undefined,
-		// Only the user's own groups can filter: another group id never narrows (or reveals) anything.
+		// Only the user's own groups can filter (an admin: any): another group id never narrows (or reveals) anything.
 		groupId
-			? actor.groupIds.includes(groupId)
+			? actor.admin || actor.groupIds.includes(groupId)
 				? inArray(
 						course.id,
 						db
@@ -115,12 +121,17 @@ export async function listCatalog(
 			.innerJoin(courseRevision, published)
 			.where(visible)
 			.orderBy(sql`1`),
-		actor.groupIds.length === 0
+		// An admin can filter by any group; "Commun" is not offered, like in the other group filters.
+		!actor.admin && actor.groupIds.length === 0
 			? []
 			: db
 					.select({ id: group.id, name: group.name })
 					.from(group)
-					.where(inArray(group.id, actor.groupIds))
+					.where(
+						actor.admin
+							? eq(group.system, false)
+							: inArray(group.id, actor.groupIds),
+					)
 					.orderBy(asc(sql`lower(${group.name})`)),
 	]);
 

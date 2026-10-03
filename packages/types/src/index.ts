@@ -209,7 +209,7 @@ export type CatalogQuery = {
 	/** Searches the name and the description. */
 	q?: string;
 	category?: string;
-	/** One of the user's own groups. */
+	/** One of the user's own groups (an admin: any group). */
 	groupId?: string;
 	sort: CatalogSort;
 	order: "asc" | "desc";
@@ -222,7 +222,7 @@ export type CatalogPage = {
 	total: number;
 	page: number;
 	pageSize: number;
-	/** Options of the filters: the categories of the courses the user sees, and the user's own groups. */
+	/** Options of the filters: the categories of the courses the user sees, and their own groups (an admin: all groups but "Commun"). */
 	categories: string[];
 	groups: PublicGroup[];
 };
