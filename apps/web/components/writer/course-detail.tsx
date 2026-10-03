@@ -9,6 +9,7 @@ import type {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
 import {
 	AlertDialog,
@@ -50,9 +51,10 @@ const dateFormat = new Intl.DateTimeFormat("fr-FR", {
 });
 
 /** What the user has to confirm before the API accepts the change. */
-type Confirmation =
-	| { kind: "status"; revision: WriterRevision; to: RevisionStatus }
-	| { kind: "delete"; revision: WriterRevision };
+type Confirmation = {
+	revision: WriterRevision;
+	to: RevisionStatus;
+};
 
 export function CourseDetail({
 	course,
@@ -71,6 +73,7 @@ export function CourseDetail({
 	const [creating, setCreating] = useState<{ baseId?: string }>();
 	const [linking, setLinking] = useState<WriterRevision>();
 	const [confirming, setConfirming] = useState<Confirmation>();
+	const [deleting, setDeleting] = useState<WriterRevision>();
 	const [error, setError] = useState<string>();
 	const [pending, setPending] = useState(false);
 
@@ -103,7 +106,7 @@ export function CourseDetail({
 	/** Publishing over a published revision and deprecating both retire a live revision: ask first. */
 	function changeStatus(revision: WriterRevision, to: RevisionStatus) {
 		if ((to === "published" && published) || to === "deprecated")
-			return setConfirming({ kind: "status", revision, to });
+			return setConfirming({ revision, to });
 		return setStatus(revision, to);
 	}
 
@@ -116,14 +119,12 @@ export function CourseDetail({
 			case "link":
 				return setLinking(revision);
 			case "delete":
-				return setConfirming({ kind: "delete", revision });
+				return setDeleting(revision);
 		}
 	}
 
 	function confirmed() {
 		if (!confirming) return;
-		if (confirming.kind === "delete")
-			return run(callApi("DELETE", `${api}/${confirming.revision.id}`));
 		return setStatus(confirming.revision, confirming.to, true);
 	}
 
@@ -272,6 +273,20 @@ export function CourseDetail({
 				/>
 			)}
 
+			{deleting && (
+				<ConfirmDeleteDialog
+					title={`Supprimer la révision « ${deleting.key} » ?`}
+					description="Son contenu sera perdu. Cette action est définitive."
+					expected={deleting.key}
+					onConfirm={() => callApi("DELETE", `${api}/${deleting.id}`)}
+					onClose={() => setDeleting(undefined)}
+					onDone={() => {
+						setDeleting(undefined);
+						router.refresh();
+					}}
+				/>
+			)}
+
 			{linking && (
 				<ReviewLinkDialog
 					courseId={course.id}
@@ -297,9 +312,7 @@ export function CourseDetail({
 						<AlertDialogCancel>Annuler</AlertDialogCancel>
 						<AlertDialogAction
 							variant={
-								confirming?.kind === "status" && confirming.to === "published"
-									? "default"
-									: "destructive"
+								confirming?.to === "published" ? "default" : "destructive"
 							}
 							onClick={confirmed}
 							disabled={pending}
@@ -316,7 +329,6 @@ export function CourseDetail({
 function confirmationTitle(confirming?: Confirmation) {
 	if (!confirming) return "";
 	const { key } = confirming.revision;
-	if (confirming.kind === "delete") return `Supprimer la révision « ${key} » ?`;
 	return confirming.to === "published"
 		? `Publier la révision « ${key} » ?`
 		: `Déprécier la révision « ${key} » ?`;
@@ -324,7 +336,6 @@ function confirmationTitle(confirming?: Confirmation) {
 
 function confirmationText(confirming?: Confirmation, publishedKey?: string) {
 	if (!confirming) return "";
-	if (confirming.kind === "delete") return "Cette action est définitive.";
 	if (confirming.to === "published")
 		return `La révision « ${publishedKey} » est actuellement publiée : elle va être dépréciée. Les apprenants verront la nouvelle révision.`;
 	return "Le cours ne sera plus accessible aux apprenants tant qu'une autre révision n'est pas publiée. La révision dépréciée reste consultable dans l'historique.";

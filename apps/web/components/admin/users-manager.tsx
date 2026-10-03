@@ -25,20 +25,11 @@ import { UserFormDialog } from "@/components/admin/user-form-dialog";
 import type { UserAction } from "@/components/admin/user-row-actions";
 import { createUserColumns } from "@/components/admin/users-columns";
 import { UsersToolbar } from "@/components/admin/users-toolbar";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { dataTableFeatures } from "@/components/data-table/features";
 import { FormError } from "@/components/form-error";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { authError } from "@/lib/api-client";
@@ -117,7 +108,7 @@ export function UsersManager({
 		router.refresh();
 	}
 
-	/** Runs an action that does not need a dialog (unban, delete). */
+	/** Runs an action that does not need a dialog (unban). */
 	const run = useCallback(
 		async (action: Promise<{ error: { message?: string } | null }>) => {
 			setError(undefined);
@@ -138,11 +129,6 @@ export function UsersManager({
 		},
 		[run],
 	);
-
-	async function confirmDelete(user: AdminUser) {
-		close();
-		await run(authClient.admin.removeUser({ userId: user.id }));
-	}
 
 	// Columns must keep a stable reference between renders.
 	const columns = useMemo(
@@ -246,34 +232,20 @@ export function UsersManager({
 				<BanDialog user={dialog.user} onClose={close} onDone={done} />
 			)}
 
-			<AlertDialog
-				open={dialog?.type === "delete"}
-				onOpenChange={(open) => !open && close()}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Supprimer{" "}
-							{dialog?.type === "delete" ? dialog.user.name : "l'utilisateur"} ?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							Le compte, ses sessions et ses appartenances aux groupes seront
-							supprimés définitivement.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Annuler</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							onClick={() =>
-								dialog?.type === "delete" && confirmDelete(dialog.user)
-							}
-						>
-							Supprimer
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{dialog?.type === "delete" && (
+				<ConfirmDeleteDialog
+					title={`Supprimer ${dialog.user.name} ?`}
+					description="Le compte, ses sessions et ses appartenances aux groupes seront supprimés définitivement."
+					expected={dialog.user.email}
+					onConfirm={async () =>
+						authError(
+							await authClient.admin.removeUser({ userId: dialog.user.id }),
+						)
+					}
+					onClose={close}
+					onDone={done}
+				/>
+			)}
 		</div>
 	);
 }

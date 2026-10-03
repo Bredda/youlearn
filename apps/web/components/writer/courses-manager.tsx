@@ -4,17 +4,8 @@ import type { CourseGroupTag, WriterCourse } from "@youlearn/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,23 +39,9 @@ export function CoursesManager({
 	const [editing, setEditing] = useState<Editing>(undefined);
 	const [deleting, setDeleting] = useState<WriterCourse>();
 	const [error, setError] = useState<string>();
-	const [pending, setPending] = useState(false);
 
 	function done() {
 		setEditing(undefined);
-		router.refresh();
-	}
-
-	async function onDelete() {
-		if (!deleting) return;
-		setPending(true);
-		const message = await callApi(
-			"DELETE",
-			`/api/writer/courses/${deleting.id}`,
-		);
-		setPending(false);
-		setDeleting(undefined);
-		if (message) return setError(message);
 		router.refresh();
 	}
 
@@ -200,34 +177,25 @@ export function CoursesManager({
 				/>
 			)}
 
-			<AlertDialog
-				open={deleting !== undefined}
-				onOpenChange={(open) => !open && setDeleting(undefined)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Supprimer le cours « {deleting?.name} » ?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							{deleting?.everPublished
-								? "Ce cours a déjà été publié : il sera archivé (seul un administrateur peut le faire) et ne sera plus visible. "
-								: "Ses révisions seront supprimées avec lui. "}
-							Cette action est définitive.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Annuler</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							onClick={onDelete}
-							disabled={pending}
-						>
-							Supprimer
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{deleting && (
+				<ConfirmDeleteDialog
+					title={`Supprimer le cours « ${deleting.name} » ?`}
+					description={`${
+						deleting.everPublished
+							? "Ce cours a déjà été publié : il sera archivé (seul un administrateur peut le faire) et ne sera plus visible. "
+							: "Ses révisions seront supprimées avec lui. "
+					}Cette action est définitive.`}
+					expected={deleting.name}
+					onConfirm={() =>
+						callApi("DELETE", `/api/writer/courses/${deleting.id}`)
+					}
+					onClose={() => setDeleting(undefined)}
+					onDone={() => {
+						setDeleting(undefined);
+						router.refresh();
+					}}
+				/>
+			)}
 		</div>
 	);
 }

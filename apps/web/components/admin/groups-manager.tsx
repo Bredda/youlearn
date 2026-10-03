@@ -4,17 +4,8 @@ import type { GroupWithMemberCount } from "@youlearn/types";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { GroupFormDialog } from "@/components/admin/group-form-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,20 +26,9 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 	const [editing, setEditing] = useState<Editing>(undefined);
 	const [deleting, setDeleting] = useState<GroupWithMemberCount>();
 	const [error, setError] = useState<string>();
-	const [pending, setPending] = useState(false);
 
 	function done() {
 		setEditing(undefined);
-		router.refresh();
-	}
-
-	async function onDelete() {
-		if (!deleting) return;
-		setPending(true);
-		const message = await callApi("DELETE", `/api/admin/groups/${deleting.id}`);
-		setPending(false);
-		setDeleting(undefined);
-		if (message) return setError(message);
 		router.refresh();
 	}
 
@@ -135,34 +115,25 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 				/>
 			)}
 
-			<AlertDialog
-				open={deleting !== undefined}
-				onOpenChange={(open) => !open && setDeleting(undefined)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Supprimer le groupe « {deleting?.name} » ?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							{deleting?.memberCount
-								? `${deleting.memberCount} utilisateur(s) en font partie et le perdront. `
-								: ""}
-							Cette action est définitive.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Annuler</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							onClick={onDelete}
-							disabled={pending}
-						>
-							Supprimer
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{deleting && (
+				<ConfirmDeleteDialog
+					title={`Supprimer le groupe « ${deleting.name} » ?`}
+					description={`${
+						deleting.memberCount
+							? `${deleting.memberCount} utilisateur(s) en font partie et le perdront. `
+							: ""
+					}Cette action est définitive.`}
+					expected={deleting.name}
+					onConfirm={() =>
+						callApi("DELETE", `/api/admin/groups/${deleting.id}`)
+					}
+					onClose={() => setDeleting(undefined)}
+					onDone={() => {
+						setDeleting(undefined);
+						router.refresh();
+					}}
+				/>
+			)}
 		</div>
 	);
 }
