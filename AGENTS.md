@@ -43,7 +43,7 @@ pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 | Path | Role |
 |---|---|
 | `apps/web` | Next.js 16 App Router + shadcn (base-ui) + Tailwind 4. Conventions: `youlearn-ui` skill. |
-| `apps/api` | Fastify 5. Mounts Better Auth on `/api/auth/*`, exposes `/api/me`, `/api/admin/*`, `/api/writer/*` (courses, revisions), `/api/review/*` and the course files. |
+| `apps/api` | Fastify 5. Mounts Better Auth on `/api/auth/*`, exposes `/api/me`, `/api/admin/*`, `/api/writer/*` (courses, revisions), `/api/review/*`, the learner catalog (`/api/courses`) and the course files. |
 | `packages/config` | Loads the root `.env`, validates it with zod, exports `env`. |
 | `packages/db` | Drizzle client (`pg`), schema, migrations (`drizzle/`). |
 | `packages/storage` | S3 client (`@aws-sdk/client-s3`) for course files: `ensureBucket`, `putObject`, `getObject` (streamed, `Range`), `objectExists`, `moveToDeprecated`, `presignGet`/`presignPut`. Only talks to the S3 API, so RustFS (dev) is swappable for any S3. |

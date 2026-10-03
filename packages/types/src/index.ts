@@ -193,6 +193,40 @@ export type WriterCoursePage = {
 	groups: CourseGroupTag[];
 };
 
+/** A published course as shown in the learner catalog (dates serialized by JSON). */
+export type CatalogCourse = Pick<
+	Course,
+	"id" | "name" | "slug" | "description" | "categories" | "imageAssetId"
+> & {
+	/** When the revision learners see was published. */
+	publishedAt: string;
+};
+
+export type CatalogSort = "name" | "publishedAt";
+
+/** Query of the learner catalog (filters, sorting, pagination), shared by the API and the web app. */
+export type CatalogQuery = {
+	/** Searches the name and the description. */
+	q?: string;
+	category?: string;
+	/** One of the user's own groups. */
+	groupId?: string;
+	sort: CatalogSort;
+	order: "asc" | "desc";
+	page: number;
+	pageSize: number;
+};
+
+export type CatalogPage = {
+	courses: CatalogCourse[];
+	total: number;
+	page: number;
+	pageSize: number;
+	/** Options of the filters: the categories of the courses the user sees, and the user's own groups. */
+	categories: string[];
+	groups: PublicGroup[];
+};
+
 /** Groups the current user may put on a course: their own for a writer, every group for an admin. */
 export type AssignableGroups = { groups: CourseGroupTag[] };
 

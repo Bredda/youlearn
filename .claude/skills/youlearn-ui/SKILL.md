@@ -39,6 +39,8 @@ Tables with sorting, filtering and pagination are executed by the API; the state
 
 Small static tables (a handful of rows, like groups or the revisions of a course) may use the plain shadcn `Table`.
 
+Server-side **card grids** (learner catalog, `/courses`) follow the same URL-state pattern without TanStack Table: `lib/catalog-query.ts`, a manager with `navigate(patch)`, a toolbar (search, `FilterSelect`s, a sort `Select`, reset) and the generic `Pagination` (`components/pagination.tsx`, props only; `DataTablePagination` is its table binding). Grid page sizes are 12/24/48.
+
 ## Row actions
 
 Row actions are **a dedicated dropdown component per table** (`user-row-actions.tsx`, `course-row-actions.tsx`, `revision-row-actions.tsx`, `group-row-actions.tsx`): a ghost icon button (`Icon name="more"`, `aria-label="Actions pour <nom>"`) opening a `DropdownMenu` whose items have icons, with a separator before the destructive ones (`variant="destructive"`). They receive `onAction(action, row)`; the manager owns the dialogs. Never put action buttons directly in table cells; the actions column is `w-16 text-right` with an `sr-only` header.

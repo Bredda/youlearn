@@ -28,6 +28,7 @@ const userItems: {
 }[] = [
 	{ name: "Mon dashboard", url: "/", icon: "dashboard" },
 	{ name: "Mes sessions", url: "/my-sessions", icon: "sessions" },
+	{ name: "Les cours", url: "/courses", icon: "courses" },
 	{ name: "Les parcours", url: "/programs", icon: "programs" },
 ];
 

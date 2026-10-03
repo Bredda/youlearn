@@ -35,6 +35,10 @@ Files are `course_asset` rows (per course, deduplicated by `sha256`, blob at `co
 
 `canReadAsset`: editors read every file of their courses; everybody else only the cover and the files used by the published revision (or, with `?review=<token>`, by the revision in review), so draft files stay private even inside the course's groups.
 
+## Learner catalog
+
+`GET /api/courses` (`lib/catalog.ts`, `routes/catalog.ts`, any signed-in user) lists what a learner can see: living courses with a **published** revision tagged "Commun" or with one of the user's *explicit* groups. Same rule for everybody, admins and writers included (their view is the writer area), so an admin only sees the courses of their own groups plus Commun. Item shape `CatalogCourse` carries no group list (it would leak other teams' names); `publishedAt` is the `updatedAt` of the published revision (it never changes afterwards). Filters: search (name, description), category, and one of the user's own groups (any other group id yields nothing); sort `name` or `publishedAt`. The filter options are the visible categories and the user's own groups. Web: `/courses` (card grid, `components/catalog/*`), no action on a card yet.
+
 ## Not built yet
 
-Learner catalog (reading published revisions), enrollment and progress (progress will reference `revision_id`), programs, videos and large uploads.
+Reading a published revision as a learner (the card has no link yet), enrollment and progress (progress will reference `revision_id`), programs, videos and large uploads.
