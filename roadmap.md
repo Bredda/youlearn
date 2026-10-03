@@ -25,7 +25,7 @@ Le socle côté formateur est là ; ce qui manque pour boucler ce parcours, c'es
 
 | # | Axe | Horizon | Statut |
 | --- | --- | --- | --- |
-| 1 | Socle du projet | Maintenant | Suivi du travail en cours de rédaction ; conteneurisation et CI avec releases à faire |
+| 1 | Socle du projet | Fait | Suivi du travail, images Docker et stack complète, CI et releases (premières exécutions à constater sur GitHub) |
 | 2 | Rédaction des cours | Fait | Révisions, éditeur, relecture, durées estimées et examen final disponibles côté formateur |
 | 3 | Parcours apprenant | Ensuite | Catalogue seul : les cartes ne mènent encore nulle part |
 | 4 | Certification | Plus tard | Dépend de l'axe 3 ; conception arrêtée, rien d'écrit |
@@ -36,9 +36,9 @@ Le socle côté formateur est là ; ce qui manque pour boucler ce parcours, c'es
 
 **But :** pouvoir travailler à plusieurs, livrer et déployer sans effort.
 
-Trois chantiers, dans cet ordre : un suivi du travail à trois niveaux (`roadmap.md` pour les grosses fonctionnalités, `todo.md` pour celle en cours, `backlog.md` pour les idées non planifiées), la conteneurisation (une image web, une image API, un compose complet avec les migrations), puis une CI qui publie des releases (release-please) et les images.
+Fait : un suivi du travail à trois niveaux (`roadmap.md` pour les grosses fonctionnalités, `todo.md` pour celle en cours, `backlog.md` pour les idées non planifiées), la conteneurisation (une image web, une image API, un compose complet avec un service de migration, `pnpm stack:up`), puis une CI qui vérifie les images et les titres de pull request, et un workflow release-please qui publie les releases et les images sur GHCR. Reste à constater sur GitHub : la première pull request de release et la première publication.
 
-**Terminé quand :** un merge sur `main` ouvre une pull request de release, et la fusionner publie une version taguée et ses images, démarrables avec un seul `docker compose up`.
+**Terminé quand :** un merge sur `main` ouvre une pull request de release, et la fusionner publie une version taguée et ses images, démarrables avec un seul `docker compose up`. Le dépôt remplit ces conditions ; la preuve sur GitHub reste à faire.
 
 ## 2. Rédaction des cours
 
