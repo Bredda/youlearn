@@ -74,6 +74,12 @@ Run one project with `pnpm --filter api test`, or watch with `pnpm --filter api 
 `pnpm install` sets up the Husky hooks. On commit, Biome fixes and formats the staged files; on push, `pnpm lint:ci`
 then `pnpm check-types` and `pnpm test` must pass. When a hook fails, fix the cause rather than bypassing it.
 
+### Continuous integration
+
+`.github/workflows/ci.yml` runs the same three checks (`lint:ci`, `check-types`, `test`) with GitHub Actions on every push
+to `main` and `dev` and on every pull request. It starts from a clean checkout with placeholder environment values, so it
+needs no secret, database or storage.
+
 ## Repository layout
 
 | Path | Role |

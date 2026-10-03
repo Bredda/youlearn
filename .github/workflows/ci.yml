@@ -1,0 +1,52 @@
+name: CI
+
+# The same checks as the pre-push hook, so a push that skipped it (--no-verify) or a pull request is still verified.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+# A newer push to the same branch makes the running check obsolete.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # `@youlearn/config` validates the environment as soon as it is imported (next typegen does it for the web
+      # app). These placeholders only have to be well-formed: no check below talks to a database or a storage.
+      DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-0123456789
+      S3_ENDPOINT: http://localhost:9000
+      S3_BUCKET: youlearn-ci
+      S3_ACCESS_KEY: CI
+      S3_SECRET_KEY: CI
+      # Do not install the Git hooks on the runner.
+      HUSKY: "0"
+    steps:
+      - uses: actions/checkout@v7
+
+      # The pnpm version comes from the `packageManager` field of package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint and format
+        run: pnpm lint:ci
+
+      - name: Types
+        run: pnpm check-types
+
+      - name: Tests
+        run: pnpm test
