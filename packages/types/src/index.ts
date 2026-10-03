@@ -1,4 +1,5 @@
 import type { Role } from "@youlearn/auth/roles";
+import type { CourseContent } from "@youlearn/content";
 import type { schema } from "@youlearn/db";
 import type { EventFilter } from "@youlearn/events";
 
@@ -121,8 +122,16 @@ export type CourseGroupTag = PublicGroup & { system: boolean };
 export type CourseRevision = typeof schema.courseRevision.$inferSelect;
 export type NewCourseRevision = typeof schema.courseRevision.$inferInsert;
 
-export type CourseContent = schema.CourseContent;
-export type CourseLesson = schema.CourseLesson;
+export type {
+	Block,
+	Chapter,
+	CourseContent,
+	MarkdownBlock,
+	Question,
+	QuestionOption,
+	Quiz,
+	VideoBlock,
+} from "@youlearn/content";
 
 export type CourseAsset = typeof schema.courseAsset.$inferSelect;
 
@@ -131,7 +140,7 @@ export type RevisionStatus = (typeof schema.revisionStatus.enumValues)[number];
 /** A revision of a course as listed in the writer area (dates serialized by JSON). */
 export type WriterRevision = Pick<
 	CourseRevision,
-	"id" | "courseId" | "key" | "status" | "parentId" | "previewToken"
+	"id" | "courseId" | "key" | "status" | "parentId" | "previewToken" | "purpose"
 > & {
 	createdAt: string;
 	updatedAt: string;
@@ -236,8 +245,19 @@ export type ReviewView = {
 		Course,
 		"id" | "name" | "description" | "categories" | "imageAssetId"
 	>;
-	revision: Pick<CourseRevision, "id" | "key">;
+	revision: Pick<CourseRevision, "id" | "key" | "purpose">;
 	content: CourseContent;
+	/**
+	 * What the revision is compared against: its parent, when that one is published or deprecated (never
+	 * somebody's unpublished work). The reader can show what changed.
+	 */
+	base: ReviewBase | null;
 	/** The token of the link, needed to load the files of the revision. */
 	token: string;
+};
+
+export type ReviewBase = {
+	key: string;
+	status: RevisionStatus;
+	content: CourseContent;
 };

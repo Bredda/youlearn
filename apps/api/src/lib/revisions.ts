@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, asc, db, eq, inArray, isNull, schema } from "@youlearn/db";
 import type {
 	CourseContent,
+	ReviewBase,
 	RevisionStatus,
 	WriterRevision,
 	WriterRevisionDetail,
@@ -76,6 +77,7 @@ async function toWriterRevisions(rows: Revision[]): Promise<WriterRevision[]> {
 		status: row.status,
 		parentId: row.parentId,
 		previewToken: row.previewToken,
+		purpose: row.purpose,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 		contributors: contributors
@@ -131,7 +133,7 @@ type Outcome<T> = ({ ok: true } & T) | ({ ok: false } & Failure);
 export async function createRevision(
 	courseId: string,
 	actor: CourseActor,
-	input: { key?: string; parentId?: string },
+	input: { key?: string; parentId?: string; purpose: string },
 ): Promise<Outcome<{ revisionId: string }>> {
 	return db.transaction(async (tx) => {
 		await lockCourse(tx, courseId);
@@ -180,7 +182,8 @@ export async function createRevision(
 				courseId,
 				key,
 				parentId: input.parentId ?? null,
-				// Cloning copies the lessons; the files they refer to are shared (assets are immutable).
+				purpose: input.purpose,
+				// Cloning copies the content; the files it refers to are shared (assets are immutable).
 				...(parent && { content: parent.content }),
 			})
 			.returning({ id: courseRevision.id });
@@ -392,4 +395,27 @@ export async function findRevisionByToken(token: string) {
 			),
 		);
 	return row;
+}
+
+/**
+ * What a review is compared against: the parent of the revision, when it is published or deprecated. An
+ * unpublished parent is somebody's work in progress, which a reviewer holding a link must not see.
+ */
+export async function findReviewBase(
+	revision: Pick<Revision, "courseId" | "parentId">,
+): Promise<ReviewBase | null> {
+	if (!revision.parentId) return null;
+	const [parent] = await db
+		.select()
+		.from(courseRevision)
+		.where(
+			and(
+				eq(courseRevision.courseId, revision.courseId),
+				eq(courseRevision.id, revision.parentId),
+				inArray(courseRevision.status, ["published", "deprecated"]),
+			),
+		);
+	return parent
+		? { key: parent.key, status: parent.status, content: parent.content }
+		: null;
 }

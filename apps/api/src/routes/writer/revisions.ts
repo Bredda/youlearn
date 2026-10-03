@@ -1,8 +1,8 @@
+import { contentSchema } from "@youlearn/content";
 import { schema } from "@youlearn/db";
 import { recordEvent } from "@youlearn/events/server";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { contentSchema } from "../../lib/content";
 import { authorizeCourse } from "../../lib/courses";
 import {
 	changeStatus,
@@ -15,6 +15,8 @@ import {
 	resetPreviewToken,
 	saveContent,
 } from "../../lib/revisions";
+
+const CONTENT_BODY_LIMIT = 8 * 1024 * 1024;
 
 const courseParams = z.object({ id: z.string().min(1) });
 const revisionParams = courseParams.extend({ revisionId: z.string().min(1) });
@@ -29,6 +31,8 @@ const createBody = z.object({
 		.optional(),
 	/** The revision to start from (its content is cloned). */
 	parentId: z.string().min(1).optional(),
+	/** Why the revision exists: mandatory, shown in the history and the review. */
+	purpose: z.string().trim().min(1).max(2000),
 });
 
 const contentBody = z.object({
@@ -75,6 +79,8 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 	// No event per save: contributors record who worked on the revision, the log keeps the milestones.
 	app.put(
 		"/api/writer/courses/:id/revisions/:revisionId/content",
+		// A whole course is saved at once: the default 1 MiB would cap it long before the content limits do.
+		{ bodyLimit: CONTENT_BODY_LIMIT },
 		async (request, reply) => {
 			const { id, revisionId } = revisionParams.parse(request.params);
 			const { content, expectedUpdatedAt } = contentBody.parse(request.body);
@@ -120,6 +126,7 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 				},
 				metadata: {
 					courseId: id,
+					purpose: body.purpose,
 					...(body.parentId && {
 						clonedFrom: (await findRevision(id, body.parentId))?.key,
 					}),

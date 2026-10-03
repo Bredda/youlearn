@@ -16,6 +16,7 @@
 		"@fastify/multipart": "^10.1.2",
 		"@youlearn/auth": "workspace:*",
 		"@youlearn/config": "workspace:*",
+		"@youlearn/content": "workspace:*",
 		"@youlearn/db": "workspace:*",
 		"@youlearn/events": "workspace:*",
 		"@youlearn/storage": "workspace:*",

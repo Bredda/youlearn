@@ -139,10 +139,15 @@ export function describeEvent({
 					: "";
 			return `Statut : ${label(data.from)} → ${label(data.to)}${replacedBy}`;
 		}
-		case "revision.create":
-			return typeof data.clonedFrom === "string"
-				? `Clonée depuis ${data.clonedFrom}`
-				: null;
+		case "revision.create": {
+			const parts = [
+				typeof data.clonedFrom === "string"
+					? `Clonée depuis ${data.clonedFrom}`
+					: null,
+				typeof data.purpose === "string" ? `But : ${data.purpose}` : null,
+			].filter(Boolean);
+			return parts.join(" ; ") || null;
+		}
 		case "asset.deprecate":
 			return "Plus utilisé : déplacé dans le bucket des fichiers dépréciés";
 		case "group.update":

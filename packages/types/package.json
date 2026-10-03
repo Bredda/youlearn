@@ -9,6 +9,7 @@
 	},
 	"dependencies": {
 		"@youlearn/auth": "workspace:*",
+		"@youlearn/content": "workspace:*",
 		"@youlearn/db": "workspace:*",
 		"@youlearn/events": "workspace:*"
 	},

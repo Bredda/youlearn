@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, db, eq, schema, sql } from "@youlearn/db";
+import { and, db, eq, inArray, schema, sql } from "@youlearn/db";
 import { objectExists, putObject } from "@youlearn/storage";
 import type { WriterAsset, WriterCourse } from "@youlearn/types";
 import { type CourseActor, canEditCourse, canViewCourse } from "./courses";
@@ -60,18 +60,27 @@ export async function storeImage(
 	return existing;
 }
 
-/** A revision of the course (optionally in a given status / with a given review token) whose lessons use the file. */
+/** A revision of the course (optionally in a given status / with a given review token) whose content uses the file. */
 async function revisionUses(
 	courseId: string,
 	assetId: string,
-	where: { status?: "published" | "preview"; token?: string },
+	where: {
+		status?: "published" | "preview";
+		statuses?: ("published" | "deprecated")[];
+		token?: string;
+		id?: string;
+	},
 ) {
 	const count = await db.$count(
 		courseRevision,
 		and(
 			eq(courseRevision.courseId, courseId),
 			where.status ? eq(courseRevision.status, where.status) : undefined,
+			where.statuses
+				? inArray(courseRevision.status, where.statuses)
+				: undefined,
 			where.token ? eq(courseRevision.previewToken, where.token) : undefined,
+			where.id ? eq(courseRevision.id, where.id) : undefined,
 			sql`${courseRevision.content}::text like ${`%asset:${escapeLike(assetId)}%`}`,
 		),
 	);
@@ -92,18 +101,27 @@ export async function canReadAsset(
 	if (canEditCourse(actor, course)) return true;
 
 	if (reviewToken) {
-		const reviewed = await db.$count(
-			courseRevision,
-			and(
-				eq(courseRevision.courseId, course.id),
-				eq(courseRevision.status, "preview"),
-				eq(courseRevision.previewToken, reviewToken),
-			),
-		);
+		const [reviewed] = await db
+			.select({ parentId: courseRevision.parentId })
+			.from(courseRevision)
+			.where(
+				and(
+					eq(courseRevision.courseId, course.id),
+					eq(courseRevision.status, "preview"),
+					eq(courseRevision.previewToken, reviewToken),
+				),
+			);
 		if (
-			reviewed > 0 &&
+			reviewed &&
 			(course.imageAssetId === assetId ||
-				(await revisionUses(course.id, assetId, { token: reviewToken })))
+				(await revisionUses(course.id, assetId, { token: reviewToken })) ||
+				// The review shows what changed since the base, so the files only the base uses (an image that was
+				// replaced) must load too. Same rule as `findReviewBase`: a published or deprecated parent only.
+				(reviewed.parentId !== null &&
+					(await revisionUses(course.id, assetId, {
+						id: reviewed.parentId,
+						statuses: ["published", "deprecated"],
+					}))))
 		)
 			return true;
 	}

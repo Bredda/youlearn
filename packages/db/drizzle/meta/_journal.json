@@ -57,6 +57,13 @@
       "when": 1790979583130,
       "tag": "0007_real_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791025673377,
+      "tag": "0008_small_quicksilver",
+      "breakpoints": true
     }
   ]
 }

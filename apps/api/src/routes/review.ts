@@ -1,7 +1,7 @@
 import type { ReviewView } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { findRevisionByToken } from "../lib/revisions";
+import { findReviewBase, findRevisionByToken } from "../lib/revisions";
 
 const params = z.object({ token: z.string().min(1).max(200) });
 
@@ -28,8 +28,13 @@ export const reviewRoutes: FastifyPluginAsync = async (app) => {
 					categories: course.categories,
 					imageAssetId: course.imageAssetId,
 				},
-				revision: { id: revision.id, key: revision.key },
+				revision: {
+					id: revision.id,
+					key: revision.key,
+					purpose: revision.purpose,
+				},
 				content: revision.content,
+				base: await findReviewBase(revision),
 				token,
 			};
 		},
