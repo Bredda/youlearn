@@ -1,0 +1,16 @@
+# The images are built from a clean copy of the sources: nothing local goes in, secrets least of all.
+.git
+.github
+.husky
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+coverage
+docs
+*.md
+docker/compose*.yml

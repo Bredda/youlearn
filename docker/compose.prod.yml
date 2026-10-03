@@ -1,0 +1,138 @@
+# The whole application: PostgreSQL, S3 storage, migrations, API and web.
+#
+#   pnpm stack:up      build the images from the sources and start everything (reads .env)
+#   pnpm stack:down    stop it (the data stays in the named volumes)
+#
+# To run a published release instead of building: YOULEARN_VERSION=1.2.3 docker compose -f docker/compose.prod.yml
+# --env-file .env up -d --no-build (the images come from ghcr.io/bredda).
+#
+# Only the web app is published; the browser never talks to the API or the storage directly.
+# A separate project name keeps these volumes apart from the development ones of docker/compose.yml.
+name: youlearn-prod
+
+x-app-environment: &app-environment
+  NODE_ENV: production
+  # `@youlearn/config` validates the same environment in the API, the migrations and the web server.
+  DATABASE_URL: postgres://${POSTGRES_USER:-youlearn}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-youlearn}
+  API_HOST: 0.0.0.0
+  API_PORT: 3001
+  API_URL: http://api:3001
+  WEB_URL: ${WEB_URL:-http://localhost:3000}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -base64 32)}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+  ADMIN_NAME: ${ADMIN_NAME:-Admin}
+  DEFAULT_GROUPS: ${DEFAULT_GROUPS:-}
+  ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-}
+  S3_ENDPOINT: http://storage:9000
+  S3_BUCKET: ${S3_BUCKET:-youlearn}
+  S3_DEPRECATED_BUCKET: ${S3_DEPRECATED_BUCKET:-}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+  S3_REGION: ${S3_REGION:-us-east-1}
+
+services:
+  database:
+    image: pgvector/pgvector:pg18-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-youlearn}
+      POSTGRES_DB: ${POSTGRES_DB:-youlearn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/18/docker
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-youlearn} -d ${POSTGRES_DB:-youlearn}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  storage:
+    image: rustfs/rustfs:1.0.0
+    restart: unless-stopped
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+    volumes:
+      - storagedata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies the migrations, then exits. The API only starts once it succeeded.
+  # Same image as `api` (built there), a different command.
+  migrate:
+    image: ghcr.io/bredda/youlearn-api:${YOULEARN_VERSION:-local}
+    command: ["node", "dist/migrate.mjs"]
+    restart: "no"
+    environment: *app-environment
+    depends_on:
+      database:
+        condition: service_healthy
+
+  api:
+    image: ghcr.io/bredda/youlearn-api:${YOULEARN_VERSION:-local}
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  web:
+    image: ghcr.io/bredda/youlearn-web:${YOULEARN_VERSION:-local}
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Frozen into the build: the Next.js rewrites to the API.
+        API_URL: http://api:3001
+        WEB_URL: ${WEB_URL:-http://localhost:3000}
+    restart: unless-stopped
+    environment: *app-environment
+    ports:
+      - ${WEB_PORT:-3000}:3000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/', { redirect: 'manual' }).then((r) => process.exit(r.status < 500 ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+volumes:
+  pgdata:
+  storagedata:

@@ -47,12 +47,12 @@ Toutes confirmées avec l'utilisateur ; l'ajustement de la 6 est noté dedans.
 
 ### Phase B — Conteneurisation
 
-- [ ] `.dockerignore` à la racine (node_modules, .next, dist, .env, .git). **Vérif. :** `docker build` n'envoie pas `.env` (vérifier avec le contexte listé).
-- [ ] `apps/api/Dockerfile` multi-étapes (installation, build tsdown, déploiement des dépendances de production, image finale non root). **Vérif. :** `docker build -f apps/api/Dockerfile .` réussit et l'image répond sur `/health`.
-- [ ] `apps/web/Dockerfile` multi-étapes avec `output: "standalone"` (décision 1) et `API_URL` en argument de build (décision 2). Fichiers : `apps/web/Dockerfile`, `apps/web/next.config.ts`. **Vérif. :** `docker build` réussit, l'image démarre, `/` redirige vers la connexion et `/api/me` atteint l'API.
-- [ ] Script de migration empaquetable (décision 3). Fichiers : `packages/db/src/migrate.ts`, `packages/db/package.json`, `apps/api/Dockerfile`. **Vérif. :** sur une base vide, le conteneur `migrate` applique toutes les migrations puis s'arrête avec le code 0 ; relancé, il ne change rien.
-- [ ] `docker/compose.prod.yml` : base, stockage, `migrate`, `api`, `web`, volumes nommés et vérifications de santé. Fichiers : `docker/compose.prod.yml`, `.env.example` (variables manquantes). **Vérif. :** `docker compose -f docker/compose.prod.yml up` depuis un clone propre, puis connexion de l'administrateur sur le port 3000 et envoi d'une image de couverture.
-- [ ] Documenter le lancement conteneurisé. Fichier : `README.md`. **Vérif. :** les commandes du README, copiées telles quelles, fonctionnent.
+- [x] `.dockerignore` à la racine (node_modules, .next, dist, .env, .git). **Vérif. :** `docker build` n'envoie pas `.env` (vérifier avec le contexte listé).
+- [x] `apps/api/Dockerfile` multi-étapes (installation, build tsdown, déploiement des dépendances de production, image finale non root). **Vérif. :** `docker build -f apps/api/Dockerfile .` réussit et l'image répond sur `/health`.
+- [x] `apps/web/Dockerfile` multi-étapes avec `output: "standalone"` (décision 1) et `API_URL` en argument de build (décision 2). Fichiers : `apps/web/Dockerfile`, `apps/web/next.config.ts`. **Vérif. :** `docker build` réussit, l'image démarre, `/` redirige vers la connexion et `/api/me` atteint l'API.
+- [x] Script de migration empaquetable (décision 3). Fichiers : `packages/db/src/migrate.ts` (`runMigrations`), `apps/api/src/migrate.ts`, `apps/api/tsdown.config.ts` (seconde entrée), `apps/api/Dockerfile`. **Vérif. :** sur une base vide, le conteneur `migrate` applique toutes les migrations puis s'arrête avec le code 0 ; relancé, il ne change rien.
+- [x] `docker/compose.prod.yml` : base, stockage, `migrate`, `api`, `web`, volumes nommés et vérifications de santé. Fichiers : `docker/compose.prod.yml`, `.env.example`, `package.json` (`stack:up`, `stack:down`). **Vérif. :** `docker compose -f docker/compose.prod.yml up` depuis un clone propre, puis connexion de l'administrateur sur le port 3000 et envoi d'une image de couverture.
+- [x] Documenter le lancement conteneurisé. Fichier : `README.md`. **Vérif. :** les commandes du README, copiées telles quelles, fonctionnent.
 
 ### Phase C — CI et releases
 

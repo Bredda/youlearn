@@ -80,6 +80,30 @@ then `pnpm check-types` and `pnpm test` must pass. When a hook fails, fix the ca
 to `main` and `dev` and on every pull request. It starts from a clean checkout with placeholder environment values, so it
 needs no secret, database or storage.
 
+## Running with Docker
+
+`docker/compose.prod.yml` starts the whole application: PostgreSQL, the S3 storage, a one-shot `migrate` service that
+applies the migrations, the API and the web app. Only the web app is published (port `WEB_PORT`, 3000 by default).
+
+```sh
+cp .env.example .env     # set POSTGRES_PASSWORD, S3_ACCESS_KEY / S3_SECRET_KEY (uppercase letters and digits),
+                         # BETTER_AUTH_SECRET, ADMIN_EMAIL / ADMIN_PASSWORD and WEB_URL (the public origin)
+pnpm stack:up            # build the images from the sources and start everything
+pnpm stack:down          # stop it; the data stays in the named volumes
+```
+
+The stack overrides `DATABASE_URL`, `S3_ENDPOINT` and `API_URL` with its own service names. It uses its own project
+name (`youlearn-prod`), so its volumes never mix with the development ones of `pnpm db:up`.
+
+Two images are built from the repository root: `apps/api/Dockerfile` (the API, and the migrations with
+`node dist/migrate.mjs`) and `apps/web/Dockerfile`. The address of the API is frozen into the web image when it is
+built (Next.js freezes its rewrites): `API_URL` defaults to `http://api:3001`, the name of the service in the stack, and
+can be changed with `--build-arg API_URL=...`. Both images run as the unprivileged `node` user and carry no secret:
+every setting is read from the environment at start.
+
+To run a published release instead of building, set `YOULEARN_VERSION` and skip the build:
+`YOULEARN_VERSION=1.2.3 docker compose -f docker/compose.prod.yml --env-file .env up -d --no-build`.
+
 ## Repository layout
 
 | Path | Role |
