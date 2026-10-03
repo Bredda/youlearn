@@ -92,8 +92,9 @@ These four checks (`check`, `Docker image (api)`, `Docker image (web)`, `Pull re
 Releases are automated with [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release.yml`,
 `release-please-config.json`, `.release-please-manifest.json`). The whole monorepo shares one version.
 
-1. Merge pull requests into `main` (squash, Conventional Commit title). While the version is below 1.0, `feat` bumps the
-   minor, `fix` the patch, and a breaking change also the minor. `chore`, `ci`, `build`, `style` and `test` do not appear
+1. Merge pull requests into `main` (squash, Conventional Commit title). The first release is `0.0.1` (`initial-version`;
+   without it release-please starts at 1.0.0). After that, and while the version is below 1.0, `feat` bumps the minor,
+   `fix` the patch, and a breaking change also the minor. `chore`, `ci`, `build`, `style` and `test` do not appear
    in the changelog.
 2. release-please keeps a pull request titled `chore(main): release x.y.z` up to date: the version in `package.json` and
    `CHANGELOG.md`. Never edit either by hand.
