@@ -52,8 +52,8 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 				<TableHeader>
 					<TableRow>
 						<TableHead>Nom</TableHead>
-						<TableHead className="w-48">Membres</TableHead>
-						<TableHead className="w-48 text-right">Actions</TableHead>
+						<TableHead className="w-44">Membres</TableHead>
+						<TableHead className="w-64 text-right">Actions</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -80,7 +80,7 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 							<TableCell>
 								{group.system ? "Tous les utilisateurs" : group.memberCount}
 							</TableCell>
-							<TableCell className="space-x-2 text-right">
+							<TableCell className="space-x-2 whitespace-nowrap text-right">
 								{!group.system && (
 									<>
 										<Button
