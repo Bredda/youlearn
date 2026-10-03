@@ -37,6 +37,7 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"revision.revoke-link": "Lien de relecture révoqué",
 	"asset.deprecate": "Fichier mis de côté",
 	"enrollment.start": "Inscription",
+	"enrollment.complete": "Cours terminé",
 };
 
 /** Self-sufficient wording for the table, where the feature is not shown next to the badge. */
@@ -63,6 +64,7 @@ export const EVENT_BADGE_LABELS: Record<EventType, string> = {
 	"revision.revoke-link": "Lien de relecture révoqué",
 	"asset.deprecate": "Fichier mis de côté",
 	"enrollment.start": "Inscription à un cours",
+	"enrollment.complete": "Cours terminé",
 };
 
 /** Rows may carry a type that no longer exists in the registry: show it as is. */
@@ -151,6 +153,8 @@ export function describeEvent({
 			].filter(Boolean);
 			return parts.join(" ; ") || null;
 		}
+		case "enrollment.complete":
+			return `Révision ${data.revisionKey ?? "—"}`;
 		case "enrollment.start":
 			return data.restart === true
 				? `Nouvelle inscription après un échec (révision ${data.revisionKey ?? "—"})`

@@ -1,4 +1,11 @@
-import { toLearnerContent } from "@youlearn/content";
+import {
+	type CompleteRefusal,
+	canCompleteChapter,
+	chapterStates,
+	enrollmentOutcome,
+	type Progress,
+	toLearnerContent,
+} from "@youlearn/content";
 import { and, db, desc, eq, isNull, schema } from "@youlearn/db";
 import type {
 	EnrollmentView,
@@ -9,7 +16,8 @@ import { visibleTo } from "./catalog";
 import { type CourseActor, canViewCourse, findCourse } from "./courses";
 import { isUniqueViolation } from "./groups";
 
-const { course, courseRevision, enrollment } = schema;
+const { chapterProgress, course, courseRevision, enrollment, quizAttempt } =
+	schema;
 
 type EnrollmentRow = typeof enrollment.$inferSelect;
 
@@ -149,13 +157,10 @@ export async function startEnrollment(
 }
 
 /**
- * The player of an enrollment: only its owner reads it, and only while they still see the course (groups can
- * change, the course can be archived). The revision is the pinned one, whatever its status now.
+ * The enrollment of `actor` with its course and pinned revision (whatever its status now). Only its owner gets it,
+ * and only while they still see the course: groups can change and the course can be archived.
  */
-export async function findEnrollmentView(
-	actor: CourseActor,
-	enrollmentId: string,
-): Promise<EnrollmentView | undefined> {
+async function findOwned(actor: CourseActor, enrollmentId: string) {
 	const [row] = await db
 		.select({ enrollment, course, revision: courseRevision })
 		.from(enrollment)
@@ -169,9 +174,45 @@ export async function findEnrollmentView(
 			),
 		);
 	if (!row) return undefined;
-
 	const target = await findCourse(row.course.id);
-	if (!target || !canViewCourse(actor, target)) return undefined;
+	return target && canViewCourse(actor, target) ? row : undefined;
+}
+
+type Executor = Pick<typeof db, "select" | "selectDistinct">;
+
+/** The chapters the learner finished and those whose quiz they passed. */
+async function loadProgress(
+	executor: Executor,
+	enrollmentId: string,
+): Promise<Progress> {
+	const [done, passed] = await Promise.all([
+		executor
+			.select({ chapterId: chapterProgress.chapterId })
+			.from(chapterProgress)
+			.where(eq(chapterProgress.enrollmentId, enrollmentId)),
+		executor
+			.selectDistinct({ chapterId: quizAttempt.chapterId })
+			.from(quizAttempt)
+			.where(
+				and(
+					eq(quizAttempt.enrollmentId, enrollmentId),
+					eq(quizAttempt.passed, true),
+				),
+			),
+	]);
+	return {
+		completed: new Set(done.map((row) => row.chapterId)),
+		passedQuizzes: new Set(passed.map((row) => row.chapterId)),
+	};
+}
+
+/** The player of an enrollment: the pinned revision, without any quiz question, and where the learner stands. */
+export async function findEnrollmentView(
+	actor: CourseActor,
+	enrollmentId: string,
+): Promise<EnrollmentView | undefined> {
+	const row = await findOwned(actor, enrollmentId);
+	if (!row) return undefined;
 
 	const [current] = await db
 		.select({ id: courseRevision.id })
@@ -182,6 +223,9 @@ export async function findEnrollmentView(
 				eq(courseRevision.status, "published"),
 			),
 		);
+	const progress = await loadProgress(db, enrollmentId);
+	const chapterStatesById = chapterStates(row.revision.content, progress);
+	const learnerContent = toLearnerContent(row.revision.content);
 	return {
 		enrollment: toLearnerEnrollment(
 			row.enrollment,
@@ -201,6 +245,77 @@ export async function findEnrollmentView(
 			durationMinutes: row.revision.durationMinutes,
 			certifying: row.revision.certifying,
 		},
-		content: toLearnerContent(row.revision.content),
+		content: {
+			...learnerContent,
+			// A locked chapter is not sent: the server, not the page, decides what the learner may read yet.
+			chapters: learnerContent.chapters.map((chapter) =>
+				chapterStatesById[chapter.id] === "locked"
+					? { ...chapter, blocks: [] }
+					: chapter,
+			),
+		},
+		chapterStates: chapterStatesById,
+		passedQuizzes: [...progress.passedQuizzes],
 	};
+}
+
+export type CompleteResult =
+	| {
+			ok: true;
+			/** This call completed the whole course. */
+			finished: boolean;
+			courseName: string;
+			revisionKey: string;
+			courseId: string;
+	  }
+	| { ok: false; reason: "NOT_FOUND" | "NOT_ACTIVE" | CompleteRefusal };
+
+/**
+ * The learner marks a chapter as finished. The enrollment row is locked so two requests cannot both decide the
+ * course is finished; finishing the last chapter of a course without final exam completes the enrollment.
+ */
+export async function completeChapter(
+	actor: CourseActor,
+	enrollmentId: string,
+	chapterId: string,
+): Promise<CompleteResult> {
+	const owned = await findOwned(actor, enrollmentId);
+	if (!owned) return { ok: false, reason: "NOT_FOUND" };
+	const content = owned.revision.content;
+
+	return db.transaction(async (tx): Promise<CompleteResult> => {
+		const [current] = await tx
+			.select({ status: enrollment.status })
+			.from(enrollment)
+			.where(eq(enrollment.id, enrollmentId))
+			.for("update");
+		if (current?.status !== "in_progress")
+			return { ok: false, reason: "NOT_ACTIVE" };
+
+		const progress = await loadProgress(tx, enrollmentId);
+		const allowed = canCompleteChapter(content, chapterId, progress);
+		if (!allowed.ok) return { ok: false, reason: allowed.reason };
+
+		await tx
+			.insert(chapterProgress)
+			.values({ enrollmentId, chapterId })
+			.onConflictDoNothing();
+		const completed = new Set([...progress.completed, chapterId]);
+		const finished =
+			enrollmentOutcome(content, completed) === "completed" &&
+			// A repeated call on a finished chapter must not complete twice.
+			!progress.completed.has(chapterId);
+		if (finished)
+			await tx
+				.update(enrollment)
+				.set({ status: "completed", finishedAt: new Date() })
+				.where(eq(enrollment.id, enrollmentId));
+		return {
+			ok: true,
+			finished,
+			courseName: owned.course.name,
+			revisionKey: owned.revision.key,
+			courseId: owned.course.id,
+		};
+	});
 }

@@ -40,8 +40,8 @@ Un plan contient : un but, un « où on en est », des **Décisions** (chacune a
 
 **Phase 2 — Progression et verrouillage**
 
-- [ ] `progress.ts` (`chapterStates`, `canCompleteChapter`, `enrollmentOutcome`) + tests. **Vérif.** : `pnpm --filter @youlearn/content test`.
-- [ ] Route `complete`, états dans le lecteur, clôture d'un cours non certifiant. **Vérif.** : `curl` (chapitre verrouillé refusé, cours terminé).
+- [x] `progress.ts` (`chapterStates`, `canCompleteChapter`, `enrollmentOutcome`) + tests. **Vérif.** : `pnpm --filter @youlearn/content test`.
+- [x] Route `complete`, états dans le lecteur, clôture d'un cours non certifiant. **Vérif.** : `curl` (chapitre verrouillé refusé, cours terminé).
 
 **Phase 3 — Quiz**
 

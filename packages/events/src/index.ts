@@ -19,7 +19,7 @@ export const EVENTS = {
 	course: ["create", "update", "delete", "set-groups"],
 	asset: ["deprecate"],
 	revision: ["create", "set-status", "delete", "new-link", "revoke-link"],
-	enrollment: ["start"],
+	enrollment: ["start", "complete"],
 } as const;
 
 export type EventFeature = keyof typeof EVENTS;

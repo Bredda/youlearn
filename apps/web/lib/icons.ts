@@ -14,6 +14,7 @@ import {
 	Award01Icon,
 	BookOpen01Icon,
 	Cancel01Icon,
+	CheckmarkCircle02Icon,
 	Clock01Icon,
 	CodeIcon,
 	Copy01Icon,
@@ -119,6 +120,10 @@ export const icons = {
 	start: PlayIcon,
 	/** Start a course over after a failure. */
 	retry: RepeatIcon,
+	/** A chapter the learner cannot open yet. */
+	locked: LockIcon,
+	/** A chapter or a course the learner finished. */
+	done: CheckmarkCircle02Icon,
 
 	// Markdown editor toolbar
 	bold: TextBoldIcon,

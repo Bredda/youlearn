@@ -4,12 +4,23 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { getCourseActor } from "../lib/courses";
 import {
+	completeChapter,
 	findEnrollmentView,
 	findLearnerCourse,
 	startEnrollment,
 } from "../lib/learning";
 
 const idParams = z.object({ id: z.string().min(1).max(100) });
+const chapterParams = idParams.extend({
+	chapterId: z.string().min(1).max(100),
+});
+
+const completeRefusals = {
+	NOT_ACTIVE: "This enrollment is no longer in progress",
+	LOCKED: "This chapter is locked",
+	QUIZ_NOT_PASSED: "The quiz of this chapter must be passed first",
+	FINAL_EXAM: "The final exam is completed by passing it",
+} as const;
 
 /**
  * The learner side of a course: its sheet, the enrollment and the player. A learner only ever receives
@@ -70,6 +81,40 @@ export const learningRoutes: FastifyPluginAsync = async (app) => {
 			const view = await findEnrollmentView(await getCourseActor(request), id);
 			if (!view) return reply.code(404).send({ error: "Enrollment not found" });
 			return view;
+		},
+	);
+
+	app.post(
+		"/api/enrollments/:id/chapters/:chapterId/complete",
+		{ preHandler: app.requireAuth },
+		async (request, reply) => {
+			const { id, chapterId } = chapterParams.parse(request.params);
+			const actor = await getCourseActor(request);
+			const result = await completeChapter(actor, id, chapterId);
+			if (!result.ok) {
+				if (result.reason === "NOT_FOUND")
+					return reply.code(404).send({ error: "Enrollment not found" });
+				if (result.reason === "UNKNOWN_CHAPTER")
+					return reply.code(404).send({ error: "Chapter not found" });
+				return reply.code(409).send({
+					error: completeRefusals[result.reason],
+					code: result.reason,
+				});
+			}
+			if (result.finished)
+				await recordEvent(
+					{
+						type: "enrollment.complete",
+						actor: { id: actor.id, label: actor.label },
+						target: { type: "enrollment", id, label: result.courseName },
+						metadata: {
+							courseId: result.courseId,
+							revisionKey: result.revisionKey,
+						},
+					},
+					request.log,
+				);
+			return { finished: result.finished };
 		},
 	);
 };

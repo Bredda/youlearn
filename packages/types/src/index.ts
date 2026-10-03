@@ -1,6 +1,7 @@
 import type { Role } from "@youlearn/auth/roles";
 import type {
 	ChapterKind,
+	ChapterState,
 	CourseContent,
 	LearnerContent,
 } from "@youlearn/content";
@@ -130,6 +131,7 @@ export type {
 	Block,
 	Chapter,
 	ChapterKind,
+	ChapterState,
 	CourseContent,
 	MarkdownBlock,
 	Question,
@@ -327,4 +329,8 @@ export type EnrollmentView = {
 		"id" | "key" | "durationMinutes" | "certifying"
 	>;
 	content: LearnerContent;
+	/** Where the learner stands in each chapter, by chapter id. A locked chapter comes without its blocks. */
+	chapterStates: Record<string, ChapterState>;
+	/** Ids of the chapters whose quiz the learner passed at least once. */
+	passedQuizzes: string[];
 };
