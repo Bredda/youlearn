@@ -1,2 +1,3 @@
-# Same check as CI would run: lint and formatting of the whole repo, without writing anything.
+# What CI would check: lint and formatting of the whole repo (read-only), then the types of every package.
 pnpm run lint:ci
+pnpm run check-types
