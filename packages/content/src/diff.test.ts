@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { deepEqual, diffContent, diffInline, pairById } from "./diff";
-import { chapter, content, md, question, quiz, video } from "./fixtures";
+import {
+	chapter,
+	content,
+	finalExam,
+	md,
+	question,
+	quiz,
+	video,
+} from "./fixtures";
 
 const ids = (items: { id: string }[]) => items.map((i) => i.id);
 
@@ -190,5 +198,40 @@ describe("diffInline", () => {
 		expect(parts.filter((p) => p.kind === "added").map((p) => p.text)).toEqual([
 			"slow",
 		]);
+	});
+});
+
+describe("diffContent: duration and certification", () => {
+	const timed = (minutes?: number) =>
+		content({ ...chapter("c1"), estimatedMinutes: minutes });
+
+	it("flags a chapter whose estimated duration changed", () => {
+		const diff = diffContent(timed(10), timed(25));
+		expect(diff.changed).toBe(true);
+		expect(diff.chapters[0]?.durationChanged).toBe(true);
+		expect(diff.chapters[0]?.status).toBe("modified");
+		expect(diff.stats.changes).toBe(1);
+		expect(diffContent(timed(10), timed(10)).changed).toBe(false);
+	});
+
+	it("treats a first estimate as a change, but not a new chapter's", () => {
+		expect(diffContent(timed(), timed(10)).chapters[0]?.durationChanged).toBe(
+			true,
+		);
+		const added = diffContent(content(), timed(10));
+		expect(added.chapters[0]?.durationChanged).toBe(false);
+		expect(added.chapters[0]?.status).toBe("added");
+	});
+
+	it("flags a course that becomes certifying", () => {
+		const before = content(chapter("c1"));
+		const after = { ...content(chapter("c1"), finalExam()), certifying: true };
+		const diff = diffContent(before, after);
+		expect(diff.certifyingChanged).toBe(true);
+		expect(diffContent(before, before).certifyingChanged).toBe(false);
+		// Undefined and false are the same thing.
+		expect(
+			diffContent(before, { ...before, certifying: false }).certifyingChanged,
+		).toBe(false);
 	});
 });

@@ -32,6 +32,8 @@ export const reviewRoutes: FastifyPluginAsync = async (app) => {
 					id: revision.id,
 					key: revision.key,
 					purpose: revision.purpose,
+					durationMinutes: revision.durationMinutes,
+					certifying: revision.certifying,
 				},
 				content: revision.content,
 				base: await findReviewBase(revision),

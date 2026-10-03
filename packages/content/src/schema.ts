@@ -31,14 +31,25 @@ export type Quiz = {
 	drawCount: number;
 	questions: Question[];
 };
+/** A `final-exam` chapter holds only a quiz and, in a certifying course, is the last chapter. */
+export type ChapterKind = "standard" | "final-exam";
 export type Chapter = {
 	id: string;
 	title: string;
+	/** Absent means `standard`. */
+	kind?: ChapterKind | undefined;
+	/** How long the chapter takes a learner, in minutes. Required to send a revision to review. */
+	estimatedMinutes?: number | undefined;
 	blocks: Block[];
 	/** Always last in the chapter. */
 	quiz?: Quiz | undefined;
 };
-export type CourseContent = { version: 2; chapters: Chapter[] };
+export type CourseContent = {
+	version: 2;
+	/** A certifying course ends with exactly one `final-exam` chapter; any other course has none. */
+	certifying?: boolean | undefined;
+	chapters: Chapter[];
+};
 
 export const EMPTY_COURSE_CONTENT: CourseContent = {
 	version: 2,
@@ -50,6 +61,8 @@ export const CONTENT_LIMITS = {
 	blocksPerChapter: 50,
 	body: 200_000,
 	markdownField: 10_000,
+	/** One day: more is a typo. */
+	chapterMinutes: 1440,
 } as const;
 
 const id = z.string().min(1).max(64);
@@ -129,19 +142,50 @@ const chapterSchema = z
 	.object({
 		id,
 		title: z.string().trim().min(1).max(200),
+		kind: z.enum(["standard", "final-exam"]).optional(),
+		estimatedMinutes: z
+			.number()
+			.int()
+			.min(1)
+			.max(CONTENT_LIMITS.chapterMinutes)
+			.optional(),
 		blocks: z.array(blockSchema).max(CONTENT_LIMITS.blocksPerChapter),
 		quiz: quizSchema.optional(),
 	})
 	.superRefine((chapter, ctx) => {
 		withUniqueIds(chapter.blocks, ctx, "Block");
+		if (
+			chapter.kind === "final-exam" &&
+			(chapter.blocks.length > 0 || !chapter.quiz)
+		) {
+			ctx.addIssue({
+				code: "custom",
+				message: "A final exam holds a quiz and no content blocks",
+			});
+		}
 	});
 
 /** Validation of what the editor saves. Keep in sync with `CourseContent` (checked by `satisfies`). */
 export const contentSchema = z
 	.object({
 		version: z.literal(2),
+		certifying: z.boolean().optional(),
 		chapters: z.array(chapterSchema).max(CONTENT_LIMITS.chapters),
 	})
-	.superRefine(({ chapters }, ctx) => {
+	.superRefine(({ chapters, certifying }, ctx) => {
 		withUniqueIds(chapters, ctx, "Chapter");
+		const exams = chapters.filter((c) => c.kind === "final-exam");
+		if (exams.length !== (certifying ? 1 : 0)) {
+			ctx.addIssue({
+				code: "custom",
+				message: certifying
+					? "A certifying course needs exactly one final exam"
+					: "Only a certifying course has a final exam",
+			});
+		} else if (exams[0] && chapters.at(-1) !== exams[0]) {
+			ctx.addIssue({
+				code: "custom",
+				message: "The final exam must be the last chapter",
+			});
+		}
 	}) satisfies z.ZodType<CourseContent>;

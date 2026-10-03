@@ -46,6 +46,22 @@ export const newQuestion = (): Question => ({
 	options: [newOption(true), newOption(false)],
 });
 
+/** The special last chapter of a certifying course: a one-shot quiz and nothing else. */
+export const newFinalExam = (id = newId()): Chapter => ({
+	id,
+	kind: "final-exam",
+	title: "Examen final",
+	blocks: [],
+	quiz: {
+		blocking: true,
+		passRate: 80,
+		drawCount: 1,
+		questions: [newQuestion()],
+	},
+});
+
+export const isFinalExam = (chapter: Chapter) => chapter.kind === "final-exam";
+
 export const newQuiz = (): Quiz => ({
 	blocking: false,
 	passRate: 70,
@@ -59,6 +75,10 @@ export type EditAction =
 	| { type: "moveChapter"; from: number; to: number }
 	| { type: "removeChapter"; chapterId: string }
 	| { type: "renameChapter"; chapterId: string; title: string }
+	| { type: "setDuration"; chapterId: string; minutes: number | undefined }
+	/** Turns certification on (adding `exam` as last chapter) or off (dropping the final exam). */
+	| { type: "setCertifying"; certifying: true; exam: Chapter }
+	| { type: "setCertifying"; certifying: false }
 	| { type: "addBlock"; chapterId: string; block: Block }
 	| { type: "moveBlock"; chapterId: string; from: number; to: number }
 	| { type: "removeBlock"; chapterId: string; blockId: string }
@@ -171,27 +191,69 @@ export function editContent(
 	content: CourseContent,
 	action: EditAction,
 ): CourseContent {
+	// The final exam is pinned last and only goes away by turning certification off: edits that would move,
+	// remove or fill it are ignored (the UI does not offer them either).
+	const examIndex = content.chapters.findIndex(isFinalExam);
+	const isExam = (chapterId: string) =>
+		content.chapters.some((c) => c.id === chapterId && isFinalExam(c));
 	switch (action.type) {
 		case "reset":
 			return action.content;
-		case "addChapter":
-			return { ...content, chapters: [...content.chapters, action.chapter] };
+		case "addChapter": {
+			const chapters = [...content.chapters];
+			chapters.splice(
+				examIndex === -1 ? chapters.length : examIndex,
+				0,
+				action.chapter,
+			);
+			return { ...content, chapters };
+		}
 		case "moveChapter":
+			if (
+				examIndex !== -1 &&
+				(action.from >= examIndex || action.to >= examIndex)
+			)
+				return content;
 			return {
 				...content,
 				chapters: moveItem(content.chapters, action.from, action.to),
 			};
 		case "removeChapter":
+			if (isExam(action.chapterId)) return content;
 			return {
 				...content,
 				chapters: content.chapters.filter((c) => c.id !== action.chapterId),
 			};
+		case "setDuration":
+			return mapChapter(
+				content,
+				action.chapterId,
+				({ estimatedMinutes: _, ...c }) =>
+					action.minutes === undefined
+						? c
+						: { ...c, estimatedMinutes: action.minutes },
+			);
+		case "setCertifying": {
+			const chapters = content.chapters.filter((c) => !isFinalExam(c));
+			if (!action.certifying) {
+				const { certifying: _, ...rest } = content;
+				return { ...rest, chapters };
+			}
+			// Keeps an existing exam (and the work in it) when asked twice.
+			if (examIndex !== -1) return { ...content, certifying: true };
+			return {
+				...content,
+				certifying: true,
+				chapters: [...chapters, action.exam],
+			};
+		}
 		case "renameChapter":
 			return mapChapter(content, action.chapterId, (c) => ({
 				...c,
 				title: action.title,
 			}));
 		case "addBlock":
+			if (isExam(action.chapterId)) return content;
 			return mapChapter(content, action.chapterId, (c) => ({
 				...c,
 				blocks: [...c.blocks, action.block],
@@ -227,6 +289,7 @@ export function editContent(
 				c.quiz ? c : { ...c, quiz: newQuiz() },
 			);
 		case "removeQuiz":
+			if (isExam(action.chapterId)) return content;
 			return mapChapter(content, action.chapterId, ({ quiz: _, ...c }) => c);
 		case "updateQuiz":
 			return mapQuiz(content, action.chapterId, (quiz) =>

@@ -2,9 +2,12 @@
 
 import {
 	type CourseContent,
+	chaptersMissingDuration,
 	contentSchema,
+	courseDurationMinutes,
 	deepEqual,
 	diffContent,
+	formatDuration,
 } from "@youlearn/content";
 import type { WriterCourse, WriterRevisionDetail } from "@youlearn/types";
 import Link from "next/link";
@@ -22,6 +25,16 @@ import { DiffSummary, RevisionDiff } from "@/components/content/revision-diff";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -32,7 +45,12 @@ import { ConfirmRemove } from "@/components/writer/confirm-remove";
 import { RevisionStatusDialog } from "@/components/writer/revision-status-dialog";
 import { DragHandle, SortableList } from "@/components/writer/sortable-list";
 import { callApi } from "@/lib/api-client";
-import { type EditAction, editContent, newChapter } from "@/lib/content-editor";
+import {
+	type EditAction,
+	editContent,
+	newChapter,
+	newFinalExam,
+} from "@/lib/content-editor";
 import { describeIssues, type EditorIssue } from "@/lib/content-issues";
 import {
 	REVISION_STATUS_LABELS,
@@ -142,6 +160,14 @@ export function RevisionEditor({
 	}, []);
 
 	const selected = content.chapters.find((c) => c.id === selectedId);
+	// The final exam is pinned after the chapters: it is listed apart and never dragged.
+	const regularChapters = content.chapters.filter(
+		(c) => c.kind !== "final-exam",
+	);
+	const finalExam = content.chapters.find((c) => c.kind === "final-exam");
+	const totalMinutes = courseDurationMinutes(content);
+	const missingDurations = chaptersMissingDuration(content).length;
+	const [confirmingUncertify, setConfirmingUncertify] = useState(false);
 
 	// Heavy work (validation, diff) follows the typing instead of blocking it.
 	const deferred = useDeferredValue(content);
@@ -203,6 +229,21 @@ export function RevisionEditor({
 		const chapter = newChapter();
 		dispatch({ type: "addChapter", chapter });
 		setSelectedId(chapter.id);
+		setShowChanges(false);
+	}
+
+	function setCertifying(certifying: boolean) {
+		if (certifying) {
+			const exam = newFinalExam();
+			dispatch({ type: "setCertifying", certifying: true, exam });
+			setSelectedId(exam.id);
+		} else {
+			dispatch({ type: "setCertifying", certifying: false });
+			if (selected?.kind === "final-exam") {
+				setSelectedId(regularChapters[0]?.id);
+			}
+		}
+		setConfirmingUncertify(false);
 		setShowChanges(false);
 	}
 
@@ -310,6 +351,15 @@ export function RevisionEditor({
 				<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
 					{REVISION_STATUS_LABELS[revision.status]}
 				</Badge>
+				{content.certifying && (
+					<Badge variant="outline">
+						<Icon name="certifying" /> Certifiant
+					</Badge>
+				)}
+				<Badge variant="outline">
+					<Icon name="duration" />
+					{formatDuration(totalMinutes) || "Durée non estimée"}
+				</Badge>
 				<Button
 					variant="outline"
 					nativeButton={false}
@@ -344,6 +394,33 @@ export function RevisionEditor({
 					onConfirm={() => publishRevision(true)}
 					onClose={() => setConfirmingPublish(false)}
 				/>
+			)}
+
+			{confirmingUncertify && (
+				<AlertDialog
+					open
+					onOpenChange={(open) => !open && setConfirmingUncertify(false)}
+				>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Retirer la certification ?</AlertDialogTitle>
+							<AlertDialogDescription>
+								L'examen final et ses questions seront perdus à l'enregistrement
+								du brouillon.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>Annuler</AlertDialogCancel>
+							<AlertDialogAction
+								variant="destructive"
+								onClick={() => setCertifying(false)}
+							>
+								<Icon name="delete" />
+								Retirer
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			)}
 
 			{error && (
@@ -415,6 +492,30 @@ export function RevisionEditor({
 				</div>
 			)}
 
+			{!readOnly && (
+				<div className="flex flex-col gap-2 rounded-md border px-3 py-2">
+					<div className="flex flex-wrap items-center gap-3">
+						<Switch
+							id="certifying"
+							checked={content.certifying === true}
+							onCheckedChange={(checked) =>
+								checked ? setCertifying(true) : setConfirmingUncertify(true)
+							}
+						/>
+						<Label htmlFor="certifying">Cours certifiant</Label>
+						<span className="text-muted-foreground text-sm">
+							Ajoute un examen final obligatoire, toujours en dernier chapitre.
+						</span>
+					</div>
+					{missingDurations > 0 && (
+						<p className="text-amber-700 text-sm dark:text-amber-400">
+							{missingDurations} chapitre{missingDurations > 1 ? "s" : ""} sans
+							durée estimée : à renseigner avant de passer en relecture.
+						</p>
+					)}
+				</div>
+			)}
+
 			{base && liveDiff && (
 				<div className="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2">
 					<Switch
@@ -444,7 +545,7 @@ export function RevisionEditor({
 							</p>
 						)}
 						<SortableList
-							items={content.chapters}
+							items={regularChapters}
 							disabled={readOnly}
 							className="flex flex-col gap-1"
 							onMove={(from, to) => dispatch({ type: "moveChapter", from, to })}
@@ -475,6 +576,11 @@ export function RevisionEditor({
 										>
 											{index + 1}. {chapter.title || "(sans titre)"}
 										</button>
+										{chapter.estimatedMinutes !== undefined && (
+											<span className="shrink-0 text-muted-foreground text-xs">
+												{formatDuration(chapter.estimatedMinutes)}
+											</span>
+										)}
 										{badge && (
 											<Badge
 												variant="outline"
@@ -508,6 +614,45 @@ export function RevisionEditor({
 								<Icon name="add" />
 								Ajouter un chapitre
 							</Button>
+						)}
+						{finalExam && (
+							<div
+								className={`flex items-center gap-1 rounded-md border border-dashed px-2 py-1 ${
+									finalExam.id === selectedId ? "bg-muted" : ""
+								}`}
+							>
+								<Icon name="certifying" className="size-4 shrink-0" />
+								<button
+									type="button"
+									aria-current={finalExam.id === selectedId}
+									onClick={() => setSelectedId(finalExam.id)}
+									className="min-w-0 flex-1 truncate px-1 text-left text-sm"
+								>
+									{finalExam.title || "(sans titre)"}
+								</button>
+								{finalExam.estimatedMinutes !== undefined && (
+									<span className="shrink-0 text-muted-foreground text-xs">
+										{formatDuration(finalExam.estimatedMinutes)}
+									</span>
+								)}
+								{(() => {
+									const change = diffStatus.get(finalExam.id);
+									const badge =
+										change && change.status !== "unchanged"
+											? DIFF_BADGES[change.status]
+											: undefined;
+									return (
+										badge && (
+											<Badge
+												variant="outline"
+												className={`border-transparent px-1 text-[10px] ${badge.tint}`}
+											>
+												{badge.label}
+											</Badge>
+										)
+									);
+								})()}
+							</div>
 						)}
 					</div>
 

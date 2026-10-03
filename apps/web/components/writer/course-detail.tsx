@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDuration } from "@youlearn/content";
 import type {
 	CourseGroupTag,
 	RevisionStatus,
@@ -205,6 +206,7 @@ export function CourseDetail({
 						<TableRow>
 							<TableHead>Révision</TableHead>
 							<TableHead className="w-32">Statut</TableHead>
+							<TableHead className="w-28">Durée</TableHead>
 							<TableHead>But</TableHead>
 							<TableHead>Contributeurs</TableHead>
 							<TableHead className="w-44">Mise à jour</TableHead>
@@ -217,7 +219,7 @@ export function CourseDetail({
 						{revisions.length === 0 && (
 							<TableRow>
 								<TableCell
-									colSpan={6}
+									colSpan={7}
 									className="h-24 text-center text-muted-foreground"
 								>
 									Aucune révision
@@ -239,6 +241,18 @@ export function CourseDetail({
 									<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
 										{REVISION_STATUS_LABELS[revision.status]}
 									</Badge>
+								</TableCell>
+								<TableCell className="text-muted-foreground">
+									<span className="flex items-center gap-1.5">
+										{formatDuration(revision.durationMinutes) || "—"}
+										{revision.certifying && (
+											<Icon
+												name="certifying"
+												className="size-4"
+												aria-label="Certifiant"
+											/>
+										)}
+									</span>
 								</TableCell>
 								<TableCell
 									className="truncate text-muted-foreground"

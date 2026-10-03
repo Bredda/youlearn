@@ -1,6 +1,8 @@
-import type { Chapter } from "@youlearn/content";
+import { type Chapter, formatDuration } from "@youlearn/content";
 import { QuizView } from "@/components/content/quiz-view";
 import { VideoEmbed } from "@/components/content/video-embed";
+import { Icon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
 import { Markdown } from "@/components/writer/markdown";
 
 /** A chapter as a reader sees it: its blocks in order, then its quiz. */
@@ -15,7 +17,19 @@ export function ChapterView({
 }) {
 	return (
 		<article className="min-w-0 rounded-md border p-4">
-			<h2 className="mb-2 font-semibold text-xl">{chapter.title}</h2>
+			<div className="mb-2 flex flex-wrap items-center gap-2">
+				<h2 className="font-semibold text-xl">{chapter.title}</h2>
+				{chapter.kind === "final-exam" && (
+					<Badge variant="outline">
+						<Icon name="certifying" /> Examen final
+					</Badge>
+				)}
+				{chapter.estimatedMinutes !== undefined && (
+					<Badge variant="secondary">
+						<Icon name="duration" /> {formatDuration(chapter.estimatedMinutes)}
+					</Badge>
+				)}
+			</div>
 			{chapter.blocks.length === 0 && !chapter.quiz && (
 				<p className="text-muted-foreground text-sm">Ce chapitre est vide.</p>
 			)}

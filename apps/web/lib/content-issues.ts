@@ -29,6 +29,22 @@ const KNOWN: [RegExp, string][] = [
 		/At least one question must be drawn/,
 		"Au moins une question doit être tirée",
 	],
+	[
+		/needs exactly one final exam/,
+		"Un cours certifiant a exactement un examen final",
+	],
+	[
+		/Only a certifying course has a final exam/,
+		"Seul un cours certifiant a un examen final",
+	],
+	[
+		/final exam must be the last chapter/,
+		"L'examen final doit être le dernier chapitre",
+	],
+	[
+		/final exam holds a quiz and no content blocks/,
+		"L'examen final ne contient qu'un quiz, sans bloc de contenu",
+	],
 ];
 
 /** Where an issue sits, in the words of the editor: `Chapitre 2 › Quiz › Question 1`. */

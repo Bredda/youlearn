@@ -4,7 +4,9 @@ import { sql } from "drizzle-orm";
 import {
 	type AnyPgColumn,
 	bigint,
+	boolean,
 	index,
+	integer,
 	jsonb,
 	pgEnum,
 	pgTable,
@@ -122,6 +124,10 @@ export const courseRevision = pgTable(
 			.$type<CourseContent>()
 			.notNull()
 			.default(EMPTY_COURSE_CONTENT),
+		/** Sum of the chapters' estimated durations, derived from `content` on every save (for lists and the catalog). */
+		durationMinutes: integer().notNull().default(0),
+		/** Mirrors `content.certifying`, derived on every save. */
+		certifying: boolean().notNull().default(false),
 		/**
 		 * Secret of the review link, set while the revision is in `preview` and cleared as soon as it leaves that
 		 * status (or when an editor revokes it). Whoever is signed in and holds the link can read the revision.

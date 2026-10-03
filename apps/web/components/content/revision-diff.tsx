@@ -1,12 +1,13 @@
-import type {
-	BlockDiff,
-	ChangeStatus,
-	ChapterDiff,
-	ContentDiff,
-	OptionDiff,
-	QuestionDiff,
-	QuizDiff,
-	QuizSetting,
+import {
+	type BlockDiff,
+	type ChangeStatus,
+	type ChapterDiff,
+	type ContentDiff,
+	formatDuration,
+	type OptionDiff,
+	type QuestionDiff,
+	type QuizDiff,
+	type QuizSetting,
 } from "@youlearn/content";
 import { LineDiff } from "@/components/content/line-diff";
 import { Icon } from "@/components/icon";
@@ -54,6 +55,9 @@ function StatusBadges({
 		</>
 	);
 }
+
+const minutesLabel = (minutes: number | undefined) =>
+	minutes === undefined ? "non estimée" : formatDuration(minutes);
 
 const changed = (item: { status: ChangeStatus; moved: boolean }) =>
 	item.status !== "unchanged" || item.moved;
@@ -309,6 +313,11 @@ function ChapterChange({
 					</span>
 				)}
 				<StatusBadges status={chapter.status} moved={chapter.moved} />
+				{(chapter.after ?? chapter.before)?.kind === "final-exam" && (
+					<Badge variant="outline">
+						<Icon name="certifying" /> Examen final
+					</Badge>
+				)}
 				{(linesAdded > 0 || linesRemoved > 0) && (
 					<span className="ml-auto font-mono text-xs">
 						<span className="text-green-700 dark:text-green-400">
@@ -321,6 +330,18 @@ function ChapterChange({
 				)}
 			</summary>
 			<div className="flex flex-col gap-3 border-t p-3">
+				{chapter.durationChanged && (
+					<p className="text-sm">
+						Durée estimée :{" "}
+						<del className="text-red-700 dark:text-red-400">
+							{minutesLabel(chapter.before?.estimatedMinutes)}
+						</del>
+						{" → "}
+						<ins className="text-green-700 no-underline dark:text-green-400">
+							{minutesLabel(chapter.after?.estimatedMinutes)}
+						</ins>
+					</p>
+				)}
 				{chapter.blocks.some(changed) && (
 					<ul className="flex flex-col gap-3">
 						{chapter.blocks.filter(changed).map((block) => (
@@ -380,6 +401,16 @@ export function RevisionDiff({
 			<p className="text-sm">
 				<DiffSummary diff={diff} />
 			</p>
+			{diff.certifyingChanged && (
+				<p className="flex items-center gap-2 text-sm">
+					<Icon name="certifying" className="size-4" />
+					Le cours{" "}
+					{diff.chapters.some((c) => c.after?.kind === "final-exam")
+						? "devient certifiant"
+						: "n'est plus certifiant"}
+					.
+				</p>
+			)}
 			{diff.chapters.filter(changed).map((chapter) => (
 				<ChapterChange
 					key={chapter.id}

@@ -1,6 +1,12 @@
 "use client";
 
-import { type Block, type Chapter, parseVideoUrl } from "@youlearn/content";
+import {
+	type Block,
+	type Chapter,
+	CONTENT_LIMITS,
+	formatDuration,
+	parseVideoUrl,
+} from "@youlearn/content";
 import { VideoEmbed } from "@/components/content/video-embed";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
@@ -105,7 +111,10 @@ function BlockBody({
 	);
 }
 
-/** Edits one chapter of a draft: title, ordered blocks (text, video) and the optional quiz that concludes it. */
+/**
+ * Edits one chapter of a draft: title, estimated duration, ordered blocks (text, video) and the optional quiz
+ * that concludes it. The final exam of a certifying course has no blocks: only its quiz, which cannot be removed.
+ */
 export function ChapterEditor({
 	chapter,
 	courseId,
@@ -121,111 +130,169 @@ export function ChapterEditor({
 	dispatch: (action: EditAction) => void;
 }) {
 	const chapterId = chapter.id;
+	const exam = chapter.kind === "final-exam";
+	const before = baseChapter?.estimatedMinutes;
 	return (
 		<div className="flex min-w-0 flex-col gap-4 rounded-md border p-4">
-			<div className="flex flex-col gap-1.5">
-				<Label htmlFor={`chapter-title-${chapterId}`}>Titre du chapitre</Label>
-				<Input
-					id={`chapter-title-${chapterId}`}
-					value={chapter.title}
-					onChange={(e) =>
-						dispatch({
-							type: "renameChapter",
-							chapterId,
-							title: e.target.value,
-						})
-					}
-				/>
+			{exam && (
+				<p className="flex items-start gap-2 rounded-md bg-muted px-3 py-2 text-sm">
+					<Icon name="certifying" className="mt-0.5 size-4 shrink-0" />
+					<span>
+						Examen final du cours certifiant : un quiz unique, toujours en
+						dernier. L'apprenant obtient le certificat en atteignant le taux de
+						réussite.
+					</span>
+				</p>
+			)}
+			<div className="grid gap-3 sm:grid-cols-[1fr_12rem]">
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor={`chapter-title-${chapterId}`}>
+						Titre du chapitre
+					</Label>
+					<Input
+						id={`chapter-title-${chapterId}`}
+						value={chapter.title}
+						onChange={(e) =>
+							dispatch({
+								type: "renameChapter",
+								chapterId,
+								title: e.target.value,
+							})
+						}
+					/>
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor={`chapter-minutes-${chapterId}`}>
+						Durée estimée (min)
+					</Label>
+					<Input
+						id={`chapter-minutes-${chapterId}`}
+						type="number"
+						inputMode="numeric"
+						min={1}
+						max={CONTENT_LIMITS.chapterMinutes}
+						value={chapter.estimatedMinutes ?? ""}
+						onChange={(e) => {
+							const minutes = e.currentTarget.valueAsNumber;
+							dispatch({
+								type: "setDuration",
+								chapterId,
+								minutes: Number.isNaN(minutes) ? undefined : minutes,
+							});
+						}}
+					/>
+					<p className="text-muted-foreground text-xs">
+						{chapter.estimatedMinutes === undefined
+							? "Requise pour passer en relecture."
+							: formatDuration(chapter.estimatedMinutes)}
+						{baseChapter &&
+							before !== chapter.estimatedMinutes &&
+							` (avant : ${before === undefined ? "non estimée" : formatDuration(before)})`}
+					</p>
+				</div>
 			</div>
 
-			<SortableList
-				items={chapter.blocks}
-				className="flex flex-col gap-3"
-				onMove={(from, to) =>
-					dispatch({ type: "moveBlock", chapterId, from, to })
-				}
-			>
-				{(block, index, handleRef) => (
-					<div className="flex flex-col gap-3 rounded-md border p-3">
-						<div className="flex items-center gap-2">
-							<DragHandle
-								handleRef={handleRef}
-								label={`Déplacer le bloc ${index + 1}`}
-							/>
-							<Icon
-								name={block.type === "video" ? "videoBlock" : "textBlock"}
-								className="size-4"
-							/>
-							<span className="font-medium text-sm">
-								{block.type === "video" ? "Vidéo" : "Texte"}
-							</span>
-							<span className="ml-auto" />
-							<ConfirmRemove
-								label={`Supprimer le bloc ${index + 1}`}
-								title="Supprimer ce bloc ?"
-								description="Son contenu sera perdu à l'enregistrement du brouillon."
-								onConfirm={() =>
-									dispatch({
-										type: "removeBlock",
-										chapterId,
-										blockId: block.id,
-									})
-								}
-							/>
-						</div>
-						<BlockBody
-							chapterId={chapterId}
-							block={block}
-							courseId={courseId}
-							base={baseChapter?.blocks.find((b) => b.id === block.id)}
-							baseKey={baseKey}
-							dispatch={dispatch}
-						/>
-					</div>
-				)}
-			</SortableList>
-
-			<div className="flex flex-wrap gap-2">
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onClick={() =>
-						dispatch({ type: "addBlock", chapterId, block: newMarkdownBlock() })
-					}
-				>
-					<Icon name="textBlock" />
-					Ajouter un texte
-				</Button>
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onClick={() =>
-						dispatch({ type: "addBlock", chapterId, block: newVideoBlock() })
-					}
-				>
-					<Icon name="videoBlock" />
-					Ajouter une vidéo
-				</Button>
-				{!chapter.quiz && (
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						onClick={() => dispatch({ type: "addQuiz", chapterId })}
+			{!exam && (
+				<>
+					<SortableList
+						items={chapter.blocks}
+						className="flex flex-col gap-3"
+						onMove={(from, to) =>
+							dispatch({ type: "moveBlock", chapterId, from, to })
+						}
 					>
-						<Icon name="quiz" />
-						Ajouter un quiz
-					</Button>
-				)}
-			</div>
+						{(block, index, handleRef) => (
+							<div className="flex flex-col gap-3 rounded-md border p-3">
+								<div className="flex items-center gap-2">
+									<DragHandle
+										handleRef={handleRef}
+										label={`Déplacer le bloc ${index + 1}`}
+									/>
+									<Icon
+										name={block.type === "video" ? "videoBlock" : "textBlock"}
+										className="size-4"
+									/>
+									<span className="font-medium text-sm">
+										{block.type === "video" ? "Vidéo" : "Texte"}
+									</span>
+									<span className="ml-auto" />
+									<ConfirmRemove
+										label={`Supprimer le bloc ${index + 1}`}
+										title="Supprimer ce bloc ?"
+										description="Son contenu sera perdu à l'enregistrement du brouillon."
+										onConfirm={() =>
+											dispatch({
+												type: "removeBlock",
+												chapterId,
+												blockId: block.id,
+											})
+										}
+									/>
+								</div>
+								<BlockBody
+									chapterId={chapterId}
+									block={block}
+									courseId={courseId}
+									base={baseChapter?.blocks.find((b) => b.id === block.id)}
+									baseKey={baseKey}
+									dispatch={dispatch}
+								/>
+							</div>
+						)}
+					</SortableList>
+
+					<div className="flex flex-wrap gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={() =>
+								dispatch({
+									type: "addBlock",
+									chapterId,
+									block: newMarkdownBlock(),
+								})
+							}
+						>
+							<Icon name="textBlock" />
+							Ajouter un texte
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={() =>
+								dispatch({
+									type: "addBlock",
+									chapterId,
+									block: newVideoBlock(),
+								})
+							}
+						>
+							<Icon name="videoBlock" />
+							Ajouter une vidéo
+						</Button>
+						{!chapter.quiz && (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={() => dispatch({ type: "addQuiz", chapterId })}
+							>
+								<Icon name="quiz" />
+								Ajouter un quiz
+							</Button>
+						)}
+					</div>
+				</>
+			)}
 
 			{chapter.quiz && (
 				<QuizEditor
 					chapterId={chapterId}
 					quiz={chapter.quiz}
 					courseId={courseId}
+					exam={exam}
 					dispatch={dispatch}
 				/>
 			)}

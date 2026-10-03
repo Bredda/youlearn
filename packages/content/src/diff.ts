@@ -74,6 +74,8 @@ export type ChapterDiff = Matched & {
 	before: Chapter | null;
 	after: Chapter | null;
 	titleChanged: boolean;
+	/** The estimated duration was set, changed or cleared on a chapter present on both sides. */
+	durationChanged: boolean;
 	blocks: BlockDiff[];
 	quiz: QuizDiff | null;
 	stats: DiffStats;
@@ -81,6 +83,8 @@ export type ChapterDiff = Matched & {
 
 export type ContentDiff = {
 	changed: boolean;
+	/** The course became (or stopped being) certifying. */
+	certifyingChanged: boolean;
 	chapters: ChapterDiff[];
 	stats: DiffStats;
 };
@@ -343,9 +347,15 @@ function diffChapter(pair: Pair<Chapter>): ChapterDiff {
 	}
 	addStats(stats, quizStats(quiz));
 	if (titleChanged) stats.changes += 1;
+	const durationChanged =
+		before !== null &&
+		after !== null &&
+		before.estimatedMinutes !== after.estimatedMinutes;
+	if (durationChanged) stats.changes += 1;
 
 	const modified =
 		titleChanged ||
+		durationChanged ||
 		blocks.some((b) => b.status !== "unchanged" || b.moved) ||
 		(quiz !== null && quiz.status !== "unchanged");
 
@@ -356,6 +366,7 @@ function diffChapter(pair: Pair<Chapter>): ChapterDiff {
 		moved: pair.moved,
 		status: statusOf(before, after, modified),
 		titleChanged,
+		durationChanged,
 		blocks,
 		quiz,
 		stats,
@@ -373,8 +384,14 @@ export function diffContent(
 		addStats(stats, chapter.stats);
 		if (chapter.moved) stats.changes += 1;
 	}
+	const certifyingChanged =
+		(from.certifying ?? false) !== (to.certifying ?? false);
+	if (certifyingChanged) stats.changes += 1;
 	return {
-		changed: chapters.some((c) => c.status !== "unchanged" || c.moved),
+		changed:
+			certifyingChanged ||
+			chapters.some((c) => c.status !== "unchanged" || c.moved),
+		certifyingChanged,
 		chapters,
 		stats,
 	};

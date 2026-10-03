@@ -45,6 +45,15 @@ export const chapter = (
 	...(quizValue && { quiz: quizValue }),
 });
 
+/** A final exam: only a quiz, always the last chapter of a certifying course. */
+export const finalExam = (id = "exam"): Chapter => ({
+	id,
+	kind: "final-exam",
+	title: "Final exam",
+	blocks: [],
+	quiz: quiz([question(`${id}-q1`)], { blocking: true }),
+});
+
 export const content = (...chapters: Chapter[]): CourseContent => ({
 	version: 2,
 	chapters,
