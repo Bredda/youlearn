@@ -1,8 +1,12 @@
+import { join } from "node:path";
 import { env } from "@youlearn/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
 	agentRules: false,
+	// Self-contained server for the Docker image; the workspace root is where the monorepo's packages are traced from.
+	output: "standalone",
+	outputFileTracingRoot: join(import.meta.dirname, "../.."),
 	// Workspace packages ship TypeScript sources.
 	transpilePackages: [
 		"@youlearn/content",

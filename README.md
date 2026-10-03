@@ -8,9 +8,9 @@ each user. There is no sign-up: administrators create the accounts.
 | Feature | Status |
 |---|---|
 | Accounts, roles (user, writer, admin), groups, event log | available |
-| Writer area: courses, revisions (draft → preview → published → deprecated), Markdown lesson editor, images, review link | available |
+| Writer area: courses, revisions (draft → preview → published → deprecated), Markdown lesson editor, images, review link, estimated chapter durations, certifying courses with a final exam | available |
 | Learner catalog: published courses visible to the user, with search, filters, sorting and pagination | available (cards have no action yet) |
-| Reading a course, enrollment and progress, programs, videos and large files | planned |
+| Reading a course, quizzes, enrollment and progress, certificates, programs, videos and large files | planned |
 
 User documentation (in French) lives in [`docs/`](docs/README.md).
 
@@ -76,9 +76,60 @@ then `pnpm check-types` and `pnpm test` must pass. When a hook fails, fix the ca
 
 ### Continuous integration
 
-`.github/workflows/ci.yml` runs the same three checks (`lint:ci`, `check-types`, `test`) with GitHub Actions on every push
-to `main` and `dev` and on every pull request. It starts from a clean checkout with placeholder environment values, so it
-needs no secret, database or storage.
+`.github/workflows/ci.yml` runs on every push to `main` and `dev` and on every pull request, from a clean checkout with
+placeholder environment values (no secret, database or storage needed):
+
+- `check`: the same three checks as the pre-push hook (`lint:ci`, `check-types`, `test`);
+- `docker`: both images must still build (not pushed);
+- `pr-title` (pull requests only): the title must be a Conventional Commit, because pull requests are squash-merged and
+  the title becomes the commit message read by the release tooling.
+
+These four checks (`check`, `Docker image (api)`, `Docker image (web)`, `Pull request title`) are the ones to require on
+`main`, together with squash merging.
+
+### Releases
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release.yml`,
+`release-please-config.json`, `.release-please-manifest.json`). The whole monorepo shares one version.
+
+1. Merge pull requests into `main` (squash, Conventional Commit title). The first release is `0.0.1` (`initial-version`;
+   without it release-please starts at 1.0.0). After that, and while the version is below 1.0, `feat` bumps the minor,
+   `fix` the patch, and a breaking change also the minor. `chore`, `ci`, `build`, `style` and `test` do not appear
+   in the changelog.
+2. release-please keeps a pull request titled `chore(main): release x.y.z` up to date: the version in `package.json` and
+   `CHANGELOG.md`. Never edit either by hand.
+3. Merging that pull request creates the tag `vx.y.z`, the GitHub release and publishes the images
+   `ghcr.io/<owner>/youlearn-api` and `youlearn-web` tagged `x.y.z`, `x.y` and `latest`.
+4. To deploy a release, see [Running with Docker](#running-with-docker) (`YOULEARN_VERSION`).
+
+The workflow needs a repository secret `RELEASE_PLEASE_TOKEN`: a personal access token allowed to write contents and pull
+requests on this repository. It is not `GITHUB_TOKEN` on purpose: events created with that token do not trigger the CI,
+so the checks required on `main` would never run on the release pull request. A package published to GHCR is private by
+default: make it public in the package settings if the images must be pullable without a login.
+
+## Running with Docker
+
+`docker/compose.prod.yml` starts the whole application: PostgreSQL, the S3 storage, a one-shot `migrate` service that
+applies the migrations, the API and the web app. Only the web app is published (port `WEB_PORT`, 3000 by default).
+
+```sh
+cp .env.example .env     # set POSTGRES_PASSWORD, S3_ACCESS_KEY / S3_SECRET_KEY (uppercase letters and digits),
+                         # BETTER_AUTH_SECRET, ADMIN_EMAIL / ADMIN_PASSWORD and WEB_URL (the public origin)
+pnpm stack:up            # build the images from the sources and start everything
+pnpm stack:down          # stop it; the data stays in the named volumes
+```
+
+The stack overrides `DATABASE_URL`, `S3_ENDPOINT` and `API_URL` with its own service names. It uses its own project
+name (`youlearn-prod`), so its volumes never mix with the development ones of `pnpm db:up`.
+
+Two images are built from the repository root: `apps/api/Dockerfile` (the API, and the migrations with
+`node dist/migrate.mjs`) and `apps/web/Dockerfile`. The address of the API is frozen into the web image when it is
+built (Next.js freezes its rewrites): `API_URL` defaults to `http://api:3001`, the name of the service in the stack, and
+can be changed with `--build-arg API_URL=...`. Both images run as the unprivileged `node` user and carry no secret:
+every setting is read from the environment at start.
+
+To run a published release instead of building, set `YOULEARN_VERSION` and skip the build:
+`YOULEARN_VERSION=1.2.3 docker compose -f docker/compose.prod.yml --env-file .env up -d --no-build`.
 
 ## Repository layout
 

@@ -1,5 +1,6 @@
 {
 	"name": "youlearn",
+	"version": "0.0.0",
 	"private": true,
 	"scripts": {
 		"build": "turbo run build",
@@ -11,6 +12,8 @@
 		"test": "turbo run test",
 		"db:up": "docker compose -f docker/compose.yml --env-file .env up -d --wait",
 		"db:down": "docker compose -f docker/compose.yml --env-file .env down",
+		"stack:up": "docker compose -f docker/compose.prod.yml --env-file .env up -d --build --wait",
+		"stack:down": "docker compose -f docker/compose.prod.yml --env-file .env down",
 		"db:generate": "turbo run db:generate",
 		"db:migrate": "turbo run db:migrate",
 		"db:push": "turbo run db:push",

@@ -7,6 +7,8 @@ Sujets et idées **non planifiés** : ils ne font pas partie de la [feuille de r
 - Tests d'intégration des routes de l'API contre une base PostgreSQL jetable (service de la CI) : aujourd'hui seules les règles pures sont testées automatiquement ; les routes et les pages se vérifient à la main.
 - Test de l'éditeur de révision : le reducer est testé, pas le composant ni la sauvegarde avec verrouillage optimiste.
 - Rendre `API_URL` configurable à l'exécution pour l'image web : une route proxy lit l'environnement, plus d'adresse figée au build (voir décision 2 du plan « socle »).
+- Alléger l'image web : le serveur Next valide tout l'environnement (base, stockage, secrets) parce qu'il importe `@youlearn/config` ; il ne devrait avoir besoin que de `API_URL` et `WEB_URL`.
+- Alléger l'image API (504 Mo) : l'élagage de `next` et d'autres paquets inutiles se fait à la main dans `apps/api/Dockerfile` parce que pnpm résout les pairs optionnels de better-auth dans le graphe de l'API ; trouver la cause plutôt que supprimer les dossiers.
 - Sauvegardes de PostgreSQL et du stockage S3, avec une procédure de restauration documentée.
 - Procédure de purge du bucket « déprécié » : l'application ne supprime jamais, la purge est une décision d'exploitation qui n'est pas encore outillée.
 
