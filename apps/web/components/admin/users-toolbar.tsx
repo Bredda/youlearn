@@ -1,56 +1,15 @@
 "use client";
 
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
+import { ROLES } from "@youlearn/auth/roles";
 import type { AdminUserQuery, GroupWithMemberCount } from "@youlearn/types";
+import { FilterSelect } from "@/components/data-table/filter-select";
+import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-
-const ALL = "all";
-
-/** A select filter where "all" means no filter. */
-function FilterSelect({
-	label,
-	value,
-	options,
-	onChange,
-	className,
-}: {
-	label: string;
-	value: string | undefined;
-	options: { value: string; label: string }[];
-	onChange: (value: string | undefined) => void;
-	className?: string;
-}) {
-	const items = [{ value: ALL, label }, ...options];
-	return (
-		<Select
-			value={value ?? ALL}
-			onValueChange={(next) =>
-				onChange(next === ALL ? undefined : (next ?? undefined))
-			}
-			items={items}
-		>
-			<SelectTrigger className={className} aria-label={label}>
-				<SelectValue />
-			</SelectTrigger>
-			<SelectContent>
-				{items.map((item) => (
-					<SelectItem key={item.value} value={item.value}>
-						{item.label}
-					</SelectItem>
-				))}
-			</SelectContent>
-		</Select>
-	);
-}
+import { ROLE_LABELS } from "@/lib/roles";
+import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
 // Remounted by the parent (`key`) when the search term changes from the outside, so the form follows the URL.
 export function UsersToolbar({
@@ -68,8 +27,17 @@ export function UsersToolbar({
 		defaultValues: { q: query.q ?? "" },
 		onSubmit: ({ value }) => onChange({ q: value.q.trim() || undefined }),
 	});
-	const hasFilters = Boolean(
-		query.q || query.role || query.status || query.groupId,
+	const typed = useStore(form.store, (state) => state.values.q);
+	// Also covers a search term typed but not submitted yet, and the sorting / page size, not only the filters.
+	const canReset = Boolean(
+		typed ||
+			query.q ||
+			query.role ||
+			query.status ||
+			query.groupId ||
+			query.sort !== "createdAt" ||
+			query.order !== "desc" ||
+			query.pageSize !== DEFAULT_PAGE_SIZE,
 	);
 
 	return (
@@ -100,6 +68,7 @@ export function UsersToolbar({
 					)}
 				/>
 				<Button type="submit" variant="outline">
+					<Icon name="search" />
 					Rechercher
 				</Button>
 			</form>
@@ -108,10 +77,10 @@ export function UsersToolbar({
 				label="Tous les rôles"
 				className="w-40"
 				value={query.role}
-				options={[
-					{ value: "admin", label: "Admin" },
-					{ value: "user", label: "Utilisateur" },
-				]}
+				options={ROLES.map((role) => ({
+					value: role,
+					label: ROLE_LABELS[role],
+				}))}
 				onChange={(role) => onChange({ role: role as AdminUserQuery["role"] })}
 			/>
 			<FilterSelect
@@ -137,11 +106,17 @@ export function UsersToolbar({
 				onChange={(groupId) => onChange({ groupId })}
 			/>
 
-			{hasFilters && (
-				<Button variant="ghost" onClick={onReset}>
-					Réinitialiser
-				</Button>
-			)}
+			<Button
+				variant="ghost"
+				disabled={!canReset}
+				onClick={() => {
+					form.reset();
+					onReset();
+				}}
+			>
+				<Icon name="reset" />
+				Réinitialiser
+			</Button>
 		</div>
 	);
 }

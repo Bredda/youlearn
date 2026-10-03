@@ -1,8 +1,15 @@
+import { parseRoles } from "@youlearn/auth/roles";
 import type { PublicUser } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { getUserGroups } from "../lib/groups";
+import { adminEventRoutes } from "./admin/events";
 import { adminGroupRoutes } from "./admin/groups";
 import { adminUserRoutes } from "./admin/users";
+import { assetRoutes } from "./assets";
+import { catalogRoutes } from "./catalog";
+import { reviewRoutes } from "./review";
+import { writerCourseRoutes } from "./writer/courses";
+import { writerRevisionRoutes } from "./writer/revisions";
 
 export const routes: FastifyPluginAsync = async (app) => {
 	app.get("/health", async () => ({ status: "ok" }));
@@ -19,13 +26,19 @@ export const routes: FastifyPluginAsync = async (app) => {
 				email,
 				emailVerified,
 				image: image ?? null,
-				role: role ?? "user",
+				roles: parseRoles(role),
 				groups: await getUserGroups(id),
 			};
 			return { user };
 		},
 	);
 
+	await app.register(adminEventRoutes);
 	await app.register(adminGroupRoutes);
 	await app.register(adminUserRoutes);
+	await app.register(writerCourseRoutes);
+	await app.register(writerRevisionRoutes);
+	await app.register(assetRoutes);
+	await app.register(catalogRoutes);
+	await app.register(reviewRoutes);
 };

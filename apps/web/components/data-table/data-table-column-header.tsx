@@ -1,12 +1,7 @@
 "use client";
 
-import {
-	ArrowDown01Icon,
-	ArrowUp01Icon,
-	UnfoldMoreIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { Column, RowData } from "@tanstack/react-table";
+import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import type { DataTableFeatures } from "./features";
 
@@ -29,15 +24,14 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
 			onClick={() => column.toggleSorting(sorted === "asc")}
 		>
 			{title}
-			<HugeiconsIcon
-				icon={
+			<Icon
+				name={
 					sorted === "asc"
-						? ArrowUp01Icon
+						? "sortAscending"
 						: sorted === "desc"
-							? ArrowDown01Icon
-							: UnfoldMoreIcon
+							? "sortDescending"
+							: "sortable"
 				}
-				strokeWidth={2}
 				className={sorted ? undefined : "opacity-40"}
 			/>
 		</Button>

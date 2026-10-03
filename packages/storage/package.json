@@ -1,0 +1,24 @@
+{
+	"name": "@youlearn/storage",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"lint": "biome check",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@aws-sdk/client-s3": "^3.1145.0",
+		"@aws-sdk/s3-request-presigner": "^3.1145.0",
+		"@youlearn/config": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.3",
+		"@youlearn/biome-config": "workspace:^",
+		"@youlearn/typescript-config": "workspace:*",
+		"typescript": "^7.0.2"
+	},
+	"exports": {
+		".": "./src/index.ts"
+	}
+}

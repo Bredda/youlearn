@@ -4,17 +4,12 @@ import type { GroupWithMemberCount } from "@youlearn/types";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { GroupFormDialog } from "@/components/admin/group-form-dialog";
+import { GroupRowActions } from "@/components/admin/group-row-actions";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Icon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Table,
@@ -34,35 +29,23 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 	const [editing, setEditing] = useState<Editing>(undefined);
 	const [deleting, setDeleting] = useState<GroupWithMemberCount>();
 	const [error, setError] = useState<string>();
-	const [pending, setPending] = useState(false);
 
 	function done() {
 		setEditing(undefined);
 		router.refresh();
 	}
 
-	async function onDelete() {
-		if (!deleting) return;
-		setPending(true);
-		const message = await callApi("DELETE", `/api/admin/groups/${deleting.id}`);
-		setPending(false);
-		setDeleting(undefined);
-		if (message) return setError(message);
-		router.refresh();
-	}
-
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="font-semibold text-xl">Groupes</h1>
-					<p className="text-muted-foreground text-sm">
-						Les groupes déterminent les cours et programmes visibles par chaque
-						utilisateur.
-					</p>
-				</div>
-				<Button onClick={() => setEditing(null)}>Nouveau groupe</Button>
-			</div>
+			<PageHeader
+				title="Groupes"
+				description="Les groupes déterminent les cours et programmes visibles par chaque utilisateur."
+			>
+				<Button onClick={() => setEditing(null)}>
+					<Icon name="add" />
+					Nouveau groupe
+				</Button>
+			</PageHeader>
 
 			{error && <FormError>{error}</FormError>}
 
@@ -70,8 +53,10 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 				<TableHeader>
 					<TableRow>
 						<TableHead>Nom</TableHead>
-						<TableHead className="w-32">Membres</TableHead>
-						<TableHead className="w-48 text-right">Actions</TableHead>
+						<TableHead className="w-44">Membres</TableHead>
+						<TableHead className="w-16 text-right">
+							<span className="sr-only">Actions</span>
+						</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -89,26 +74,24 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 						<TableRow key={group.id}>
 							<TableCell className="truncate font-medium">
 								{group.name}
+								{group.system && (
+									<Badge variant="secondary" className="ml-2">
+										Système
+									</Badge>
+								)}
 							</TableCell>
-							<TableCell>{group.memberCount}</TableCell>
-							<TableCell className="space-x-2 text-right">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setEditing(group)}
-								>
-									Renommer
-								</Button>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => {
+							<TableCell>
+								{group.system ? "Tous les utilisateurs" : group.memberCount}
+							</TableCell>
+							<TableCell className="text-right">
+								<GroupRowActions
+									group={group}
+									onAction={(action, target) => {
+										if (action === "rename") return setEditing(target);
 										setError(undefined);
-										setDeleting(group);
+										setDeleting(target);
 									}}
-								>
-									Supprimer
-								</Button>
+								/>
 							</TableCell>
 						</TableRow>
 					))}
@@ -123,34 +106,25 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 				/>
 			)}
 
-			<AlertDialog
-				open={deleting !== undefined}
-				onOpenChange={(open) => !open && setDeleting(undefined)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Supprimer le groupe « {deleting?.name} » ?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							{deleting?.memberCount
-								? `${deleting.memberCount} utilisateur(s) en font partie et le perdront. `
-								: ""}
-							Cette action est définitive.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Annuler</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							onClick={onDelete}
-							disabled={pending}
-						>
-							Supprimer
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{deleting && (
+				<ConfirmDeleteDialog
+					title={`Supprimer le groupe « ${deleting.name} » ?`}
+					description={`${
+						deleting.memberCount
+							? `${deleting.memberCount} utilisateur(s) en font partie et le perdront. `
+							: ""
+					}Cette action est définitive.`}
+					expected={deleting.name}
+					onConfirm={() =>
+						callApi("DELETE", `/api/admin/groups/${deleting.id}`)
+					}
+					onClose={() => setDeleting(undefined)}
+					onDone={() => {
+						setDeleting(undefined);
+						router.refresh();
+					}}
+				/>
+			)}
 		</div>
 	);
 }

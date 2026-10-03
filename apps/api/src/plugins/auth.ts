@@ -5,6 +5,7 @@ import {
 	fromNodeHeaders,
 	getSession,
 } from "@youlearn/auth";
+import { canWrite, isAdmin, parseRoles } from "@youlearn/auth/roles";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
 
@@ -19,6 +20,11 @@ declare module "fastify" {
 			reply: FastifyReply,
 		) => Promise<void>;
 		requireAuth: (
+			request: FastifyRequest,
+			reply: FastifyReply,
+		) => Promise<void>;
+		/** Writers and admins. */
+		requireWriter: (
 			request: FastifyRequest,
 			reply: FastifyReply,
 		) => Promise<void>;
@@ -65,7 +71,14 @@ export default fp(
 		app.decorate("requireAdmin", async (request, reply) => {
 			await app.requireAuth(request, reply);
 			if (reply.sent) return;
-			if (request.auth?.user.role !== "admin")
+			if (!isAdmin(parseRoles(request.auth?.user.role)))
+				return reply.code(403).send({ error: "Forbidden" });
+		});
+
+		app.decorate("requireWriter", async (request, reply) => {
+			await app.requireAuth(request, reply);
+			if (reply.sent) return;
+			if (!canWrite(parseRoles(request.auth?.user.role)))
 				return reply.code(403).send({ error: "Forbidden" });
 		});
 	},

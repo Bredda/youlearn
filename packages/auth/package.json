@@ -5,12 +5,14 @@
 	"type": "module",
 	"scripts": {
 		"lint": "biome check",
+		"test": "vitest run",
 		"check-types": "tsc --noEmit",
 		"seed:admin": "tsx scripts/seed-admin.ts"
 	},
 	"dependencies": {
 		"@youlearn/config": "workspace:*",
 		"@youlearn/db": "workspace:*",
+		"@youlearn/events": "workspace:*",
 		"better-auth": "^1.7.7"
 	},
 	"devDependencies": {
@@ -18,10 +20,12 @@
 		"@youlearn/biome-config": "workspace:^",
 		"@youlearn/typescript-config": "workspace:*",
 		"tsx": "^4.23.15",
-		"typescript": "^7.0.2"
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.3"
 	},
 	"exports": {
 		".": "./src/index.ts",
-		"./client": "./src/client.ts"
+		"./client": "./src/client.ts",
+		"./roles": "./src/roles.ts"
 	}
 }

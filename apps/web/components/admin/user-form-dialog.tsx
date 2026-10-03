@@ -2,6 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { authClient } from "@youlearn/auth/client";
+import { ROLES, type Role, serializeRoles } from "@youlearn/auth/roles";
 import { isEmailDomainAllowed } from "@youlearn/config/email-domain";
 import type {
 	AdminUser,
@@ -12,6 +13,7 @@ import { useState } from "react";
 import z from "zod";
 import { GroupsCombobox } from "@/components/admin/groups-combobox";
 import { FormError } from "@/components/form-error";
+import { PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -28,15 +30,17 @@ import {
 	FieldError,
 	FieldGroup,
 	FieldLabel,
+	FieldLegend,
+	FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { authError, callApi } from "@/lib/api-client";
+import { ROLE_LABELS } from "@/lib/roles";
 
 const baseSchema = z.object({
 	name: z.string().trim().min(1, "Nom requis"),
 	email: z.email("Adresse email invalide"),
-	isAdmin: z.boolean(),
+	roles: z.array(z.enum(ROLES)).min(1, "Au moins un rôle"),
 	groups: z.array(z.object({ id: z.string(), name: z.string() })),
 });
 
@@ -69,7 +73,7 @@ type Values = {
 	name: string;
 	email: string;
 	password: string;
-	isAdmin: boolean;
+	roles: Role[];
 	groups: PublicGroup[];
 };
 
@@ -87,7 +91,8 @@ export function UserFormDialog({
 
 	/** Returns an error message, or null once everything is saved. */
 	async function save(value: Values): Promise<string | null> {
-		const role = value.isAdmin ? "admin" : "user";
+		// Canonical order, so that an unchanged selection compares equal.
+		const roles = ROLES.filter((role) => value.roles.includes(role));
 		let userId = user?.id;
 
 		if (user) {
@@ -100,9 +105,9 @@ export function UserFormDialog({
 				);
 				if (message) return message;
 			}
-			if (role !== user.role) {
+			if (serializeRoles(roles) !== serializeRoles(user.roles)) {
 				const message = authError(
-					await authClient.admin.setRole({ userId: user.id, role }),
+					await authClient.admin.setRole({ userId: user.id, role: roles }),
 				);
 				if (message) return message;
 			}
@@ -111,7 +116,7 @@ export function UserFormDialog({
 				email: value.email,
 				password: value.password,
 				name: value.name,
-				role,
+				role: roles,
 			});
 			const message = authError(created);
 			if (message) return message;
@@ -129,7 +134,7 @@ export function UserFormDialog({
 			name: user?.name ?? "",
 			email: user?.email ?? "",
 			password: "",
-			isAdmin: user?.role === "admin",
+			roles: user?.roles ?? ["user"],
 			groups: user?.groups ?? [],
 		} satisfies Values as Values,
 		validators: {
@@ -259,20 +264,46 @@ export function UserFormDialog({
 						)}
 
 						<form.Field
-							name="isAdmin"
+							name="roles"
 							// biome-ignore lint/correctness/noChildrenProp: shadcn pattern
-							children={(field) => (
-								<Field orientation="horizontal">
-									<Checkbox
-										id="user-admin"
-										name={field.name}
-										checked={field.state.value}
-										onCheckedChange={(checked) => field.handleChange(checked)}
-										disabled={isSelf}
-									/>
-									<FieldLabel htmlFor="user-admin">Administrateur</FieldLabel>
-								</Field>
-							)}
+							children={(field) => {
+								const isInvalid =
+									field.state.meta.isTouched && !field.state.meta.isValid;
+								return (
+									<FieldSet data-invalid={isInvalid}>
+										<FieldLegend variant="label">Rôles</FieldLegend>
+										<div className="flex flex-wrap gap-x-6 gap-y-2">
+											{ROLES.map((role) => (
+												<Field
+													key={role}
+													orientation="horizontal"
+													className="w-auto"
+												>
+													<Checkbox
+														id={`user-role-${role}`}
+														checked={field.state.value.includes(role)}
+														onCheckedChange={(checked) =>
+															field.handleChange(
+																checked
+																	? [...field.state.value, role]
+																	: field.state.value.filter((r) => r !== role),
+															)
+														}
+														// You cannot take the admin role away from yourself.
+														disabled={isSelf && role === "admin"}
+													/>
+													<FieldLabel htmlFor={`user-role-${role}`}>
+														{ROLE_LABELS[role]}
+													</FieldLabel>
+												</Field>
+											))}
+										</div>
+										{isInvalid && (
+											<FieldError errors={field.state.meta.errors} />
+										)}
+									</FieldSet>
+								);
+							}}
 						/>
 
 						<form.Field
@@ -305,7 +336,7 @@ export function UserFormDialog({
 
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>
-							{pending && <Spinner />}
+							<PendingIcon pending={pending} name={user ? "save" : "add"} />
 							{user ? "Enregistrer" : "Créer"}
 						</Button>
 					</DialogFooter>

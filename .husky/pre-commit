@@ -1,0 +1,6 @@
+# Format and fix what Biome can fix in the staged files, put the result back in the commit, and block the commit
+# when something is left that it cannot fix.
+status=0
+pnpm exec biome check --staged --write --no-errors-on-unmatched || status=$?
+git update-index --again
+exit $status

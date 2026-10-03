@@ -1,5 +1,13 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
 	"root": false,
-	"extends": ["@youlearn/biome-config/base", "@youlearn/biome-config/next-js"]
+	"extends": ["@youlearn/biome-config/base", "@youlearn/biome-config/next-js"],
+	"files": {
+		"includes": ["!components/ui"]
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	}
 }

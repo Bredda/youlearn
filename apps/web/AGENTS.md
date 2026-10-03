@@ -7,3 +7,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# apps/web conventions
+
+UI copy is **French**; code, identifiers and comments are English.
+
+The detailed UI conventions (data and auth, forms, server-side tables, row-action menus, delete confirmations, icons, page headings, components) are in the **`youlearn-ui` skill**: invoke it before creating or changing anything in this app.

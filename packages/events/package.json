@@ -1,0 +1,23 @@
+{
+	"name": "@youlearn/events",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"lint": "biome check",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@youlearn/db": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.3",
+		"@youlearn/biome-config": "workspace:^",
+		"@youlearn/typescript-config": "workspace:*",
+		"typescript": "^7.0.2"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./server": "./src/record.ts"
+	}
+}

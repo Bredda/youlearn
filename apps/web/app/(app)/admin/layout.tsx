@@ -1,3 +1,4 @@
+import { isAdmin } from "@youlearn/auth/roles";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 
@@ -8,7 +9,7 @@ export default async function AdminLayout({
 	children: React.ReactNode;
 }) {
 	const user = await getCurrentUser();
-	if (user?.role !== "admin") redirect("/");
+	if (!user || !isAdmin(user.roles)) redirect("/");
 
 	return children;
 }

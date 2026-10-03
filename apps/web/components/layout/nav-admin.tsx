@@ -1,38 +1,37 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-
+import { Icon } from "@/components/icon";
 import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+	SidebarGroup,
+	SidebarGroupLabel,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import type { IconSvgObject } from "@/lib/types";
+import type { IconName } from "@/lib/icons";
 
 export function NavAdmin({
-  items,
+	items,
 }: {
-  items: {
-    name: string;
-    url: string;
-    icon: IconSvgObject;
-  }[];
+	items: {
+		name: string;
+		url: string;
+		icon: IconName;
+	}[];
 }) {
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Admin</SidebarGroupLabel>
-      <SidebarMenu>
-        {items.map((item) => (
-          <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton render={<a href={item.url} />}>
-              <HugeiconsIcon icon={item.icon} />
-              <span>{item.name}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
-      </SidebarMenu>
-    </SidebarGroup>
-  );
+	return (
+		<SidebarGroup>
+			<SidebarGroupLabel>Admin</SidebarGroupLabel>
+			<SidebarMenu>
+				{items.map((item) => (
+					<SidebarMenuItem key={item.name}>
+						<SidebarMenuButton render={<a href={item.url} />}>
+							<Icon name={item.icon} />
+							<span>{item.name}</span>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				))}
+			</SidebarMenu>
+		</SidebarGroup>
+	);
 }

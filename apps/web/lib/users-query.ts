@@ -1,3 +1,4 @@
+import { ROLES } from "@youlearn/auth/roles";
 import type { AdminUserQuery } from "@youlearn/types";
 import z from "zod";
 
@@ -14,7 +15,7 @@ const optionalText = z
 
 const schema = z.object({
 	q: optionalText,
-	role: z.enum(["admin", "user"]).optional().catch(undefined),
+	role: z.enum(ROLES).optional().catch(undefined),
 	status: z.enum(["active", "banned"]).optional().catch(undefined),
 	groupId: optionalText,
 	sort: z.enum(["name", "email", "role", "createdAt"]).catch("createdAt"),

@@ -6,6 +6,7 @@ import type { AdminUser } from "@youlearn/types";
 import { useState } from "react";
 import z from "zod";
 import { FormError } from "@/components/form-error";
+import { PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -22,8 +23,8 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { authError } from "@/lib/api-client";
+import type { IconName } from "@/lib/icons";
 
 type Props = { user: AdminUser; onClose: () => void; onDone: () => void };
 
@@ -33,6 +34,7 @@ function ValueDialog({
 	description,
 	label,
 	submitLabel,
+	submitIcon,
 	type = "text",
 	schema,
 	submit,
@@ -43,6 +45,7 @@ function ValueDialog({
 	description: string;
 	label: string;
 	submitLabel: string;
+	submitIcon: IconName;
 	type?: string;
 	schema: z.ZodType<string, string>;
 	submit: (value: string) => Promise<string | null>;
@@ -110,7 +113,7 @@ function ValueDialog({
 					</FieldGroup>
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>
-							{pending && <Spinner />}
+							<PendingIcon pending={pending} name={submitIcon} />
 							{submitLabel}
 						</Button>
 					</DialogFooter>
@@ -127,6 +130,7 @@ export function PasswordDialog({ user, onClose, onDone }: Props) {
 			description="Définit un nouveau mot de passe pour ce compte."
 			label="Mot de passe"
 			submitLabel="Enregistrer"
+			submitIcon="save"
 			type="password"
 			schema={z.string().min(8, "8 caractères minimum")}
 			submit={async (newPassword) =>
@@ -150,6 +154,7 @@ export function BanDialog({ user, onClose, onDone }: Props) {
 			description="L'utilisateur est déconnecté immédiatement et ne peut plus se connecter tant qu'il n'est pas débanni."
 			label="Motif (facultatif)"
 			submitLabel="Bannir"
+			submitIcon="ban"
 			schema={z.string()}
 			submit={async (reason) =>
 				authError(

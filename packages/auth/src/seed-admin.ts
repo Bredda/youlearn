@@ -1,6 +1,8 @@
 import { env } from "@youlearn/config";
 import { db, eq, schema } from "@youlearn/db";
+import { recordEvent } from "@youlearn/events/server";
 import { auth } from "./auth";
+import { isAdmin, parseRoles, serializeRoles } from "./roles";
 
 type Logger = Pick<Console, "info" | "warn">;
 
@@ -35,11 +37,18 @@ export async function ensureAdminUser(
 		return "created";
 	}
 
-	if (existing.role !== "admin") {
+	const roles = parseRoles(existing.role);
+	if (!isAdmin(roles)) {
+		// Keep the roles the account already has (writer...) and add admin.
 		await db
 			.update(schema.user)
-			.set({ role: "admin" })
+			.set({ role: serializeRoles([...roles, "admin"]) })
 			.where(eq(schema.user.id, existing.id));
+		await recordEvent({
+			type: "user.set-role",
+			target: { type: "user", id: existing.id, label: existing.email },
+			metadata: { from: roles, to: [...roles, "admin"] },
+		});
 		logger.info(`Existing user promoted to admin (${email})`);
 		return "promoted";
 	}

@@ -1,3 +1,4 @@
+import { parseRoles, ROLES } from "@youlearn/auth/roles";
 import {
 	and,
 	asc,
@@ -14,12 +15,13 @@ import {
 import type { AdminUser, AdminUserPage } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { escapeLike } from "../../lib/sql";
 
 const { user, group, userGroup } = schema;
 
 const query = z.object({
 	q: z.string().trim().max(100).optional(),
-	role: z.enum(["admin", "user"]).optional(),
+	role: z.enum(ROLES).optional(),
 	status: z.enum(["active", "banned"]).optional(),
 	groupId: z.string().min(1).optional(),
 	sort: z.enum(["name", "email", "role", "createdAt"]).default("createdAt"),
@@ -35,10 +37,6 @@ const sortColumns = {
 	createdAt: user.createdAt,
 };
 
-/** Escapes LIKE wildcards so the search term is matched literally. */
-const escapeLike = (value: string) =>
-	value.replace(/[\\%_]/g, (char) => `\\${char}`);
-
 /** User listing for the admin UI: Better Auth's `list-users` knows nothing about our groups. */
 export const adminUserRoutes: FastifyPluginAsync = async (app) => {
 	app.addHook("preHandler", app.requireAdmin);
@@ -51,7 +49,8 @@ export const adminUserRoutes: FastifyPluginAsync = async (app) => {
 			search
 				? or(ilike(user.name, search), ilike(user.email, search))
 				: undefined,
-			role ? eq(user.role, role) : undefined,
+			// `role` holds a comma separated list ("admin,writer"): match any of them.
+			role ? sql`${role} = ANY(string_to_array(${user.role}, ','))` : undefined,
 			status ? eq(user.banned, status === "banned") : undefined,
 			groupId
 				? inArray(
@@ -103,8 +102,9 @@ export const adminUserRoutes: FastifyPluginAsync = async (app) => {
 					.orderBy(asc(sql`lower(${group.name})`))
 			: [];
 
-		const users: AdminUser[] = rows.map((row) => ({
+		const users: AdminUser[] = rows.map(({ role, ...row }) => ({
 			...row,
+			roles: parseRoles(role),
 			createdAt: row.createdAt.toISOString(),
 			groups: memberships
 				.filter((m) => m.userId === row.id)
