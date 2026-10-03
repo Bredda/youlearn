@@ -4,6 +4,8 @@ import type {
 	ChapterState,
 	CourseContent,
 	LearnerContent,
+	LearnerQuestion,
+	QuestionCorrection,
 } from "@youlearn/content";
 import type { schema } from "@youlearn/db";
 import type { EventFilter } from "@youlearn/events";
@@ -333,4 +335,35 @@ export type EnrollmentView = {
 	chapterStates: Record<string, ChapterState>;
 	/** Ids of the chapters whose quiz the learner passed at least once. */
 	passedQuizzes: string[];
+	/** Every attempt at a quiz of this enrollment, oldest first (an open one has no score). */
+	attempts: AttemptSummary[];
+};
+
+export type AttemptSummary = {
+	id: string;
+	chapterId: string;
+	finalExam: boolean;
+	score: number | null;
+	passed: boolean | null;
+	startedAt: string;
+	submittedAt: string | null;
+};
+
+/** An attempt in progress: the questions drawn for it, without any answer. */
+export type LearnerAttempt = {
+	id: string;
+	chapterId: string;
+	finalExam: boolean;
+	questions: LearnerQuestion[];
+};
+
+/** The outcome of a submitted attempt. */
+export type AttemptResult = {
+	score: number;
+	passed: boolean;
+	passRate: number;
+	/** Right answers and explanations, for the quizzes of a chapter. Never for the final exam. */
+	corrections: QuestionCorrection[] | null;
+	/** The enrollment after this attempt: a final exam passed or failed ends it. */
+	enrollmentStatus: EnrollmentStatus;
 };

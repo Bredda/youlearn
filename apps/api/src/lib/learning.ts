@@ -1,14 +1,22 @@
 import {
+	answersIssue,
 	type CompleteRefusal,
 	canCompleteChapter,
 	chapterStates,
+	drawQuiz,
 	enrollmentOutcome,
+	gradeAttempt,
+	learnerQuestions,
 	type Progress,
+	type QuizAnswers,
 	toLearnerContent,
 } from "@youlearn/content";
-import { and, db, desc, eq, isNull, schema } from "@youlearn/db";
+import { and, asc, db, desc, eq, isNull, schema } from "@youlearn/db";
 import type {
+	AttemptResult,
+	AttemptSummary,
 	EnrollmentView,
+	LearnerAttempt,
 	LearnerCourse,
 	LearnerEnrollment,
 } from "@youlearn/types";
@@ -223,7 +231,14 @@ export async function findEnrollmentView(
 				eq(courseRevision.status, "published"),
 			),
 		);
-	const progress = await loadProgress(db, enrollmentId);
+	const [progress, attempts] = await Promise.all([
+		loadProgress(db, enrollmentId),
+		db
+			.select()
+			.from(quizAttempt)
+			.where(eq(quizAttempt.enrollmentId, enrollmentId))
+			.orderBy(asc(quizAttempt.startedAt)),
+	]);
 	const chapterStatesById = chapterStates(row.revision.content, progress);
 	const learnerContent = toLearnerContent(row.revision.content);
 	return {
@@ -256,6 +271,17 @@ export async function findEnrollmentView(
 		},
 		chapterStates: chapterStatesById,
 		passedQuizzes: [...progress.passedQuizzes],
+		attempts: attempts.map(
+			(attempt): AttemptSummary => ({
+				id: attempt.id,
+				chapterId: attempt.chapterId,
+				finalExam: attempt.finalExam,
+				score: attempt.score,
+				passed: attempt.passed,
+				startedAt: attempt.startedAt.toISOString(),
+				submittedAt: attempt.submittedAt?.toISOString() ?? null,
+			}),
+		),
 	};
 }
 
@@ -316,6 +342,191 @@ export async function completeChapter(
 			courseName: owned.course.name,
 			revisionKey: owned.revision.key,
 			courseId: owned.course.id,
+		};
+	});
+}
+
+export type StartAttemptResult =
+	| { ok: true; attempt: LearnerAttempt }
+	| {
+			ok: false;
+			reason:
+				| "NOT_FOUND"
+				| "NOT_ACTIVE"
+				| "UNKNOWN_CHAPTER"
+				| "NO_QUIZ"
+				| "LOCKED"
+				| "EXAM_ALREADY_TAKEN";
+	  };
+
+/**
+ * Starts an attempt at the quiz of a chapter, or resumes the one still open (same questions, same order). The
+ * server draws the questions and keeps the draw. The final exam has a single attempt per enrollment.
+ */
+export async function startAttempt(
+	actor: CourseActor,
+	enrollmentId: string,
+	chapterId: string,
+): Promise<StartAttemptResult> {
+	const owned = await findOwned(actor, enrollmentId);
+	if (!owned) return { ok: false, reason: "NOT_FOUND" };
+	const content = owned.revision.content;
+	const chapter = content.chapters.find((c) => c.id === chapterId);
+	if (!chapter) return { ok: false, reason: "UNKNOWN_CHAPTER" };
+	const quiz = chapter.quiz;
+	if (!quiz) return { ok: false, reason: "NO_QUIZ" };
+	const finalExam = chapter.kind === "final-exam";
+
+	return db.transaction(async (tx): Promise<StartAttemptResult> => {
+		const [current] = await tx
+			.select({ status: enrollment.status })
+			.from(enrollment)
+			.where(eq(enrollment.id, enrollmentId))
+			.for("update");
+		if (current?.status !== "in_progress")
+			return { ok: false, reason: "NOT_ACTIVE" };
+
+		const progress = await loadProgress(tx, enrollmentId);
+		if (chapterStates(content, progress)[chapterId] === "locked")
+			return { ok: false, reason: "LOCKED" };
+
+		const attempts = await tx
+			.select()
+			.from(quizAttempt)
+			.where(
+				and(
+					eq(quizAttempt.enrollmentId, enrollmentId),
+					eq(quizAttempt.chapterId, chapterId),
+				),
+			);
+		const open = attempts.find((attempt) => attempt.submittedAt === null);
+		if (!open && finalExam && attempts.length > 0)
+			return { ok: false, reason: "EXAM_ALREADY_TAKEN" };
+
+		const attempt =
+			open ??
+			(
+				await tx
+					.insert(quizAttempt)
+					.values({
+						enrollmentId,
+						chapterId,
+						finalExam,
+						draw: drawQuiz(quiz),
+					})
+					.returning()
+			)[0];
+		if (!attempt) throw new Error("Attempt was not created");
+		return {
+			ok: true,
+			attempt: {
+				id: attempt.id,
+				chapterId,
+				finalExam,
+				questions: learnerQuestions(quiz, attempt.draw),
+			},
+		};
+	});
+}
+
+export type SubmitAttemptResult =
+	| {
+			ok: true;
+			result: AttemptResult;
+			/** The final exam was just passed or failed: the enrollment ended. */
+			ended: "completed" | "failed" | null;
+			courseId: string;
+			courseName: string;
+			revisionKey: string;
+	  }
+	| {
+			ok: false;
+			reason: "NOT_FOUND" | "NOT_ACTIVE" | "ALREADY_SUBMITTED";
+	  }
+	| { ok: false; reason: "INVALID_ANSWERS"; message: string };
+
+/**
+ * Grades an attempt on the server. A chapter quiz returns the correction; the final exam returns the score only
+ * and ends the enrollment: passed completes it, failed marks it `failed` (the learner starts over with a new one).
+ */
+export async function submitAttempt(
+	actor: CourseActor,
+	enrollmentId: string,
+	attemptId: string,
+	answers: QuizAnswers,
+): Promise<SubmitAttemptResult> {
+	const owned = await findOwned(actor, enrollmentId);
+	if (!owned) return { ok: false, reason: "NOT_FOUND" };
+	const content = owned.revision.content;
+
+	return db.transaction(async (tx): Promise<SubmitAttemptResult> => {
+		const [current] = await tx
+			.select({ status: enrollment.status })
+			.from(enrollment)
+			.where(eq(enrollment.id, enrollmentId))
+			.for("update");
+		if (current?.status !== "in_progress")
+			return { ok: false, reason: "NOT_ACTIVE" };
+
+		const [attempt] = await tx
+			.select()
+			.from(quizAttempt)
+			.where(
+				and(
+					eq(quizAttempt.id, attemptId),
+					eq(quizAttempt.enrollmentId, enrollmentId),
+				),
+			);
+		const quiz = content.chapters.find(
+			(c) => c.id === attempt?.chapterId,
+		)?.quiz;
+		if (!attempt || !quiz) return { ok: false, reason: "NOT_FOUND" };
+		if (attempt.submittedAt) return { ok: false, reason: "ALREADY_SUBMITTED" };
+
+		const issue = answersIssue(quiz, attempt.draw, answers);
+		if (issue) return { ok: false, reason: "INVALID_ANSWERS", message: issue };
+
+		const grade = gradeAttempt(quiz, attempt.draw, answers);
+		await tx
+			.update(quizAttempt)
+			.set({
+				answers,
+				score: grade.score,
+				passed: grade.passed,
+				submittedAt: new Date(),
+			})
+			.where(eq(quizAttempt.id, attemptId));
+
+		let status: "in_progress" | "completed" | "failed" = "in_progress";
+		if (attempt.finalExam) {
+			if (grade.passed) {
+				await tx
+					.insert(chapterProgress)
+					.values({ enrollmentId, chapterId: attempt.chapterId })
+					.onConflictDoNothing();
+				const progress = await loadProgress(tx, enrollmentId);
+				status = enrollmentOutcome(content, progress.completed);
+			} else status = "failed";
+			if (status !== "in_progress")
+				await tx
+					.update(enrollment)
+					.set({ status, finishedAt: new Date() })
+					.where(eq(enrollment.id, enrollmentId));
+		}
+		return {
+			ok: true,
+			result: {
+				score: grade.score,
+				passed: grade.passed,
+				passRate: quiz.passRate,
+				// The final exam never shows its correction: the pool would leak a little more at every try.
+				corrections: attempt.finalExam ? null : grade.corrections,
+				enrollmentStatus: status,
+			},
+			ended: status === "in_progress" ? null : status,
+			courseId: owned.course.id,
+			courseName: owned.course.name,
+			revisionKey: owned.revision.key,
 		};
 	});
 }

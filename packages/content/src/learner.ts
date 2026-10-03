@@ -1,4 +1,4 @@
-import type { Chapter, CourseContent, Quiz } from "./schema";
+import type { Chapter, CourseContent, Question, Quiz } from "./schema";
 
 /**
  * What a learner may receive of a quiz: its settings and the size of the pool, never the questions (they come
@@ -37,3 +37,11 @@ export function toLearnerContent(content: CourseContent): LearnerContent {
 		})),
 	};
 }
+
+/** A drawn question as the learner answers it: no `correct` flag, no explanation (those come with the correction). */
+export type LearnerQuestion = {
+	id: string;
+	type: Question["type"];
+	prompt: string;
+	options: { id: string; text: string }[];
+};

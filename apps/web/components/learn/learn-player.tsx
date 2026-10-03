@@ -4,14 +4,14 @@ import Link from "next/link";
 import { ChapterView } from "@/components/content/chapter-view";
 import { Icon } from "@/components/icon";
 import { CompleteChapterButton } from "@/components/learn/complete-chapter-button";
+import { QuizRunner } from "@/components/learn/quiz-runner";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 /**
  * The course as a learner reads it: the chapters of the revision they follow, one at a time (the chapter is in the
- * URL). The server says which chapters are locked and sends none of their content. The quizzes are not played
- * here yet.
+ * URL). The server says which chapters are locked and sends none of their content.
  */
 export function LearnPlayer({
 	view,
@@ -34,6 +34,8 @@ export function LearnPlayer({
 	const state = chapter ? chapterStates[chapter.id] : undefined;
 	const active = enrollment.status === "in_progress";
 	const isExam = chapter?.kind === "final-exam";
+	const examScore =
+		view.attempts.find((attempt) => attempt.finalExam)?.score ?? null;
 	const blockedByQuiz =
 		chapter?.quiz?.blocking === true &&
 		!view.passedQuizzes.includes(chapter.id);
@@ -65,6 +67,22 @@ export function LearnPlayer({
 				<p className="flex items-center gap-2 rounded-md border border-primary bg-primary/10 px-3 py-2 text-sm">
 					<Icon name="done" /> Vous avez terminé ce cours.
 				</p>
+			)}
+			{enrollment.status === "failed" && (
+				<div className="flex flex-col gap-2 rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-sm">
+					<p>
+						Vous n'avez pas réussi l'examen final
+						{examScore !== null && ` (score ${examScore} %)`}. Pour obtenir la
+						certification, il faut recommencer le cours depuis le début.
+					</p>
+					<Button
+						className="self-start"
+						nativeButton={false}
+						render={<Link href={`/courses/${course.id}`} />}
+					>
+						<Icon name="retry" /> Recommencer le cours
+					</Button>
+				</div>
 			)}
 			{enrollment.outdated && (
 				<p className="rounded-md border border-dashed bg-muted/50 px-3 py-2 text-sm">
@@ -139,18 +157,19 @@ export function LearnPlayer({
 									courseId={course.id}
 								/>
 								{chapter.quiz && (
-									<p className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-										<Icon name="quiz" />
-										Quiz : {chapter.quiz.drawCount} question
-										{chapter.quiz.drawCount > 1 ? "s" : ""} tirée
-										{chapter.quiz.drawCount > 1 ? "s" : ""} parmi{" "}
-										{chapter.quiz.poolSize}
-										{chapter.quiz.blocking &&
-											" (à réussir pour ouvrir la suite)"}
-										<Badge variant="outline" className="ml-auto">
-											Bientôt disponible
-										</Badge>
-									</p>
+									<QuizRunner
+										// A new key per chapter resets the quiz in progress.
+										key={chapter.id}
+										enrollmentId={enrollment.id}
+										courseId={course.id}
+										chapterId={chapter.id}
+										quiz={chapter.quiz}
+										finalExam={isExam}
+										active={active}
+										attempts={view.attempts.filter(
+											(attempt) => attempt.chapterId === chapter.id,
+										)}
+									/>
 								)}
 								{state === "completed" ? (
 									<Badge variant="secondary" className="self-start">

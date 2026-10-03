@@ -45,9 +45,9 @@ Un plan contient : un but, un « où on en est », des **Décisions** (chacune a
 
 **Phase 3 — Quiz**
 
-- [ ] `quiz-draw.ts` (tirage, questions sans `correct`, correction) + tests. **Vérif.** : tests unitaires.
-- [ ] Tentatives (démarrer ou reprendre, soumettre), examen final one-shot, échec, recommencer, événements `enrollment.complete` / `fail`. **Vérif.** : `curl` (même tirage à la reprise, double soumission 409, 2e examen 409, échec puis recommencer, pas de corrigé à l'examen final).
-- [ ] Web : `QuizRunner`, confirmation de l'examen final, écran d'échec. **Vérif.** : `pnpm check-types`, pages chargées en `curl`.
+- [x] `quiz-draw.ts` (tirage, questions sans `correct`, correction) + tests. **Vérif.** : tests unitaires.
+- [x] Tentatives (démarrer ou reprendre, soumettre), examen final one-shot, échec, recommencer, événements `enrollment.complete` / `fail`. **Vérif.** : `curl` (même tirage à la reprise, double soumission 409, 2e examen 409, échec puis recommencer, pas de corrigé à l'examen final).
+- [x] Web : `QuizRunner`, confirmation de l'examen final, écran d'échec. **Vérif.** : `pnpm check-types`, pages chargées en `curl`.
 
 **Phase 4 — Mes sessions et traçabilité**
 
