@@ -8,7 +8,7 @@ import type {
 } from "@youlearn/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
 import { Icon } from "@/components/icon";
@@ -72,6 +72,12 @@ export function CourseDetail({
 	const [deleting, setDeleting] = useState<WriterRevision>();
 	const [error, setError] = useState<string>();
 	const [pending, setPending] = useState(false);
+
+	// Most recently modified first, whatever the order the API returns.
+	const byUpdate = useMemo(
+		() => [...revisions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+		[revisions],
+	);
 
 	const draft = course.current.draft;
 	const published = course.current.published;
@@ -212,16 +218,22 @@ export function CourseDetail({
 							<TableRow>
 								<TableCell
 									colSpan={6}
-									className="text-center text-muted-foreground"
+									className="h-24 text-center text-muted-foreground"
 								>
-									Aucune révision.
+									Aucune révision
 								</TableCell>
 							</TableRow>
 						)}
-						{revisions.map((revision) => (
+						{byUpdate.map((revision) => (
 							<TableRow key={revision.id}>
 								<TableCell className="truncate font-medium">
-									{revision.key}
+									<Link
+										href={`/writer/courses/${course.id}/revisions/${revision.id}`}
+										className="hover:underline"
+										title={`${revision.status === "draft" ? "Éditer" : "Voir"} la révision ${revision.key}`}
+									>
+										{revision.key}
+									</Link>
 								</TableCell>
 								<TableCell>
 									<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
