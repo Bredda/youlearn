@@ -21,7 +21,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
 	Table,
 	TableBody,
@@ -34,6 +34,10 @@ import { CourseFormDialog } from "@/components/writer/course-form-dialog";
 import { assetUrl } from "@/components/writer/markdown";
 import { ReviewLinkDialog } from "@/components/writer/review-link-dialog";
 import { RevisionFormDialog } from "@/components/writer/revision-form-dialog";
+import {
+	type RevisionAction,
+	RevisionRowActions,
+} from "@/components/writer/revision-row-actions";
 import { callApi } from "@/lib/api-client";
 import {
 	REVISION_STATUS_LABELS,
@@ -101,6 +105,19 @@ export function CourseDetail({
 		if ((to === "published" && published) || to === "deprecated")
 			return setConfirming({ kind: "status", revision, to });
 		return setStatus(revision, to);
+	}
+
+	function onRevisionAction(action: RevisionAction, revision: WriterRevision) {
+		switch (action.type) {
+			case "status":
+				return changeStatus(revision, action.to);
+			case "clone":
+				return setCreating({ baseId: revision.id });
+			case "link":
+				return setLinking(revision);
+			case "delete":
+				return setConfirming({ kind: "delete", revision });
+		}
 	}
 
 	function confirmed() {
@@ -182,7 +199,9 @@ export function CourseDetail({
 							<TableHead className="w-32">Statut</TableHead>
 							<TableHead>Contributeurs</TableHead>
 							<TableHead className="w-44">Mise à jour</TableHead>
-							<TableHead className="w-80 text-right">Actions</TableHead>
+							<TableHead className="w-16 text-right">
+								<span className="sr-only">Actions</span>
+							</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -212,88 +231,14 @@ export function CourseDetail({
 								<TableCell className="text-muted-foreground">
 									{dateFormat.format(new Date(revision.updatedAt))}
 								</TableCell>
-								<TableCell className="space-x-2 whitespace-normal text-right">
-									<Link
-										href={`/writer/courses/${course.id}/revisions/${revision.id}`}
-										className={buttonVariants({
-											variant: "outline",
-											size: "sm",
-										})}
-									>
-										{revision.status === "draft" ? "Éditer" : "Voir"}
-									</Link>
-									{revision.status === "draft" && (
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={pending}
-											onClick={() => changeStatus(revision, "preview")}
-										>
-											Passer en relecture
-										</Button>
-									)}
-									{revision.status === "preview" && (
-										<>
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => setLinking(revision)}
-											>
-												Lien de relecture
-											</Button>
-											<Button
-												variant="outline"
-												size="sm"
-												disabled={pending || draft !== undefined}
-												onClick={() => changeStatus(revision, "draft")}
-											>
-												Repasser en brouillon
-											</Button>
-											<Button
-												size="sm"
-												disabled={pending}
-												onClick={() => changeStatus(revision, "published")}
-											>
-												Publier
-											</Button>
-										</>
-									)}
-									{revision.status === "published" && (
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={pending}
-											onClick={() => changeStatus(revision, "deprecated")}
-										>
-											Déprécier
-										</Button>
-									)}
-									{(revision.status === "published" ||
-										revision.status === "deprecated") && (
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={pending || draft !== undefined}
-											onClick={() => setCreating({ baseId: revision.id })}
-										>
-											{revision.status === "deprecated"
-												? "Restaurer en brouillon"
-												: "Cloner en brouillon"}
-										</Button>
-									)}
-									{(revision.status === "draft" ||
-										revision.status === "preview") && (
-										<Button
-											variant="destructive"
-											size="sm"
-											disabled={pending}
-											onClick={() =>
-												setConfirming({ kind: "delete", revision })
-											}
-										>
-											Supprimer
-										</Button>
-									)}
+								<TableCell className="text-right">
+									<RevisionRowActions
+										courseId={course.id}
+										revision={revision}
+										hasDraft={draft !== undefined}
+										pending={pending}
+										onAction={onRevisionAction}
+									/>
 								</TableCell>
 							</TableRow>
 						))}

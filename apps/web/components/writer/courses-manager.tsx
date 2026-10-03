@@ -26,6 +26,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
+import { CourseRowActions } from "@/components/writer/course-row-actions";
 import { assetUrl } from "@/components/writer/markdown";
 import { callApi } from "@/lib/api-client";
 import {
@@ -100,7 +101,9 @@ export function CoursesManager({
 						<TableHead>Catégories</TableHead>
 						<TableHead>Groupes</TableHead>
 						<TableHead>Révisions</TableHead>
-						<TableHead className="w-48 text-right">Actions</TableHead>
+						<TableHead className="w-16 text-right">
+							<span className="sr-only">Actions</span>
+						</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -173,24 +176,15 @@ export function CoursesManager({
 									)}
 								</div>
 							</TableCell>
-							<TableCell className="space-x-2 text-right">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setEditing(course)}
-								>
-									Modifier
-								</Button>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => {
+							<TableCell className="text-right">
+								<CourseRowActions
+									course={course}
+									onAction={(action, target) => {
+										if (action === "edit") return setEditing(target);
 										setError(undefined);
-										setDeleting(course);
+										setDeleting(target);
 									}}
-								>
-									Supprimer
-								</Button>
+								/>
 							</TableCell>
 						</TableRow>
 					))}
