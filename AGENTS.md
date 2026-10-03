@@ -84,7 +84,7 @@ Detailed conventions live in project skills (`.claude/skills/`), loaded when the
 - TypeScript strict with `noUncheckedIndexedAccess`; no `any`. Imports are sorted by Biome.
 - Match the surrounding code (names, comment density). Comments explain *why*, not what.
 - Keep changes scoped: do not reformat or "clean up" generated files (`components/ui`, `drizzle/`) beyond the task.
-- Commits follow Conventional Commits (`feat:`, `fix:`...). Never commit `.env`.
+- Commits follow Conventional Commits (`feat:`, `fix:`...). Pull requests are squash-merged and their **title** becomes the commit message release-please reads, so it must be a Conventional Commit too (CI checks it). Never edit `CHANGELOG.md` or the version in `package.json`: release-please owns them. Never commit `.env`.
 
 ## Gotchas
 

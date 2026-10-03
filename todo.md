@@ -56,10 +56,10 @@ Toutes confirmées avec l'utilisateur ; l'ajustement de la 6 est noté dedans.
 
 ### Phase C — CI et releases
 
-- [ ] Vérification de construction des deux images sur les pull requests, sans publication. Fichier : `.github/workflows/ci.yml`. **Vérif. :** actionlint passe en local ; le job tourne au premier push (à constater sur GitHub).
-- [ ] Workflow release-please (décisions 5 et 6). Fichiers : `.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json`, `package.json` (`version`). **Vérif. :** actionlint passe, les deux fichiers JSON sont valides ; la pull request de release n'apparaît qu'après un premier merge sur GitHub.
-- [ ] Publication des images sur GHCR à la création d'une release (décision 4). Fichier : `.github/workflows/release.yml`. **Vérif. :** actionlint passe ; la première publication ne se constate que sur GitHub.
-- [ ] Documenter le processus de release (Conventional Commits, pull request de release, déploiement d'une version). Fichiers : `README.md`, `AGENTS.md`. **Vérif. :** un nouveau contributeur peut suivre la procédure sans question.
+- [x] Vérification de construction des deux images sur les pull requests, sans publication. Fichier : `.github/workflows/ci.yml` (jobs `docker`, et `pr-title` : les fusions se font en squash, le titre devient le message de commit). **Vérif. :** actionlint passe en local ; les jobs ne tournent qu'au premier push (à constater sur GitHub).
+- [x] Workflow release-please (décisions 5 et 6). Fichiers : `.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json`, `package.json` (`version`). **Vérif. :** actionlint passe, les deux fichiers JSON sont valides ; la pull request de release n'apparaît qu'après un premier merge sur GitHub.
+- [x] Publication des images sur GHCR à la création d'une release (décision 4). Fichier : `.github/workflows/release.yml`. **Vérif. :** actionlint passe ; la première publication ne se constate que sur GitHub.
+- [x] Documenter le processus de release (Conventional Commits, pull request de release, déploiement d'une version). Fichiers : `README.md`, `AGENTS.md`. **Vérif. :** un nouveau contributeur peut suivre la procédure sans question.
 
 ### Terminé quand
 

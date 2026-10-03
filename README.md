@@ -76,9 +76,35 @@ then `pnpm check-types` and `pnpm test` must pass. When a hook fails, fix the ca
 
 ### Continuous integration
 
-`.github/workflows/ci.yml` runs the same three checks (`lint:ci`, `check-types`, `test`) with GitHub Actions on every push
-to `main` and `dev` and on every pull request. It starts from a clean checkout with placeholder environment values, so it
-needs no secret, database or storage.
+`.github/workflows/ci.yml` runs on every push to `main` and `dev` and on every pull request, from a clean checkout with
+placeholder environment values (no secret, database or storage needed):
+
+- `check`: the same three checks as the pre-push hook (`lint:ci`, `check-types`, `test`);
+- `docker`: both images must still build (not pushed);
+- `pr-title` (pull requests only): the title must be a Conventional Commit, because pull requests are squash-merged and
+  the title becomes the commit message read by the release tooling.
+
+These four checks (`check`, `Docker image (api)`, `Docker image (web)`, `Pull request title`) are the ones to require on
+`main`, together with squash merging.
+
+### Releases
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release.yml`,
+`release-please-config.json`, `.release-please-manifest.json`). The whole monorepo shares one version.
+
+1. Merge pull requests into `main` (squash, Conventional Commit title). While the version is below 1.0, `feat` bumps the
+   minor, `fix` the patch, and a breaking change also the minor. `chore`, `ci`, `build`, `style` and `test` do not appear
+   in the changelog.
+2. release-please keeps a pull request titled `chore(main): release x.y.z` up to date: the version in `package.json` and
+   `CHANGELOG.md`. Never edit either by hand.
+3. Merging that pull request creates the tag `vx.y.z`, the GitHub release and publishes the images
+   `ghcr.io/<owner>/youlearn-api` and `youlearn-web` tagged `x.y.z`, `x.y` and `latest`.
+4. To deploy a release, see [Running with Docker](#running-with-docker) (`YOULEARN_VERSION`).
+
+The workflow needs a repository secret `RELEASE_PLEASE_TOKEN`: a personal access token allowed to write contents and pull
+requests on this repository. It is not `GITHUB_TOKEN` on purpose: events created with that token do not trigger the CI,
+so the checks required on `main` would never run on the release pull request. A package published to GHCR is private by
+default: make it public in the package settings if the images must be pullable without a login.
 
 ## Running with Docker
 
