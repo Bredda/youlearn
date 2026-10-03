@@ -1,3 +1,4 @@
+import { env } from "@youlearn/config";
 import type {
 	AssignableGroups,
 	WriterCourse,
@@ -42,6 +43,7 @@ export default async function WriterCoursePage(
 			revisions={revisions}
 			assignableGroups={groups}
 			suggestedKey={key}
+			webUrl={env.WEB_URL}
 		/>
 	);
 }

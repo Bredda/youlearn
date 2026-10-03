@@ -18,11 +18,14 @@ import { Input } from "@/components/ui/input";
 // Mounted only while open, so the state starts fresh each time.
 export function ReviewLinkDialog({
 	courseId,
+	webUrl,
 	revision,
 	onClose,
 	onChanged,
 }: {
 	courseId: string;
+	/** Public origin of the app: the link must not depend on the author's browser. */
+	webUrl: string;
 	revision: WriterRevision;
 	onClose: () => void;
 	/** The link was replaced or revoked: the page must refresh its data. */
@@ -33,7 +36,7 @@ export function ReviewLinkDialog({
 	const [copied, setCopied] = useState(false);
 	const [error, setError] = useState<string>();
 
-	const url = token ? `${window.location.origin}/review/${token}` : "";
+	const url = token ? `${new URL(webUrl).origin}/review/${token}` : "";
 
 	async function change(method: "POST" | "DELETE") {
 		setPending(true);

@@ -63,11 +63,14 @@ export function CourseDetail({
 	revisions,
 	assignableGroups,
 	suggestedKey,
+	webUrl,
 }: {
 	course: WriterCourse;
 	revisions: WriterRevision[];
 	assignableGroups: CourseGroupTag[];
 	suggestedKey: string;
+	/** Public origin of the app (`WEB_URL`), the base of the review links. */
+	webUrl: string;
 }) {
 	const router = useRouter();
 	const [editing, setEditing] = useState(false);
@@ -297,6 +300,7 @@ export function CourseDetail({
 			{linking && (
 				<ReviewLinkDialog
 					courseId={course.id}
+					webUrl={webUrl}
 					// Read from the refreshed list so a regenerated link is not shown stale.
 					revision={revisions.find((r) => r.id === linking.id) ?? linking}
 					onClose={() => setLinking(undefined)}
