@@ -28,5 +28,18 @@ export default async function RevisionPage(
 		revision: WriterRevisionDetail;
 	};
 
-	return <RevisionEditor course={course} revision={revision} />;
+	// What the editor compares against: the revision this one was cloned from (gone if it was deleted).
+	let base: WriterRevisionDetail | null = null;
+	if (revision.parentId) {
+		const parentResponse = await apiFetch(
+			`/api/writer/courses/${id}/revisions/${revision.parentId}`,
+		);
+		if (parentResponse.ok) {
+			base = (
+				(await parentResponse.json()) as { revision: WriterRevisionDetail }
+			).revision;
+		}
+	}
+
+	return <RevisionEditor course={course} revision={revision} base={base} />;
 }
