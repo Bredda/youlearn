@@ -12,6 +12,7 @@ import { useState } from "react";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
 import { Icon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -131,44 +132,47 @@ export function CourseDetail({
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex items-start justify-between gap-4">
-				<div className="flex flex-col gap-2">
+			<div className="flex flex-col gap-4">
+				<Link
+					href="/writer/courses"
+					className="text-muted-foreground text-sm hover:underline"
+				>
+					← Cours
+				</Link>
+				<PageHeader
+					title={course.name}
+					description={course.description || undefined}
+				>
+					<Button variant="outline" onClick={() => setEditing(true)}>
+						<Icon name="edit" />
+						Modifier
+					</Button>
+				</PageHeader>
+				<div className="flex items-start gap-4">
 					{course.imageAssetId && (
 						// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
 						<img
 							src={assetUrl(course.id, course.imageAssetId)}
 							alt=""
-							className="h-32 w-56 rounded-md border object-cover"
+							className="h-24 w-40 rounded-md border object-cover"
 						/>
 					)}
-					<Link
-						href="/writer/courses"
-						className="text-muted-foreground text-sm hover:underline"
-					>
-						← Cours
-					</Link>
-					<h1 className="font-semibold text-xl">{course.name}</h1>
-					<p className="text-muted-foreground text-xs">{course.slug}</p>
-					{course.description && (
-						<p className="max-w-prose text-sm">{course.description}</p>
-					)}
-					<div className="flex flex-wrap gap-1">
-						{course.categories.map((category) => (
-							<Badge key={category} variant="outline">
-								{category}
-							</Badge>
-						))}
-						{course.groups.map((group) => (
-							<Badge key={group.id} variant="secondary">
-								{group.name}
-							</Badge>
-						))}
+					<div className="flex flex-col gap-2">
+						<p className="text-muted-foreground text-xs">{course.slug}</p>
+						<div className="flex flex-wrap gap-1">
+							{course.categories.map((category) => (
+								<Badge key={category} variant="outline">
+									{category}
+								</Badge>
+							))}
+							{course.groups.map((group) => (
+								<Badge key={group.id} variant="secondary">
+									{group.name}
+								</Badge>
+							))}
+						</div>
 					</div>
 				</div>
-				<Button variant="outline" onClick={() => setEditing(true)}>
-					<Icon name="edit" />
-					Modifier
-				</Button>
 			</div>
 
 			<div className="flex flex-col gap-4">

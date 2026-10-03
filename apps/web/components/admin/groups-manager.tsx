@@ -7,6 +7,7 @@ import { GroupFormDialog } from "@/components/admin/group-form-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
 import { Icon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,19 +36,15 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="font-semibold text-xl">Groupes</h1>
-					<p className="text-muted-foreground text-sm">
-						Les groupes déterminent les cours et programmes visibles par chaque
-						utilisateur.
-					</p>
-				</div>
+			<PageHeader
+				title="Groupes"
+				description="Les groupes déterminent les cours et programmes visibles par chaque utilisateur."
+			>
 				<Button onClick={() => setEditing(null)}>
 					<Icon name="add" />
 					Nouveau groupe
 				</Button>
-			</div>
+			</PageHeader>
 
 			{error && <FormError>{error}</FormError>}
 

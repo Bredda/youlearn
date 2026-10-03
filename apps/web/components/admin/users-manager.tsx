@@ -29,6 +29,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { dataTableFeatures } from "@/components/data-table/features";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { authError } from "@/lib/api-client";
 import { DEFAULT_PAGE_SIZE, usersQueryToSearchParams } from "@/lib/users-query";
@@ -152,28 +153,20 @@ export function UsersManager({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between gap-4">
-				<div>
-					<h1 className="font-semibold text-xl">Utilisateurs</h1>
-					<p className="text-muted-foreground text-sm">
-						Comptes, rôles et groupes.
-					</p>
-				</div>
-				<div className="flex items-center gap-2">
-					<Button
-						variant="outline"
-						disabled={isPending}
-						onClick={() => startTransition(() => router.refresh())}
-					>
-						<PendingIcon pending={isPending} name="refresh" />
-						Actualiser
-					</Button>
-					<Button onClick={() => setDialog({ type: "create" })}>
-						<Icon name="add" />
-						Nouvel utilisateur
-					</Button>
-				</div>
-			</div>
+			<PageHeader title="Utilisateurs" description="Comptes, rôles et groupes.">
+				<Button
+					variant="outline"
+					disabled={isPending}
+					onClick={() => startTransition(() => router.refresh())}
+				>
+					<PendingIcon pending={isPending} name="refresh" />
+					Actualiser
+				</Button>
+				<Button onClick={() => setDialog({ type: "create" })}>
+					<Icon name="add" />
+					Nouvel utilisateur
+				</Button>
+			</PageHeader>
 
 			<UsersToolbar
 				key={query.q ?? ""}

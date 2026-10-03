@@ -20,6 +20,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { dataTableFeatures } from "@/components/data-table/features";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
 import type { CourseAction } from "@/components/writer/course-row-actions";
@@ -121,32 +122,26 @@ export function CoursesManager({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between gap-4">
-				<div>
-					<h1 className="font-semibold text-xl">Cours</h1>
-					<p className="text-muted-foreground text-sm">
-						Un cours est visible des utilisateurs qui partagent au moins un de
-						ses groupes.
-					</p>
-				</div>
-				<div className="flex items-center gap-2">
-					<Button
-						variant="outline"
-						disabled={isPending}
-						onClick={() => startTransition(() => router.refresh())}
-					>
-						<PendingIcon pending={isPending} name="refresh" />
-						Actualiser
-					</Button>
-					<Button
-						onClick={() => setEditing(null)}
-						disabled={assignableGroups.length === 0}
-					>
-						<Icon name="add" />
-						Nouveau cours
-					</Button>
-				</div>
-			</div>
+			<PageHeader
+				title="Cours"
+				description="Un cours est visible des utilisateurs qui partagent au moins un de ses groupes."
+			>
+				<Button
+					variant="outline"
+					disabled={isPending}
+					onClick={() => startTransition(() => router.refresh())}
+				>
+					<PendingIcon pending={isPending} name="refresh" />
+					Actualiser
+				</Button>
+				<Button
+					onClick={() => setEditing(null)}
+					disabled={assignableGroups.length === 0}
+				>
+					<Icon name="add" />
+					Nouveau cours
+				</Button>
+			</PageHeader>
 
 			{assignableGroups.length === 0 && (
 				<FormError>

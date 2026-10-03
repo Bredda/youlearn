@@ -29,6 +29,7 @@ Tables with sorting/filtering/pagination use the data table building blocks in `
 
 ## UI components
 
+- **Page headings** use `PageHeader` (`components/page-header.tsx`): `title`, optional `description` and, as children, the buttons shown on the right (create, refresh...); it draws the separator under the heading. Do not write a page `<h1>` by hand.
 - **Icons are centralized** in `lib/icons.ts`, by meaning (`add`, `edit`, `delete`, `open`, `publish`...). Use `<Icon name="delete" />` (`components/icon.tsx`) and, in a button that starts an action, `<PendingIcon pending={pending} name="save" />` (the icon becomes a spinner while it runs). Never import `@hugeicons/*` icons outside `components/ui` and those two files; to add an icon, give it a name in the registry. Every action button and menu item has its icon, except plain dismiss buttons ("Annuler"). Navigation items take an `IconName`.
 - Add shadcn components with `pnpm dlx shadcn@latest add <name>` (style `base-mira`, built on `@base-ui/react`, icons from `@hugeicons`). Compose them, do not edit `components/ui/*` unless needed (the folder is excluded from Biome).
 - Theme: `next-themes` through `ThemeProvider`; use `useThemeToggle()` rather than calling it directly. Persistence and no-flash loading are handled by the library.

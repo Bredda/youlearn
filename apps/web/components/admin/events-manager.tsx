@@ -15,6 +15,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { dataTableFeatures } from "@/components/data-table/features";
 import { PendingIcon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { eventsQueryToSearchParams } from "@/lib/events-query";
 import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
@@ -83,13 +84,10 @@ export function EventsManager({ events, total, query }: Props) {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between gap-4">
-				<div>
-					<h1 className="font-semibold text-xl">Événements</h1>
-					<p className="text-muted-foreground text-sm">
-						Journal des actions : qui a fait quoi, et quand.
-					</p>
-				</div>
+			<PageHeader
+				title="Événements"
+				description="Journal des actions : qui a fait quoi, et quand."
+			>
 				<Button
 					variant="outline"
 					disabled={isPending}
@@ -98,7 +96,7 @@ export function EventsManager({ events, total, query }: Props) {
 					<PendingIcon pending={isPending} name="refresh" />
 					Actualiser
 				</Button>
-			</div>
+			</PageHeader>
 
 			<EventsToolbar
 				key={query.q ?? ""}

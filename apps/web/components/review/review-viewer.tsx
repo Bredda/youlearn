@@ -2,6 +2,7 @@
 
 import type { ReviewView } from "@youlearn/types";
 import { useState } from "react";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { assetUrl, Markdown } from "@/components/writer/markdown";
 
@@ -18,19 +19,19 @@ export function ReviewViewer({ view }: { view: ReviewView }) {
 				n'est pas encore publié.
 			</div>
 
-			<div className="flex items-start gap-4">
-				{course.imageAssetId && (
-					// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
-					<img
-						src={assetUrl(course.id, course.imageAssetId, token)}
-						alt=""
-						className="h-24 w-40 rounded-md border object-cover"
-					/>
-				)}
-				<div className="flex flex-col gap-2">
-					<h1 className="font-semibold text-xl">{course.name}</h1>
-					{course.description && (
-						<p className="max-w-prose text-sm">{course.description}</p>
+			<PageHeader
+				title={course.name}
+				description={course.description || undefined}
+			/>
+			{(course.imageAssetId || course.categories.length > 0) && (
+				<div className="flex items-start gap-4">
+					{course.imageAssetId && (
+						// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
+						<img
+							src={assetUrl(course.id, course.imageAssetId, token)}
+							alt=""
+							className="h-24 w-40 rounded-md border object-cover"
+						/>
 					)}
 					<div className="flex flex-wrap gap-1">
 						{course.categories.map((category) => (
@@ -40,7 +41,7 @@ export function ReviewViewer({ view }: { view: ReviewView }) {
 						))}
 					</div>
 				</div>
-			</div>
+			)}
 
 			{content.lessons.length === 0 ? (
 				<p className="text-muted-foreground text-sm">

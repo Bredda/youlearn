@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Icon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,7 +39,7 @@ export default async function MePage() {
 
 	return (
 		<div className="flex max-w-2xl flex-col gap-4">
-			<h1 className="font-semibold text-xl">Mon profil</h1>
+			<PageHeader title="Mon profil" />
 
 			<Card>
 				<CardHeader className="flex-row items-center gap-4">

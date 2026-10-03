@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,34 +154,30 @@ export function RevisionEditor({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-start justify-between gap-4">
-				<div className="flex flex-col gap-2">
-					<Link
-						href={`/writer/courses/${course.id}`}
-						className="text-muted-foreground text-sm hover:underline"
-					>
-						← {course.name}
-					</Link>
-					<div className="flex items-center gap-2">
-						<h1 className="font-semibold text-xl">{revision.key}</h1>
-						<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
-							{REVISION_STATUS_LABELS[revision.status]}
-						</Badge>
-					</div>
-					{readOnly && (
-						<p className="text-muted-foreground text-sm">
-							Seul un brouillon est modifiable : pour corriger cette révision,
-							clonez-la en brouillon depuis la page du cours.
-						</p>
-					)}
-				</div>
+			<Link
+				href={`/writer/courses/${course.id}`}
+				className="text-muted-foreground text-sm hover:underline"
+			>
+				← {course.name}
+			</Link>
+			<PageHeader
+				title={revision.key}
+				description={
+					readOnly
+						? "Seul un brouillon est modifiable : pour corriger cette révision, clonez-la en brouillon depuis la page du cours."
+						: undefined
+				}
+			>
+				<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
+					{REVISION_STATUS_LABELS[revision.status]}
+				</Badge>
 				{!readOnly && (
 					<Button onClick={save} disabled={!dirty || saving}>
 						<PendingIcon pending={saving} name="save" />
 						{dirty ? "Enregistrer" : "Enregistré"}
 					</Button>
 				)}
-			</div>
+			</PageHeader>
 
 			{error && (
 				<FormError>
