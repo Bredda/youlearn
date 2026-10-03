@@ -6,16 +6,19 @@
 		"dev": "turbo run dev",
 		"lint": "turbo run lint",
 		"format": "biome format --write .",
+		"lint:ci": "biome ci .",
 		"check-types": "turbo run check-types",
 		"db:up": "docker compose -f docker/compose.yml --env-file .env up -d --wait",
 		"db:down": "docker compose -f docker/compose.yml --env-file .env down",
 		"db:generate": "turbo run db:generate",
 		"db:migrate": "turbo run db:migrate",
 		"db:push": "turbo run db:push",
-		"db:studio": "turbo run db:studio"
+		"db:studio": "turbo run db:studio",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.12",
+		"husky": "^9.1.7",
 		"turbo": "^2.11.6",
 		"typescript": "7.0.2"
 	},

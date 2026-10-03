@@ -53,7 +53,7 @@ Icons are centralized in `lib/icons.ts`, by meaning (`add`, `edit`, `delete`, `o
 
 ## Components and styling
 
-- Add shadcn components with `pnpm dlx shadcn@latest add <name>` (style `base-mira`, built on `@base-ui/react`). Compose them, do not edit `components/ui/*` unless needed (the folder is excluded from Biome, and Biome must not reformat generated files such as `components/layout/app-sidebar.tsx`: run it only on the files you touched).
+- Add shadcn components with `pnpm dlx shadcn@latest add <name>` (style `base-mira`, built on `@base-ui/react`). Compose them, do not edit `components/ui/*` unless needed (the folder is excluded from Biome).
 - Theme: `next-themes` through `ThemeProvider`; use `useThemeToggle()` rather than calling it directly.
 - Do not use unlayered global CSS resets: they override Tailwind utilities.
 

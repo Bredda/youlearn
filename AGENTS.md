@@ -27,13 +27,15 @@ pnpm dev                 # web :3000 + api :3001 (turbo TUI)
 
 pnpm check-types         # tsc in every package (web runs `next typegen` first)
 pnpm --filter <pkg> exec biome check --write <paths>   # lint + format the files you touched
+pnpm lint:ci             # Biome on the whole repo, read-only (what the pre-push hook runs)
 pnpm build
 pnpm db:generate         # after editing packages/db/src/schema -> commit the new migration
 pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 ```
 
 - Format and lint with **Biome** only (tabs, no Prettier): `pnpm format` formats the repo, and while working run `pnpm --filter <pkg> exec biome check --write <paths>` on the files you touched. `apps/web/components/ui` (shadcn-generated) is excluded from Biome on purpose; CSS uses Biome's Tailwind parser.
-- Known failures that are not yours: `check-types` fails on `components/ui/spinner.tsx` (generated, type error), and `pnpm lint` reports a few issues in `web` (e.g. the unused shadcn sample `components/layout/login-form.tsx`). Do not "fix" them as a side effect, but make sure you introduce no new error.
+- Known failure that is not yours: `check-types` fails on `components/ui/spinner.tsx` (generated, type error). Do not "fix" it as a side effect, but make sure you introduce no new error. Lint and format are clean repo-wide (generated `packages/db/drizzle/` and `components/ui` are excluded from Biome): keep it that way.
+- **Git hooks** (Husky, installed by `pnpm install` through the `prepare` script): `pre-commit` runs `biome check --staged --write` (fixes and re-stages the staged files, blocks the commit on what it cannot fix; a partially staged file gets staged entirely), `pre-push` runs `pnpm lint:ci`. When a hook fails, fix the cause rather than bypassing it with `--no-verify`.
 - There is no test suite yet. Verify with `check-types`, Biome on touched files, and by exercising pages/endpoints (e.g. `curl` with a session cookie).
 
 ## Layout

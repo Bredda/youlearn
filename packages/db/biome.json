@@ -1,5 +1,8 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
 	"root": false,
-	"extends": ["@youlearn/biome-config/base"]
+	"extends": ["@youlearn/biome-config/base"],
+	"files": {
+		"includes": ["**", "!drizzle"]
+	}
 }

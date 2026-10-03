@@ -1,0 +1,2 @@
+# Same check as CI would run: lint and formatting of the whole repo, without writing anything.
+pnpm run lint:ci
