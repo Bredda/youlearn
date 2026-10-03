@@ -63,12 +63,23 @@ export default async function ComparePage(props: {
 		undefined;
 
 	const back = (
-		<Link
-			href={`/writer/courses/${id}`}
-			className="text-muted-foreground text-sm hover:underline"
-		>
-			← {course.name}
-		</Link>
+		<div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+			{target && (
+				<Link
+					href={`/writer/courses/${id}/revisions/${target.id}`}
+					className="text-muted-foreground hover:underline"
+				>
+					← {target.status === "draft" ? "Retour à l'édition de" : "Retour à"}{" "}
+					{target.key}
+				</Link>
+			)}
+			<Link
+				href={`/writer/courses/${id}`}
+				className="text-muted-foreground hover:underline"
+			>
+				{course.name}
+			</Link>
+		</div>
 	);
 
 	if (!toId || !target) {
@@ -110,7 +121,13 @@ export default async function ComparePage(props: {
 					].map(({ label, revision }) => (
 						<div key={label} className="rounded-md border px-3 py-2">
 							<dt className="text-muted-foreground">
-								{label} : {revision.key}
+								{label} :{" "}
+								<Link
+									href={`/writer/courses/${id}/revisions/${revision.id}`}
+									className="font-medium text-foreground hover:underline"
+								>
+									{revision.key}
+								</Link>
 							</dt>
 							<dd className="whitespace-pre-wrap">{revision.purpose}</dd>
 						</div>
