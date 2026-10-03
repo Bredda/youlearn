@@ -1,91 +1,97 @@
-# Turborepo starter
+# YouLearn
 
-This Turborepo starter is maintained by the Turborepo core team.
+Learning platform: **courses** (and soon programs) whose visibility depends on the **groups** an administrator gives
+each user. There is no sign-up: administrators create the accounts.
 
-## Using this example
+## Project status
 
-Create a new Turborepo from this example:
+| Feature | Status |
+|---|---|
+| Accounts, roles (user, writer, admin), groups, event log | available |
+| Writer area: courses, revisions (draft → preview → published → deprecated), Markdown lesson editor, images, review link | available |
+| Learner catalog: published courses visible to the user, with search, filters, sorting and pagination | available (cards have no action yet) |
+| Reading a course, enrollment and progress, programs, videos and large files | planned |
 
-```sh
-pnpm dlx create-turbo@latest --example with-biome
-```
+User documentation (in French) lives in [`docs/`](docs/README.md).
 
-## What's inside?
+## Stack
 
-This Turborepo includes the following packages/apps:
+- **pnpm 12 + Turborepo** monorepo, TypeScript everywhere.
+- **Web**: Next.js 16 (App Router), shadcn/ui (base-ui), Tailwind 4, TanStack Form and Table.
+- **API**: Fastify 5, Better Auth (admin plugin), zod.
+- **Data**: PostgreSQL 18 with drizzle-orm; files in object storage through the S3 API (RustFS in development).
+- **Quality**: Biome (lint and format), Husky (Git hooks).
 
-### Apps and Packages
+## Requirements
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@youlearn/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@youlearn/biome-config`: shared [Biome](https://biomejs.dev/) configurations
-- `@youlearn/typescript-config`: shared `tsconfig.json` files
+Node.js 24 or later, pnpm 12, Docker (PostgreSQL and the S3 storage run with `docker compose`).
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools set up for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [Biome](https://biomejs.dev/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run:
+## Getting started
 
 ```sh
-pnpm build
+cp .env.example .env     # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
+                         # and ADMIN_EMAIL / ADMIN_PASSWORD to create the first administrator
+pnpm install
+pnpm db:up               # PostgreSQL + S3 storage (docker/compose.yml, reads .env)
+pnpm db:migrate          # apply the migrations
+pnpm dev                 # web on :3000 and API on :3001
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Open <http://localhost:3000> and sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`. When it starts, the API creates the
+administrator if missing, the "Commun" system group, the groups listed in `DEFAULT_GROUPS` (first install only) and the
+storage buckets. The storage console is at <http://localhost:9001>.
 
-```sh
-pnpm turbo build --filter=docs
-```
+Every environment variable is described, with its default, in [`.env.example`](.env.example). `.env` is read at process
+start: restart `pnpm dev` after changing it.
 
-### Develop
+## Commands
 
-To develop all apps and packages, run:
+Run them all from the repository root.
 
-```sh
-pnpm dev
-```
+| Command | Purpose |
+|---|---|
+| `pnpm dev` | web and API in development mode |
+| `pnpm build` | build every project |
+| `pnpm check-types` | `tsc` in every project |
+| `pnpm lint:ci` | Biome on the whole repository, read-only |
+| `pnpm format` | format the repository with Biome |
+| `pnpm db:up` / `pnpm db:down` | start / stop PostgreSQL and the storage |
+| `pnpm db:generate` | generate a migration after a schema change (`packages/db/src/schema`) |
+| `pnpm db:migrate` | apply the migrations |
+| `pnpm db:studio` | drizzle studio to browse the database |
+| `pnpm --filter @youlearn/auth seed:admin` | create the administrator from `ADMIN_*` (the API already does it at startup) |
 
-You can develop a specific package by using a filter:
+There is no test suite yet: verify with `check-types`, Biome, and by exercising the pages and routes.
 
-```sh
-pnpm turbo dev --filter=web
-```
+### Git hooks
 
-### Remote Caching
+`pnpm install` sets up the Husky hooks. On commit, Biome fixes and formats the staged files; on push, `pnpm lint:ci`
+then `pnpm check-types` must pass. When a hook fails, fix the cause rather than bypassing it.
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+## Repository layout
 
-Turborepo can use [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+| Path | Role |
+|---|---|
+| `apps/web` | Next.js: the user interface (pages, forms, tables) |
+| `apps/api` | Fastify: Better Auth on `/api/auth/*`, routes `/api/admin/*`, `/api/writer/*`, `/api/courses`, `/api/review/*` and course files |
+| `packages/config` | loads the root `.env`, validates it with zod and exports `env` |
+| `packages/db` | drizzle client, schema and migrations |
+| `packages/storage` | S3 client for course files |
+| `packages/events` | event log registry and recording |
+| `packages/auth` | Better Auth instance, browser client, roles, administrator seed |
+| `packages/types` | types shared by the API and the web app |
+| `packages/typescript-config`, `packages/biome-config` | shared configurations |
+| `docs` | user documentation |
 
-By default, Turborepo caches locally. To enable Remote Caching, create a [Vercel account](https://vercel.com/signup?utm_source=turborepo-examples), then authenticate the Turborepo CLI:
+Packages ship TypeScript sources with no build step: the web app consumes them through `transpilePackages`, the API
+bundles them with tsdown.
 
-```sh
-pnpm turbo login
-```
+## Contributing
 
-Next, link the repository to your Remote Cache:
+Detailed conventions (UI, API, courses domain) are in [`AGENTS.md`](AGENTS.md) and in the skills under
+[`.claude/skills/`](.claude/skills). The essentials:
 
-```sh
-pnpm turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- UI copy is in **French**; code, identifiers and comments are in **English**;
+- commits follow Conventional Commits (`feat:`, `fix:`...), and `.env` is never committed;
+- an applied migration is never edited: generate a new one;
+- the app never deletes a stored file for good: it moves it to the "deprecated" bucket.
