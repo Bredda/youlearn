@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "@/components/ui/toast";
 import { ChapterEditor } from "@/components/writer/chapter-editor";
 import { ConfirmRemove } from "@/components/writer/confirm-remove";
 import { DragHandle, SortableList } from "@/components/writer/sortable-list";
@@ -247,6 +248,7 @@ export function RevisionEditor({
 		setUpdatedAt(saved.updatedAt);
 		setDirty(false);
 		writeLocalDraft(revision.id, null);
+		toast.add({ type: "success", title: "Modifications enregistrées" });
 	}
 
 	const shownIssues = issues.length > 0 ? issues : liveIssues;
@@ -293,12 +295,6 @@ export function RevisionEditor({
 					<Icon name="compare" />
 					Comparer
 				</Button>
-				{!readOnly && (
-					<Button onClick={save} disabled={!dirty || saving}>
-						<PendingIcon pending={saving} name="save" />
-						Enregistrer
-					</Button>
-				)}
 			</PageHeader>
 
 			{error && (
@@ -481,6 +477,20 @@ export function RevisionEditor({
 								dispatch={dispatch}
 							/>
 						))}
+				</div>
+			)}
+			{!readOnly && (
+				<div className="sticky bottom-0 z-20 -mx-4 -mb-4 flex items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+					<span
+						aria-live="polite"
+						className="mr-auto text-muted-foreground text-sm"
+					>
+						{dirty ? "Modifications non enregistrées" : "Tout est enregistré"}
+					</span>
+					<Button onClick={save} disabled={!dirty || saving}>
+						<PendingIcon pending={saving} name="save" />
+						Enregistrer
+					</Button>
 				</div>
 			)}
 		</div>
