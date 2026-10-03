@@ -56,6 +56,7 @@ Icons are centralized in `lib/icons.ts`, by meaning (`add`, `edit`, `delete`, `o
 ## Components and styling
 
 - Add shadcn components with `pnpm dlx shadcn@latest add <name>` (style `base-mira`, built on `@base-ui/react`). Compose them, do not edit `components/ui/*` unless needed (the folder is excluded from Biome).
+- Toasts: `toast.add({ type: "success", title })` from `@/components/ui/toast` (shadcn's base-ui Toast, not Sonner); the `Toaster` is mounted once in the root layout. The viewport sits at `bottom-20` (a local edit of the generated file: `shadcn add toast --overwrite` would undo it) so it clears the sticky save bar of the revision editor.
 - Theme: `next-themes` through `ThemeProvider`; use `useThemeToggle()` rather than calling it directly.
 - Do not use unlayered global CSS resets: they override Tailwind utilities.
 

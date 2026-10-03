@@ -36,7 +36,7 @@ permet d'**Ouvrir**, **Modifier** ou **Supprimer** le cours.
 
 ## Cycle de vie d'une révision
 
-Ouvrez un cours pour voir ses révisions. Chacune a un nom automatique du type `whispering_toucan`, qui ne change plus.
+Ouvrez un cours pour voir ses révisions, de la plus récemment modifiée à la plus ancienne. Chacune a un nom automatique du type `whispering_toucan`, qui ne change plus ; cliquer sur ce nom ouvre la révision (en édition pour un brouillon, en lecture sinon).
 
 | Statut | Signification | Modifiable ? |
 |---|---|---|
@@ -68,6 +68,11 @@ Le menu **Actions** de chaque révision propose, selon son statut : **Éditer** 
 **Lien de relecture**, **Publier**, **Repasser en brouillon**, **Cloner en brouillon** / **Restaurer en brouillon**,
 **Déprécier** et **Supprimer**, ainsi que **Comparer** (voir [Comparer des révisions](#comparer-des-révisions)).
 
+Une révision en **relecture** peut aussi être publiée depuis sa propre page (bouton **Publier**, avec la même confirmation
+quand une autre révision est déjà publiée).
+
+Dans la liste des cours, la colonne **Révisions** indique « Aucune révision » pour un cours qui vient d'être créé.
+
 ## Écrire le contenu
 
 **Éditer** ouvre l'éditeur d'un brouillon. Un cours est fait de **chapitres** ; un chapitre est fait de **blocs** placés dans
@@ -89,7 +94,7 @@ l'ordre voulu et, s'il le faut, d'un **quiz** qui le conclut.
   - **Questions tirées** : l'apprenant n'aura que *n* questions, tirées au hasard parmi les *m* du quiz (*n* ≤ *m*, vous
     pouvez mettre *n* = *m*) ;
   - **Quiz bloquant** : l'apprenant devra atteindre le **taux de réussite** indiqué pour accéder au **chapitre suivant**.
-- **Enregistrer** sauvegarde. Un encart signale les points à corriger (titre vide, lien vidéo non reconnu, quiz sans bonne
+- **Enregistrer** sauvegarde : le bouton reste affiché en bas de l'écran pendant que vous écrivez, et une notification confirme l'enregistrement. Un encart signale les points à corriger (titre vide, lien vidéo non reconnu, quiz sans bonne
   réponse…) : tant qu'il en reste, l'enregistrement est refusé. Le navigateur vous prévient si vous quittez la page avec des
   modifications non enregistrées.
 
@@ -114,7 +119,7 @@ Quand la révision a été clonée d'une autre, l'éditeur la compare en direct 
 **Actions → Comparer** (ou le bouton **Comparer** de l'éditeur) ouvre une page qui montre ce qui change entre **deux
 révisions quelconques** du cours, quel que soit leur statut (les dépréciées comprises). Choisissez la **base** (avant) et la
 **révision** (après) ; par défaut, la révision est comparée à celle dont elle a été clonée. Cette page est réservée aux
-personnes qui peuvent modifier le cours.
+personnes qui peuvent modifier le cours. Un lien en haut de page ramène à la révision que vous éditiez.
 
 ## Faire relire une révision
 
