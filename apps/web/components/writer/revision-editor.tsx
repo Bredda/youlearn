@@ -8,6 +8,7 @@ import {
 } from "@youlearn/content";
 import type { WriterCourse, WriterRevisionDetail } from "@youlearn/types";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
 	useCallback,
 	useDeferredValue,
@@ -28,7 +29,9 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { ChapterEditor } from "@/components/writer/chapter-editor";
 import { ConfirmRemove } from "@/components/writer/confirm-remove";
+import { RevisionStatusDialog } from "@/components/writer/revision-status-dialog";
 import { DragHandle, SortableList } from "@/components/writer/sortable-list";
+import { callApi } from "@/lib/api-client";
 import { type EditAction, editContent, newChapter } from "@/lib/content-editor";
 import { describeIssues, type EditorIssue } from "@/lib/content-issues";
 import {
@@ -113,7 +116,12 @@ export function RevisionEditor({
 	revision: WriterRevisionDetail;
 	base: WriterRevisionDetail | null;
 }) {
+	const router = useRouter();
 	const readOnly = revision.status !== "draft";
+	// A revision in review can be published from here; that deprecates the published one, which is confirmed first.
+	const published = course.current.published;
+	const [confirmingPublish, setConfirmingPublish] = useState(false);
+	const [publishing, setPublishing] = useState(false);
 	const [content, dispatchEdit] = useReducer(editContent, revision.content);
 	const [selectedId, setSelectedId] = useState(
 		revision.content.chapters[0]?.id,
@@ -203,6 +211,25 @@ export function RevisionEditor({
 		if (selectedId === chapterId) {
 			setSelectedId(content.chapters.find((c) => c.id !== chapterId)?.id);
 		}
+	}
+
+	async function publishRevision(confirm: boolean) {
+		setPublishing(true);
+		setError(undefined);
+		setStale(false);
+		const message = await callApi(
+			"POST",
+			`/api/writer/courses/${course.id}/revisions/${revision.id}/status`,
+			{ to: "published", confirm },
+		);
+		setPublishing(false);
+		setConfirmingPublish(false);
+		if (message) return setError(message);
+		toast.add({
+			type: "success",
+			title: `Révision « ${revision.key} » publiée`,
+		});
+		router.refresh();
 	}
 
 	async function save() {
@@ -295,7 +322,29 @@ export function RevisionEditor({
 					<Icon name="compare" />
 					Comparer
 				</Button>
+				{revision.status === "preview" && (
+					<Button
+						disabled={publishing}
+						onClick={() =>
+							published ? setConfirmingPublish(true) : publishRevision(false)
+						}
+					>
+						<PendingIcon pending={publishing} name="publish" />
+						Publier
+					</Button>
+				)}
 			</PageHeader>
+
+			{confirmingPublish && (
+				<RevisionStatusDialog
+					revisionKey={revision.key}
+					to="published"
+					publishedKey={published?.key}
+					pending={publishing}
+					onConfirm={() => publishRevision(true)}
+					onClose={() => setConfirmingPublish(false)}
+				/>
+			)}
 
 			{error && (
 				<FormError>

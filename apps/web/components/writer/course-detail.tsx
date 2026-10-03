@@ -13,16 +13,6 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
 import { Icon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +30,7 @@ import {
 	type RevisionAction,
 	RevisionRowActions,
 } from "@/components/writer/revision-row-actions";
+import { RevisionStatusDialog } from "@/components/writer/revision-status-dialog";
 import { callApi } from "@/lib/api-client";
 import { assetUrl } from "@/lib/asset-url";
 import {
@@ -55,7 +46,7 @@ const dateFormat = new Intl.DateTimeFormat("fr-FR", {
 /** What the user has to confirm before the API accepts the change. */
 type Confirmation = {
 	revision: WriterRevision;
-	to: RevisionStatus;
+	to: "published" | "deprecated";
 };
 
 export function CourseDetail({
@@ -315,47 +306,16 @@ export function CourseDetail({
 				/>
 			)}
 
-			<AlertDialog
-				open={confirming !== undefined}
-				onOpenChange={(open) => !open && setConfirming(undefined)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{confirmationTitle(confirming)}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{confirmationText(confirming, published?.key)}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Annuler</AlertDialogCancel>
-						<AlertDialogAction
-							variant={
-								confirming?.to === "published" ? "default" : "destructive"
-							}
-							onClick={confirmed}
-							disabled={pending}
-						>
-							<Icon name="confirm" />
-							Confirmer
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{confirming && (
+				<RevisionStatusDialog
+					revisionKey={confirming.revision.key}
+					to={confirming.to}
+					publishedKey={published?.key}
+					pending={pending}
+					onConfirm={confirmed}
+					onClose={() => setConfirming(undefined)}
+				/>
+			)}
 		</div>
 	);
-}
-
-function confirmationTitle(confirming?: Confirmation) {
-	if (!confirming) return "";
-	const { key } = confirming.revision;
-	return confirming.to === "published"
-		? `Publier la révision « ${key} » ?`
-		: `Déprécier la révision « ${key} » ?`;
-}
-
-function confirmationText(confirming?: Confirmation, publishedKey?: string) {
-	if (!confirming) return "";
-	if (confirming.to === "published")
-		return `La révision « ${publishedKey} » est actuellement publiée : elle va être dépréciée. Les apprenants verront la nouvelle révision.`;
-	return "Le cours ne sera plus accessible aux apprenants tant qu'une autre révision n'est pas publiée. La révision dépréciée reste consultable dans l'historique.";
 }
