@@ -1,8 +1,7 @@
 "use client";
 
-import { MoreHorizontalIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { AdminUser } from "@youlearn/types";
+import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -35,13 +34,15 @@ export function UserRowActions({
 					/>
 				}
 			>
-				<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
+				<Icon name="more" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
 				<DropdownMenuItem onClick={() => onAction("edit", user)}>
+					<Icon name="edit" />
 					Modifier
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={() => onAction("password", user)}>
+					<Icon name="password" />
 					Changer le mot de passe
 				</DropdownMenuItem>
 				{!isSelf && (
@@ -49,10 +50,12 @@ export function UserRowActions({
 						<DropdownMenuSeparator />
 						{user.banned ? (
 							<DropdownMenuItem onClick={() => onAction("unban", user)}>
+								<Icon name="unban" />
 								Débannir
 							</DropdownMenuItem>
 						) : (
 							<DropdownMenuItem onClick={() => onAction("ban", user)}>
+								<Icon name="ban" />
 								Bannir
 							</DropdownMenuItem>
 						)}
@@ -60,6 +63,7 @@ export function UserRowActions({
 							variant="destructive"
 							onClick={() => onAction("delete", user)}
 						>
+							<Icon name="delete" />
 							Supprimer
 						</DropdownMenuItem>
 					</>

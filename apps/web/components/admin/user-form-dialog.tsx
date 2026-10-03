@@ -13,6 +13,7 @@ import { useState } from "react";
 import z from "zod";
 import { GroupsCombobox } from "@/components/admin/groups-combobox";
 import { FormError } from "@/components/form-error";
+import { PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -33,7 +34,6 @@ import {
 	FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { authError, callApi } from "@/lib/api-client";
 import { ROLE_LABELS } from "@/lib/roles";
 
@@ -336,7 +336,7 @@ export function UserFormDialog({
 
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>
-							{pending && <Spinner />}
+							<PendingIcon pending={pending} name={user ? "save" : "add"} />
 							{user ? "Enregistrer" : "Créer"}
 						</Button>
 					</DialogFooter>

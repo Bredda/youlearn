@@ -1,18 +1,10 @@
 "use client";
 
-import {
-	LogoutIcon,
-	Moon02Icon,
-	NotificationIcon,
-	Sun03Icon,
-	UnfoldMoreIcon,
-	UserCircleIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { signOut } from "@youlearn/auth/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Icon } from "@/components/icon";
 import { NotificationsDialog } from "@/components/layout/notifications-dialog";
 import { useThemeToggle } from "@/components/theme-provider";
 import {
@@ -63,11 +55,7 @@ export function NavUser() {
 								<span className="truncate font-medium">{user.name}</span>
 								<span className="truncate text-xs">{user.email}</span>
 							</div>
-							<HugeiconsIcon
-								icon={UnfoldMoreIcon}
-								strokeWidth={2}
-								className="ml-auto size-4"
-							/>
+							<Icon name="expand" className="ml-auto size-4" />
 						</DropdownMenuTrigger>
 						<DropdownMenuContent
 							className="w-fit"
@@ -89,24 +77,21 @@ export function NavUser() {
 							<DropdownMenuSeparator />
 							<DropdownMenuGroup>
 								<DropdownMenuItem render={<Link href="/me" />}>
-									<HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} />
+									<Icon name="profile" />
 									Mon profil
 								</DropdownMenuItem>
 								<DropdownMenuItem onClick={toggle}>
-									<HugeiconsIcon
-										icon={isDark ? Sun03Icon : Moon02Icon}
-										strokeWidth={2}
-									/>
+									<Icon name={isDark ? "themeLight" : "themeDark"} />
 									{isDark ? "Mode clair" : "Mode sombre"}
 								</DropdownMenuItem>
 								<DropdownMenuItem onClick={() => setNotificationsOpen(true)}>
-									<HugeiconsIcon icon={NotificationIcon} strokeWidth={2} />
+									<Icon name="notifications" />
 									Notifications
 								</DropdownMenuItem>
 							</DropdownMenuGroup>
 							<DropdownMenuSeparator />
 							<DropdownMenuItem onClick={onLogout}>
-								<HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
+								<Icon name="signOut" />
 								Se déconnecter
 							</DropdownMenuItem>
 						</DropdownMenuContent>

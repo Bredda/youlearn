@@ -3,6 +3,7 @@
 import { useForm, useStore } from "@tanstack/react-form";
 import { EVENT_FEATURES, EVENTS, type EventType } from "@youlearn/events";
 import type { AdminEventQuery } from "@youlearn/types";
+import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -85,6 +86,7 @@ export function EventsToolbar({
 					)}
 				/>
 				<Button type="submit" variant="outline">
+					<Icon name="search" />
 					Rechercher
 				</Button>
 			</form>
@@ -131,6 +133,7 @@ export function EventsToolbar({
 					onReset();
 				}}
 			>
+				<Icon name="reset" />
 				Réinitialiser
 			</Button>
 		</div>

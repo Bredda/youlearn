@@ -1,7 +1,5 @@
 "use client";
 
-import { Refresh01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	type OnChangeFn,
 	type PaginationState,
@@ -16,8 +14,8 @@ import { EventsToolbar } from "@/components/admin/events-toolbar";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { dataTableFeatures } from "@/components/data-table/features";
+import { PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { eventsQueryToSearchParams } from "@/lib/events-query";
 import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
@@ -97,11 +95,7 @@ export function EventsManager({ events, total, query }: Props) {
 					disabled={isPending}
 					onClick={() => startTransition(() => router.refresh())}
 				>
-					{isPending ? (
-						<Spinner />
-					) : (
-						<HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} />
-					)}
+					<PendingIcon pending={isPending} name="refresh" />
 					Actualiser
 				</Button>
 			</div>

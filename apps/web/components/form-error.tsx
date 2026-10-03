@@ -1,5 +1,4 @@
-import { Alert01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { Icon } from "@/components/icon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 /** Error returned by the server on submit (field validation errors go through `FieldError`). */
@@ -12,7 +11,7 @@ export function FormError({
 }) {
 	return (
 		<Alert variant="destructive">
-			<HugeiconsIcon icon={Alert01Icon} />
+			<Icon name="alert" />
 			<AlertTitle>{title}</AlertTitle>
 			<AlertDescription>{children}</AlertDescription>
 		</Alert>

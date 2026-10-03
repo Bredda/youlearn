@@ -3,6 +3,7 @@
 import type { WriterRevision } from "@youlearn/types";
 import { useState } from "react";
 import { FormError } from "@/components/form-error";
+import { Icon, PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -13,7 +14,6 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 
 // Mounted only while open, so the state starts fresh each time.
 export function ReviewLinkDialog({
@@ -81,6 +81,7 @@ export function ReviewLinkDialog({
 							aria-label="Lien de relecture"
 						/>
 						<Button type="button" variant="outline" onClick={copy}>
+							<Icon name={copied ? "copied" : "copy"} />
 							{copied ? "Copié" : "Copier"}
 						</Button>
 					</div>
@@ -95,11 +96,12 @@ export function ReviewLinkDialog({
 							disabled={pending}
 							onClick={() => change("DELETE")}
 						>
+							<Icon name="delete" />
 							Révoquer
 						</Button>
 					)}
 					<Button disabled={pending} onClick={() => change("POST")}>
-						{pending && <Spinner />}
+						<PendingIcon pending={pending} name="link" />
 						{token ? "Générer un nouveau lien" : "Générer un lien"}
 					</Button>
 				</DialogFooter>

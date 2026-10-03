@@ -1,9 +1,8 @@
 "use client";
 
-import { MoreHorizontalIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { RevisionStatus, WriterRevision } from "@youlearn/types";
 import Link from "next/link";
+import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -48,7 +47,7 @@ export function RevisionRowActions({
 					/>
 				}
 			>
-				<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
+				<Icon name="more" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
 				<DropdownMenuItem
@@ -58,6 +57,7 @@ export function RevisionRowActions({
 						/>
 					}
 				>
+					<Icon name={status === "draft" ? "edit" : "view"} />
 					{status === "draft" ? "Éditer" : "Voir"}
 				</DropdownMenuItem>
 
@@ -66,24 +66,28 @@ export function RevisionRowActions({
 						disabled={pending}
 						onClick={run({ type: "status", to: "preview" })}
 					>
+						<Icon name="preview" />
 						Passer en relecture
 					</DropdownMenuItem>
 				)}
 				{status === "preview" && (
 					<>
 						<DropdownMenuItem onClick={run({ type: "link" })}>
+							<Icon name="link" />
 							Lien de relecture
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							disabled={pending}
 							onClick={run({ type: "status", to: "published" })}
 						>
+							<Icon name="publish" />
 							Publier
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							disabled={pending || hasDraft}
 							onClick={run({ type: "status", to: "draft" })}
 						>
+							<Icon name="toDraft" />
 							Repasser en brouillon
 						</DropdownMenuItem>
 					</>
@@ -93,6 +97,7 @@ export function RevisionRowActions({
 						disabled={pending || hasDraft}
 						onClick={run({ type: "clone" })}
 					>
+						<Icon name={status === "deprecated" ? "toDraft" : "clone"} />
 						{status === "deprecated"
 							? "Restaurer en brouillon"
 							: "Cloner en brouillon"}
@@ -106,6 +111,7 @@ export function RevisionRowActions({
 						disabled={pending}
 						onClick={run({ type: "status", to: "deprecated" })}
 					>
+						<Icon name="deprecate" />
 						Déprécier
 					</DropdownMenuItem>
 				)}
@@ -115,6 +121,7 @@ export function RevisionRowActions({
 						disabled={pending}
 						onClick={run({ type: "delete" })}
 					>
+						<Icon name="delete" />
 						Supprimer
 					</DropdownMenuItem>
 				)}

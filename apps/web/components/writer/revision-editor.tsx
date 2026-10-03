@@ -9,10 +9,10 @@ import type {
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { FormError } from "@/components/form-error";
+import { Icon, PendingIcon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/writer/markdown";
 import {
@@ -176,7 +176,7 @@ export function RevisionEditor({
 				</div>
 				{!readOnly && (
 					<Button onClick={save} disabled={!dirty || saving}>
-						{saving && <Spinner />}
+						<PendingIcon pending={saving} name="save" />
 						{dirty ? "Enregistrer" : "Enregistré"}
 					</Button>
 				)}
@@ -227,7 +227,7 @@ export function RevisionEditor({
 											disabled={index === 0}
 											onClick={() => move(index, -1)}
 										>
-											↑
+											<Icon name="moveUp" />
 										</Button>
 										<Button
 											variant="ghost"
@@ -236,7 +236,7 @@ export function RevisionEditor({
 											disabled={index === lessons.length - 1}
 											onClick={() => move(index, 1)}
 										>
-											↓
+											<Icon name="moveDown" />
 										</Button>
 										<Button
 											variant="ghost"
@@ -244,7 +244,7 @@ export function RevisionEditor({
 											aria-label="Supprimer la leçon"
 											onClick={() => remove(lesson.id)}
 										>
-											✕
+											<Icon name="delete" />
 										</Button>
 									</>
 								)}
@@ -256,6 +256,7 @@ export function RevisionEditor({
 					</ul>
 					{!readOnly && (
 						<Button variant="outline" onClick={addLesson}>
+							<Icon name="add" />
 							Ajouter une leçon
 						</Button>
 					)}
@@ -276,6 +277,7 @@ export function RevisionEditor({
 									size="sm"
 									onClick={() => setPreview(false)}
 								>
+									<Icon name="edit" />
 									Éditer
 								</Button>
 							)}
@@ -285,6 +287,7 @@ export function RevisionEditor({
 									size="sm"
 									onClick={() => setPreview(true)}
 								>
+									<Icon name="view" />
 									Aperçu
 								</Button>
 							)}
@@ -296,7 +299,7 @@ export function RevisionEditor({
 										disabled={uploading}
 										onClick={() => fileRef.current?.click()}
 									>
-										{uploading && <Spinner />}
+										<PendingIcon pending={uploading} name="image" />
 										Insérer une image
 									</Button>
 									<input

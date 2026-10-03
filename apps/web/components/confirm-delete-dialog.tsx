@@ -3,6 +3,7 @@
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { FormError } from "@/components/form-error";
+import { PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 
 /**
  * Destructive confirmation in the GitHub way: the button stays disabled until the user types the exact name of
@@ -111,7 +111,7 @@ export function ConfirmDeleteDialog({
 									variant="destructive"
 									disabled={pending || confirmation.trim() !== expected}
 								>
-									{pending && <Spinner />}
+									<PendingIcon pending={pending} name="delete" />
 									{confirmLabel}
 								</Button>
 							)}

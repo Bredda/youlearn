@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,9 +87,11 @@ export default async function MePage() {
 				</CardContent>
 				<CardFooter className="flex-wrap gap-2">
 					<Button variant="outline" disabled>
+						<Icon name="password" />
 						Modifier mon mot de passe
 					</Button>
 					<Button variant="outline" disabled>
+						<Icon name="groups" />
 						Demander l'accès à un groupe
 					</Button>
 				</CardFooter>

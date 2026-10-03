@@ -1,13 +1,7 @@
 "use client";
 
-import {
-	ArrowLeft01Icon,
-	ArrowLeftDoubleIcon,
-	ArrowRight01Icon,
-	ArrowRightDoubleIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { ReactTable, RowData } from "@tanstack/react-table";
+import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -67,7 +61,7 @@ export function DataTablePagination<TData extends RowData>({
 						disabled={!table.getCanPreviousPage()}
 						onClick={() => table.firstPage()}
 					>
-						<HugeiconsIcon icon={ArrowLeftDoubleIcon} strokeWidth={2} />
+						<Icon name="firstPage" />
 					</Button>
 					<Button
 						variant="outline"
@@ -76,7 +70,7 @@ export function DataTablePagination<TData extends RowData>({
 						disabled={!table.getCanPreviousPage()}
 						onClick={() => table.previousPage()}
 					>
-						<HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+						<Icon name="previousPage" />
 					</Button>
 					<Button
 						variant="outline"
@@ -85,7 +79,7 @@ export function DataTablePagination<TData extends RowData>({
 						disabled={!table.getCanNextPage()}
 						onClick={() => table.nextPage()}
 					>
-						<HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
+						<Icon name="nextPage" />
 					</Button>
 					<Button
 						variant="outline"
@@ -94,7 +88,7 @@ export function DataTablePagination<TData extends RowData>({
 						disabled={!table.getCanNextPage()}
 						onClick={() => table.lastPage()}
 					>
-						<HugeiconsIcon icon={ArrowRightDoubleIcon} strokeWidth={2} />
+						<Icon name="lastPage" />
 					</Button>
 				</div>
 			</div>

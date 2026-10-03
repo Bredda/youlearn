@@ -1,18 +1,12 @@
 "use client";
 
-import {
-	Alert01Icon,
-	Eye,
-	EyeOff,
-	Login01Icon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { useForm } from "@tanstack/react-form";
 import { signIn } from "@youlearn/auth/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import z from "zod";
+import { Icon, PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	Field,
@@ -28,7 +22,6 @@ import {
 	InputGroupAddon,
 	InputGroupInput,
 } from "../ui/input-group";
-import { Spinner } from "../ui/spinner";
 
 const formSchema = z.object({
 	email: z.email("Adresse email invalide"),
@@ -139,8 +132,8 @@ export function SignInForm() {
 										autoComplete="current-password"
 									/>
 									<InputGroupAddon align="inline-end">
-										<HugeiconsIcon
-											icon={showPassword ? Eye : EyeOff}
+										<Icon
+											name={showPassword ? "show" : "hide"}
 											onClick={() => setShowPassword(!showPassword)}
 										/>
 									</InputGroupAddon>
@@ -154,7 +147,7 @@ export function SignInForm() {
 
 				{error && (
 					<Alert variant="destructive" className="max-w-md">
-						<HugeiconsIcon icon={Alert01Icon} />
+						<Icon name="alert" />
 
 						<AlertTitle>Echec d'authentification</AlertTitle>
 						<AlertDescription>{error}</AlertDescription>
@@ -162,7 +155,7 @@ export function SignInForm() {
 				)}
 				<Field>
 					<Button type="submit" disabled={pending}>
-						{pending ? <Spinner /> : <HugeiconsIcon icon={Login01Icon} />}
+						<PendingIcon pending={pending} name="signIn" />
 						Login
 					</Button>
 				</Field>

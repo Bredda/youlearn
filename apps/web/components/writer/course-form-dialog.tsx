@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import z from "zod";
 import { GroupsCombobox } from "@/components/admin/groups-combobox";
 import { FormError } from "@/components/form-error";
+import { Icon, PendingIcon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,6 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { assetUrl } from "@/components/writer/markdown";
 import { callApi } from "@/lib/api-client";
@@ -265,7 +265,7 @@ export function CourseFormDialog({
 										disabled={uploading}
 										onClick={() => fileRef.current?.click()}
 									>
-										{uploading && <Spinner />}
+										<PendingIcon pending={uploading} name="upload" />
 										{imageAssetId ? "Remplacer" : "Ajouter"}
 									</Button>
 									{imageAssetId && (
@@ -275,6 +275,7 @@ export function CourseFormDialog({
 											size="sm"
 											onClick={() => setImageAssetId(null)}
 										>
+											<Icon name="delete" />
 											Retirer
 										</Button>
 									)}
@@ -357,7 +358,7 @@ export function CourseFormDialog({
 					</FieldGroup>
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>
-							{pending && <Spinner />}
+							<PendingIcon pending={pending} name={course ? "save" : "add"} />
 							{course ? "Enregistrer" : "Créer"}
 						</Button>
 					</DialogFooter>

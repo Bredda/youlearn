@@ -1,19 +1,9 @@
 "use client";
 
-import {
-  AiLearningIcon,
-  Audit01Icon,
-  CourseIcon,
-  CrowdfundingIcon,
-  ElearningExchangeIcon,
-  GolfHoleIcon,
-  SchoolIcon,
-  UsersIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { canWrite, isAdmin } from "@youlearn/auth/roles";
 import Link from "next/link";
 import type * as React from "react";
+import { Icon } from "@/components/icon";
 import { NavAdmin } from "@/components/layout/nav-admin";
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
@@ -28,35 +18,35 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { useUser } from "@/components/user-provider";
-import type { IconSvgObject } from "@/lib/types";
+import type { IconName } from "@/lib/icons";
 import { NavWriter } from "./nav-writer";
 
 const userItems: {
   name: string;
   url: string;
-  icon: IconSvgObject;
+  icon: IconName;
 }[] = [
-  { name: "Mon dashboard", url: "/", icon: UsersIcon },
-  { name: "Mes sessions", url: "/my-sessions", icon: CourseIcon },
-  { name: "Les parcours", url: "/programs", icon: SchoolIcon },
+  { name: "Mon dashboard", url: "/", icon: "dashboard" },
+  { name: "Mes sessions", url: "/my-sessions", icon: "sessions" },
+  { name: "Les parcours", url: "/programs", icon: "programs" },
 ];
 
 const adminItems: {
   name: string;
   url: string;
-  icon: IconSvgObject;
+  icon: IconName;
 }[] = [
-  { name: "Groupes", url: "/admin/groups", icon: CrowdfundingIcon },
-  { name: "Utilisateurs", url: "/admin/users", icon: UsersIcon },
-  { name: "Événements", url: "/admin/events", icon: Audit01Icon },
+  { name: "Groupes", url: "/admin/groups", icon: "groups" },
+  { name: "Utilisateurs", url: "/admin/users", icon: "users" },
+  { name: "Événements", url: "/admin/events", icon: "events" },
 ];
 const writerItems: {
   name: string;
   url: string;
-  icon: IconSvgObject;
+  icon: IconName;
 }[] = [
-  { name: "Parcours", url: "/writer/programs", icon: GolfHoleIcon },
-  { name: "Cours", url: "/writer/courses", icon: ElearningExchangeIcon },
+  { name: "Parcours", url: "/writer/programs", icon: "programs" },
+  { name: "Cours", url: "/writer/courses", icon: "courses" },
 ];
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const user = useUser();
@@ -68,7 +58,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/" />}>
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <HugeiconsIcon icon={AiLearningIcon} className="size-4" />
+                <Icon name="brand" className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">YouLearn</span>

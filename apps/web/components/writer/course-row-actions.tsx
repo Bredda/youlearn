@@ -1,9 +1,8 @@
 "use client";
 
-import { MoreHorizontalIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { WriterCourse } from "@youlearn/types";
 import Link from "next/link";
+import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -33,15 +32,17 @@ export function CourseRowActions({
 					/>
 				}
 			>
-				<HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
+				<Icon name="more" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
 				<DropdownMenuItem
 					render={<Link href={`/writer/courses/${course.id}`} />}
 				>
+					<Icon name="open" />
 					Ouvrir
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={() => onAction("edit", course)}>
+					<Icon name="edit" />
 					Modifier
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
@@ -49,6 +50,7 @@ export function CourseRowActions({
 					variant="destructive"
 					onClick={() => onAction("delete", course)}
 				>
+					<Icon name="delete" />
 					Supprimer
 				</DropdownMenuItem>
 			</DropdownMenuContent>

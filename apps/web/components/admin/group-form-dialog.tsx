@@ -5,6 +5,7 @@ import type { GroupWithMemberCount } from "@youlearn/types";
 import { useState } from "react";
 import z from "zod";
 import { FormError } from "@/components/form-error";
+import { PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -21,7 +22,6 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { callApi } from "@/lib/api-client";
 
 const formSchema = z.object({
@@ -106,7 +106,7 @@ export function GroupFormDialog({
 					</FieldGroup>
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>
-							{pending && <Spinner />}
+							<PendingIcon pending={pending} name={group ? "save" : "add"} />
 							{group ? "Enregistrer" : "Créer"}
 						</Button>
 					</DialogFooter>

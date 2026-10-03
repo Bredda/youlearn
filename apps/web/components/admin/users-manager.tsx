@@ -1,7 +1,5 @@
 "use client";
 
-import { Refresh01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	type OnChangeFn,
 	type PaginationState,
@@ -30,8 +28,8 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { dataTableFeatures } from "@/components/data-table/features";
 import { FormError } from "@/components/form-error";
+import { Icon, PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { authError } from "@/lib/api-client";
 import { DEFAULT_PAGE_SIZE, usersQueryToSearchParams } from "@/lib/users-query";
 
@@ -167,14 +165,11 @@ export function UsersManager({
 						disabled={isPending}
 						onClick={() => startTransition(() => router.refresh())}
 					>
-						{isPending ? (
-							<Spinner />
-						) : (
-							<HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} />
-						)}
+						<PendingIcon pending={isPending} name="refresh" />
 						Actualiser
 					</Button>
 					<Button onClick={() => setDialog({ type: "create" })}>
+						<Icon name="add" />
 						Nouvel utilisateur
 					</Button>
 				</div>

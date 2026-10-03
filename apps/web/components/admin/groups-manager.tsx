@@ -6,6 +6,7 @@ import { useState } from "react";
 import { GroupFormDialog } from "@/components/admin/group-form-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
+import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +43,10 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 						utilisateur.
 					</p>
 				</div>
-				<Button onClick={() => setEditing(null)}>Nouveau groupe</Button>
+				<Button onClick={() => setEditing(null)}>
+					<Icon name="add" />
+					Nouveau groupe
+				</Button>
 			</div>
 
 			{error && <FormError>{error}</FormError>}
@@ -87,6 +91,7 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 											size="sm"
 											onClick={() => setEditing(group)}
 										>
+											<Icon name="edit" />
 											Renommer
 										</Button>
 										<Button
@@ -97,6 +102,7 @@ export function GroupsManager({ groups }: { groups: GroupWithMemberCount[] }) {
 												setDeleting(group);
 											}}
 										>
+											<Icon name="delete" />
 											Supprimer
 										</Button>
 									</>

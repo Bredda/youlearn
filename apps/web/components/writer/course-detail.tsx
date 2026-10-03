@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
+import { Icon } from "@/components/icon";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -165,6 +166,7 @@ export function CourseDetail({
 					</div>
 				</div>
 				<Button variant="outline" onClick={() => setEditing(true)}>
+					<Icon name="edit" />
 					Modifier
 				</Button>
 			</div>
@@ -187,6 +189,7 @@ export function CourseDetail({
 								: undefined
 						}
 					>
+						<Icon name="add" />
 						Nouvelle révision
 					</Button>
 				</div>
@@ -317,6 +320,7 @@ export function CourseDetail({
 							onClick={confirmed}
 							disabled={pending}
 						>
+							<Icon name="confirm" />
 							Confirmer
 						</AlertDialogAction>
 					</AlertDialogFooter>

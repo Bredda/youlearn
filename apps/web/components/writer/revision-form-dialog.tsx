@@ -5,6 +5,7 @@ import type { WriterRevision } from "@youlearn/types";
 import { useState } from "react";
 import z from "zod";
 import { FormError } from "@/components/form-error";
+import { PendingIcon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -29,7 +30,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { callApi } from "@/lib/api-client";
 import { REVISION_STATUS_LABELS } from "@/lib/revisions";
 
@@ -173,7 +173,7 @@ export function RevisionFormDialog({
 					</FieldGroup>
 					<DialogFooter>
 						<Button type="submit" disabled={pending}>
-							{pending && <Spinner />}
+							<PendingIcon pending={pending} name="add" />
 							Créer
 						</Button>
 					</DialogFooter>

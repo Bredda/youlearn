@@ -1,7 +1,6 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-
+import { Icon } from "@/components/icon";
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
@@ -9,7 +8,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import type { IconSvgObject } from "@/lib/types";
+import type { IconName } from "@/lib/icons";
 
 export function NavWriter({
 	items,
@@ -17,7 +16,7 @@ export function NavWriter({
 	items: {
 		name: string;
 		url: string;
-		icon: IconSvgObject;
+		icon: IconName;
 	}[];
 }) {
 	return (
@@ -27,7 +26,7 @@ export function NavWriter({
 				{items.map((item) => (
 					<SidebarMenuItem key={item.name}>
 						<SidebarMenuButton render={<a href={item.url} />}>
-							<HugeiconsIcon icon={item.icon} />
+							<Icon name={item.icon} />
 							<span>{item.name}</span>
 						</SidebarMenuButton>
 					</SidebarMenuItem>

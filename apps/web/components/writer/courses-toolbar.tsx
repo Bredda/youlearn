@@ -3,6 +3,7 @@
 import { useForm, useStore } from "@tanstack/react-form";
 import type { CourseGroupTag, WriterCourseQuery } from "@youlearn/types";
 import { FilterSelect } from "@/components/data-table/filter-select";
+import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,7 @@ export function CoursesToolbar({
 					)}
 				/>
 				<Button type="submit" variant="outline">
+					<Icon name="search" />
 					Rechercher
 				</Button>
 			</form>
@@ -115,6 +117,7 @@ export function CoursesToolbar({
 					onReset();
 				}}
 			>
+				<Icon name="reset" />
 				Réinitialiser
 			</Button>
 		</div>
