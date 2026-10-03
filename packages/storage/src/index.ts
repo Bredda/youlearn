@@ -1,5 +1,6 @@
 import type { Readable } from "node:stream";
 import {
+	CopyObjectCommand,
 	CreateBucketCommand,
 	DeleteObjectCommand,
 	GetObjectCommand,
@@ -12,6 +13,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@youlearn/config";
 
 const { S3_ENDPOINT, S3_BUCKET, S3_REGION } = env;
+const DEPRECATED_BUCKET = env.S3_DEPRECATED_BUCKET ?? `${S3_BUCKET}-deprecated`;
 
 export const s3 = new S3Client({
 	endpoint: S3_ENDPOINT,
@@ -27,12 +29,12 @@ export const s3 = new S3Client({
 /** Default lifetime of a signed URL, in seconds. */
 const SIGNED_URL_TTL = 15 * 60;
 
-/** Creates the bucket when it does not exist yet (idempotent, like the other startup seeds). */
-export async function ensureBucket(logger: {
-	info: (message: string) => void;
-}) {
+async function ensureOneBucket(
+	bucket: string,
+	logger: { info: (message: string) => void },
+) {
 	try {
-		await s3.send(new HeadBucketCommand({ Bucket: S3_BUCKET }));
+		await s3.send(new HeadBucketCommand({ Bucket: bucket }));
 	} catch (error) {
 		if (
 			(error as { $metadata?: { httpStatusCode?: number } }).$metadata
@@ -40,9 +42,17 @@ export async function ensureBucket(logger: {
 		) {
 			throw error;
 		}
-		await s3.send(new CreateBucketCommand({ Bucket: S3_BUCKET }));
-		logger.info(`Storage bucket created (${S3_BUCKET})`);
+		await s3.send(new CreateBucketCommand({ Bucket: bucket }));
+		logger.info(`Storage bucket created (${bucket})`);
 	}
+}
+
+/** Creates the buckets (files, and the one for deprecated files) when they do not exist yet (idempotent). */
+export async function ensureBucket(logger: {
+	info: (message: string) => void;
+}) {
+	await ensureOneBucket(S3_BUCKET, logger);
+	await ensureOneBucket(DEPRECATED_BUCKET, logger);
 }
 
 export async function putObject(
@@ -60,9 +70,17 @@ export async function putObject(
 	);
 }
 
-export async function objectExists(key: string) {
+export async function objectExists(
+	key: string,
+	where: "files" | "deprecated" = "files",
+) {
 	try {
-		await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+		await s3.send(
+			new HeadObjectCommand({
+				Bucket: where === "files" ? S3_BUCKET : DEPRECATED_BUCKET,
+				Key: key,
+			}),
+		);
 		return true;
 	} catch (error) {
 		if (
@@ -102,6 +120,30 @@ export async function getObject(
 		if ((error as { name?: string }).name === "NoSuchKey") return undefined;
 		throw error;
 	}
+}
+
+/**
+ * "Removes" a file by moving it to the deprecated bucket under the same key (S3 has no move: copy, then delete).
+ * The application never deletes files for good. Does nothing when the file is already gone.
+ */
+export async function moveToDeprecated(key: string) {
+	try {
+		await s3.send(
+			new CopyObjectCommand({
+				Bucket: DEPRECATED_BUCKET,
+				Key: key,
+				// Per the S3 API the source is `<bucket>/<key>`, URL-encoded except the slashes.
+				CopySource: encodeURIComponent(`${S3_BUCKET}/${key}`).replace(
+					/%2F/g,
+					"/",
+				),
+			}),
+		);
+	} catch (error) {
+		if ((error as { name?: string }).name === "NoSuchKey") return;
+		throw error;
+	}
+	await deleteObject(key);
 }
 
 export async function deleteObject(key: string) {

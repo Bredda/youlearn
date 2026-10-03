@@ -67,6 +67,12 @@ export const envSchema = z
 		S3_BUCKET: z
 			.string()
 			.regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, "invalid S3 bucket name"),
+		/** Where files no longer used go instead of being deleted. Default: `<S3_BUCKET>-deprecated`. */
+		S3_DEPRECATED_BUCKET: optional(
+			z
+				.string()
+				.regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, "invalid S3 bucket name"),
+		),
 		S3_ACCESS_KEY: z.string().min(1),
 		S3_SECRET_KEY: z.string().min(1),
 		S3_REGION: z.string().min(1).default("us-east-1"),

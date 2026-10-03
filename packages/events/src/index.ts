@@ -17,6 +17,7 @@ export const EVENTS = {
 	],
 	group: ["create", "update", "delete"],
 	course: ["create", "update", "delete", "set-groups"],
+	asset: ["deprecate"],
 	revision: ["create", "set-status", "delete", "new-link", "revoke-link"],
 } as const;
 

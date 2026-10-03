@@ -1,6 +1,6 @@
 import { and, db, eq, schema } from "@youlearn/db";
 import { recordEvent } from "@youlearn/events/server";
-import { deleteObject } from "@youlearn/storage";
+import { moveToDeprecated } from "@youlearn/storage";
 import type { AssignableGroups, WriterCourse } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
@@ -272,7 +272,8 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 		return { course: updated satisfies WriterCourse };
 	});
 
-	// A course published once is archived (admin only) to keep what learners did; the others are really deleted.
+	// A course published once is archived (admin only) to keep what learners did, files included; the others are
+	// really deleted and their files go to the deprecated bucket.
 	app.delete("/api/writer/courses/:id", async (request, reply) => {
 		const { id } = idParams.parse(request.params);
 		const access = await authorizeCourse(request, reply, id);
@@ -300,10 +301,10 @@ export const writerCourseRoutes: FastifyPluginAsync = async (app) => {
 				.from(courseAsset)
 				.where(eq(courseAsset.courseId, id));
 			await db.delete(course).where(eq(course.id, id));
-			// The rows are gone with the course (cascade): remove the blobs too, best effort.
+			// The rows are gone with the course (cascade); the files are put aside, never deleted.
 			for (const { sha256 } of assets)
-				await deleteObject(assetKey(id, sha256)).catch((error) =>
-					request.log.error(error, "Could not delete a course file"),
+				await moveToDeprecated(assetKey(id, sha256)).catch((error) =>
+					request.log.error(error, "Could not move a course file"),
 				);
 		}
 

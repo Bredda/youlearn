@@ -10,6 +10,7 @@ export const FEATURE_LABELS: Record<EventFeature, string> = {
 	group: "Groupes",
 	course: "Cours",
 	revision: "Révisions",
+	asset: "Fichiers",
 };
 
 export const EVENT_LABELS: Record<EventType, string> = {
@@ -33,6 +34,7 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"revision.delete": "Suppression",
 	"revision.new-link": "Nouveau lien de relecture",
 	"revision.revoke-link": "Lien de relecture révoqué",
+	"asset.deprecate": "Fichier mis de côté",
 };
 
 /** Self-sufficient wording for the table, where the feature is not shown next to the badge. */
@@ -57,6 +59,7 @@ export const EVENT_BADGE_LABELS: Record<EventType, string> = {
 	"revision.delete": "Suppression de révision",
 	"revision.new-link": "Nouveau lien de relecture",
 	"revision.revoke-link": "Lien de relecture révoqué",
+	"asset.deprecate": "Fichier mis de côté",
 };
 
 /** Rows may carry a type that no longer exists in the registry: show it as is. */
@@ -140,6 +143,8 @@ export function describeEvent({
 			return typeof data.clonedFrom === "string"
 				? `Clonée depuis ${data.clonedFrom}`
 				: null;
+		case "asset.deprecate":
+			return "Plus utilisé : déplacé dans le bucket des fichiers dépréciés";
 		case "group.update":
 			return `Nom : ${data.from ?? "—"} → ${data.to ?? "—"}`;
 		case "user.ban":
