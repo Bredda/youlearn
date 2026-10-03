@@ -27,7 +27,7 @@ Same shape for users, events and courses: a zod `query` (`q`, filters, `sort`, `
 
 ## Types (`packages/types`)
 
-Derive from the schema (`typeof schema.x.$inferSelect`) and keep the package free of runtime code (type-only imports). API responses that cross to the web app are typed there; JSON dates are strings. A type that the schema itself needs (a jsonb shape) is defined in the schema file and re-exported.
+Derive from the schema (`typeof schema.x.$inferSelect`) and keep the package free of runtime code (type-only imports). API responses that cross to the web app are typed there; JSON dates are strings. A type that the schema itself needs (a jsonb shape) is defined in the schema file and re-exported; the course content shape lives in `@youlearn/content` (a pure leaf the schema imports) because the web app validates and diffs it too.
 
 ## Events (audit log)
 

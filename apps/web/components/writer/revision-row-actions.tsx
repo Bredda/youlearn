@@ -60,6 +60,16 @@ export function RevisionRowActions({
 					<Icon name={status === "draft" ? "edit" : "view"} />
 					{status === "draft" ? "Éditer" : "Voir"}
 				</DropdownMenuItem>
+				<DropdownMenuItem
+					render={
+						<Link
+							href={`/writer/courses/${courseId}/compare?to=${revision.id}`}
+						/>
+					}
+				>
+					<Icon name="compare" />
+					Comparer
+				</DropdownMenuItem>
 
 				{status === "draft" && (
 					<DropdownMenuItem

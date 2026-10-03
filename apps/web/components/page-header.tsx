@@ -16,8 +16,8 @@ export function PageHeader({
 }) {
 	return (
 		<header className="flex flex-col gap-4">
-			<div className="flex items-start justify-between gap-4">
-				<div className="min-w-0">
+			<div className="flex flex-wrap items-start justify-between gap-4">
+				<div className="min-w-0 flex-1 basis-64">
 					<h1 className="font-semibold text-xl">{title}</h1>
 					{description && (
 						<p className="text-muted-foreground text-sm">{description}</p>

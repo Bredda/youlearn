@@ -8,21 +8,11 @@ import type {
 } from "@youlearn/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { FormError } from "@/components/form-error";
 import { Icon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,14 +24,15 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
-import { assetUrl } from "@/components/writer/markdown";
 import { ReviewLinkDialog } from "@/components/writer/review-link-dialog";
 import { RevisionFormDialog } from "@/components/writer/revision-form-dialog";
 import {
 	type RevisionAction,
 	RevisionRowActions,
 } from "@/components/writer/revision-row-actions";
+import { RevisionStatusDialog } from "@/components/writer/revision-status-dialog";
 import { callApi } from "@/lib/api-client";
+import { assetUrl } from "@/lib/asset-url";
 import {
 	REVISION_STATUS_LABELS,
 	REVISION_STATUS_VARIANTS,
@@ -55,7 +46,7 @@ const dateFormat = new Intl.DateTimeFormat("fr-FR", {
 /** What the user has to confirm before the API accepts the change. */
 type Confirmation = {
 	revision: WriterRevision;
-	to: RevisionStatus;
+	to: "published" | "deprecated";
 };
 
 export function CourseDetail({
@@ -81,6 +72,12 @@ export function CourseDetail({
 	const [deleting, setDeleting] = useState<WriterRevision>();
 	const [error, setError] = useState<string>();
 	const [pending, setPending] = useState(false);
+
+	// Most recently modified first, whatever the order the API returns.
+	const byUpdate = useMemo(
+		() => [...revisions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+		[revisions],
+	);
 
 	const draft = course.current.draft;
 	const published = course.current.published;
@@ -208,6 +205,7 @@ export function CourseDetail({
 						<TableRow>
 							<TableHead>Révision</TableHead>
 							<TableHead className="w-32">Statut</TableHead>
+							<TableHead>But</TableHead>
 							<TableHead>Contributeurs</TableHead>
 							<TableHead className="w-44">Mise à jour</TableHead>
 							<TableHead className="w-16 text-right">
@@ -219,22 +217,34 @@ export function CourseDetail({
 						{revisions.length === 0 && (
 							<TableRow>
 								<TableCell
-									colSpan={5}
-									className="text-center text-muted-foreground"
+									colSpan={6}
+									className="h-24 text-center text-muted-foreground"
 								>
-									Aucune révision.
+									Aucune révision
 								</TableCell>
 							</TableRow>
 						)}
-						{revisions.map((revision) => (
+						{byUpdate.map((revision) => (
 							<TableRow key={revision.id}>
 								<TableCell className="truncate font-medium">
-									{revision.key}
+									<Link
+										href={`/writer/courses/${course.id}/revisions/${revision.id}`}
+										className="hover:underline"
+										title={`${revision.status === "draft" ? "Éditer" : "Voir"} la révision ${revision.key}`}
+									>
+										{revision.key}
+									</Link>
 								</TableCell>
 								<TableCell>
 									<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
 										{REVISION_STATUS_LABELS[revision.status]}
 									</Badge>
+								</TableCell>
+								<TableCell
+									className="truncate text-muted-foreground"
+									title={revision.purpose}
+								>
+									{revision.purpose}
 								</TableCell>
 								<TableCell className="truncate text-muted-foreground">
 									{revision.contributors.map((c) => c.name).join(", ")}
@@ -308,47 +318,16 @@ export function CourseDetail({
 				/>
 			)}
 
-			<AlertDialog
-				open={confirming !== undefined}
-				onOpenChange={(open) => !open && setConfirming(undefined)}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{confirmationTitle(confirming)}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{confirmationText(confirming, published?.key)}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Annuler</AlertDialogCancel>
-						<AlertDialogAction
-							variant={
-								confirming?.to === "published" ? "default" : "destructive"
-							}
-							onClick={confirmed}
-							disabled={pending}
-						>
-							<Icon name="confirm" />
-							Confirmer
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{confirming && (
+				<RevisionStatusDialog
+					revisionKey={confirming.revision.key}
+					to={confirming.to}
+					publishedKey={published?.key}
+					pending={pending}
+					onConfirm={confirmed}
+					onClose={() => setConfirming(undefined)}
+				/>
+			)}
 		</div>
 	);
-}
-
-function confirmationTitle(confirming?: Confirmation) {
-	if (!confirming) return "";
-	const { key } = confirming.revision;
-	return confirming.to === "published"
-		? `Publier la révision « ${key} » ?`
-		: `Déprécier la révision « ${key} » ?`;
-}
-
-function confirmationText(confirming?: Confirmation, publishedKey?: string) {
-	if (!confirming) return "";
-	if (confirming.to === "published")
-		return `La révision « ${publishedKey} » est actuellement publiée : elle va être dépréciée. Les apprenants verront la nouvelle révision.`;
-	return "Le cours ne sera plus accessible aux apprenants tant qu'une autre révision n'est pas publiée. La révision dépréciée reste consultable dans l'historique.";
 }

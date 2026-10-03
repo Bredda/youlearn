@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { assetUrl } from "@/components/writer/markdown";
 import { callApi } from "@/lib/api-client";
+import { assetUrl } from "@/lib/asset-url";
 
 const formSchema = z.object({
 	name: z

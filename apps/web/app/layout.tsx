@@ -6,6 +6,7 @@ import {
 	Space_Grotesk,
 } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const fontSans = Space_Grotesk({
@@ -45,6 +46,7 @@ export default function RootLayout({
 					disableTransitionOnChange
 				>
 					<TooltipProvider>{children}</TooltipProvider>
+					<Toaster />
 				</ThemeProvider>
 			</body>
 		</html>

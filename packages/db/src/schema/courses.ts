@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { type CourseContent, EMPTY_COURSE_CONTENT } from "@youlearn/content";
 import { sql } from "drizzle-orm";
 import {
 	type AnyPgColumn,
@@ -92,24 +93,6 @@ export const courseAsset = pgTable(
 	],
 );
 
-/**
- * What a revision teaches: an ordered list of lessons. Versioned so the shape can evolve (sections, videos,
- * quizzes...) with old revisions still readable. Markdown bodies are inline for now.
- */
-export type CourseContent = {
-	version: 1;
-	lessons: CourseLesson[];
-};
-
-export type CourseLesson = {
-	id: string;
-	title: string;
-	type: "markdown";
-	body: string;
-};
-
-export const EMPTY_COURSE_CONTENT: CourseContent = { version: 1, lessons: [] };
-
 export const revisionStatus = pgEnum("revision_status", [
 	"draft",
 	"preview",
@@ -133,6 +116,8 @@ export const courseRevision = pgTable(
 		/** The business id (e.g. `whispering_toucan`), unique per course and immutable. */
 		key: text().notNull(),
 		status: revisionStatus().notNull().default("draft"),
+		/** Why this revision exists, written by whoever creates it (mandatory, also when cloning). */
+		purpose: text().notNull(),
 		content: jsonb()
 			.$type<CourseContent>()
 			.notNull()

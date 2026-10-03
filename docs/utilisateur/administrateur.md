@@ -40,5 +40,5 @@ mot de passe.
 
 ## Fichiers
 
-La plateforme ne supprime jamais un fichier (image de cours, image de leçon) : un fichier devenu inutile est déplacé dans un
+La plateforme ne supprime jamais un fichier (image de cours, image de chapitre) : un fichier devenu inutile est déplacé dans un
 espace de stockage « déprécié », qu'il appartient à l'exploitation de vider si l'on veut récupérer de la place.

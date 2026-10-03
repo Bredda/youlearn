@@ -10,7 +10,7 @@ import {
 	type CourseAction,
 	CourseRowActions,
 } from "@/components/writer/course-row-actions";
-import { assetUrl } from "@/components/writer/markdown";
+import { assetUrl } from "@/lib/asset-url";
 import {
 	REVISION_STATUS_LABELS,
 	REVISION_STATUS_VARIANTS,
@@ -97,19 +97,31 @@ export function createCourseColumns({
 			id: "revisions",
 			header: "Révisions",
 			enableSorting: false,
-			cell: ({ row }) => (
-				<div className="flex flex-wrap gap-1">
-					{(["published", "preview", "draft"] as const).map(
-						(status) =>
-							row.original.current[status] && (
-								<Badge key={status} variant={REVISION_STATUS_VARIANTS[status]}>
-									{REVISION_STATUS_LABELS[status]} ·{" "}
-									{row.original.current[status].key}
-								</Badge>
-							),
-					)}
-				</div>
-			),
+			cell: ({ row }) => {
+				const active = (["published", "preview", "draft"] as const).filter(
+					(status) => row.original.current[status],
+				);
+				// A new course has no revision yet: say so instead of leaving the cell blank.
+				if (active.length === 0) {
+					return (
+						<span className="text-muted-foreground text-xs">
+							{row.original.everPublished
+								? "Aucune révision active"
+								: "Aucune révision"}
+						</span>
+					);
+				}
+				return (
+					<div className="flex flex-wrap gap-1">
+						{active.map((status) => (
+							<Badge key={status} variant={REVISION_STATUS_VARIANTS[status]}>
+								{REVISION_STATUS_LABELS[status]} ·{" "}
+								{row.original.current[status]?.key}
+							</Badge>
+						))}
+					</div>
+				);
+			},
 		}),
 		helper.accessor("updatedAt", {
 			id: "updatedAt",

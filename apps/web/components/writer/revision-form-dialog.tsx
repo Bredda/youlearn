@@ -30,6 +30,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { callApi } from "@/lib/api-client";
 import { REVISION_STATUS_LABELS } from "@/lib/revisions";
 
@@ -46,6 +47,11 @@ const formSchema = z.object({
 			"Minuscules, chiffres, tirets et underscores",
 		),
 	parentId: z.string(),
+	purpose: z
+		.string()
+		.trim()
+		.min(1, "Indiquez le but de cette révision")
+		.max(2000, "2000 caractères maximum"),
 });
 
 // Mounted only while open, so the form starts fresh each time.
@@ -71,7 +77,7 @@ export function RevisionFormDialog({
 		baseId ?? revisions.find((revision) => revision.status === "published")?.id;
 
 	const form = useForm({
-		defaultValues: { key: suggestedKey, parentId: base ?? NONE },
+		defaultValues: { key: suggestedKey, parentId: base ?? NONE, purpose: "" },
 		validators: { onSubmit: formSchema },
 		onSubmit: async ({ value }) => {
 			setPending(true);
@@ -81,6 +87,7 @@ export function RevisionFormDialog({
 				`/api/writer/courses/${courseId}/revisions`,
 				{
 					key: value.key,
+					purpose: value.purpose,
 					...(value.parentId !== NONE && { parentId: value.parentId }),
 				},
 			);
@@ -168,6 +175,36 @@ export function RevisionFormDialog({
 									</Select>
 								</Field>
 							)}
+						/>
+						<form.Field
+							name="purpose"
+							// biome-ignore lint/correctness/noChildrenProp: shadcn pattern
+							children={(field) => {
+								const isInvalid =
+									field.state.meta.isTouched && !field.state.meta.isValid;
+								return (
+									<Field data-invalid={isInvalid}>
+										<FieldLabel htmlFor="revision-purpose">But</FieldLabel>
+										<Textarea
+											id="revision-purpose"
+											name={field.name}
+											value={field.state.value}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+											aria-invalid={isInvalid}
+											rows={3}
+											placeholder="Ex. : mise à jour du chapitre 2 pour la nouvelle version, correction des quiz…"
+										/>
+										<FieldDescription>
+											Ce que cette révision change ou apporte. Visible dans
+											l'historique et par les relecteurs.
+										</FieldDescription>
+										{isInvalid && (
+											<FieldError errors={field.state.meta.errors} />
+										)}
+									</Field>
+								);
+							}}
 						/>
 						{error && <FormError>{error}</FormError>}
 					</FieldGroup>

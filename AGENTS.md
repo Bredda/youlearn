@@ -37,7 +37,7 @@ pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 - Format and lint with **Biome** only (tabs, no Prettier): `pnpm format` formats the repo, and while working run `pnpm --filter <pkg> exec biome check --write <paths>` on the files you touched. `apps/web/components/ui` (shadcn-generated) is excluded from Biome on purpose; CSS uses Biome's Tailwind parser.
 - Lint, format and types are clean repo-wide (generated `packages/db/drizzle/` and `components/ui` are excluded from Biome): keep it that way, an error is yours. `components/ui/spinner.tsx` carries a small local fix (spread before `strokeWidth`); re-running `shadcn add spinner --overwrite` would bring the type error back.
 - **Git hooks** (Husky, installed by `pnpm install` through the `prepare` script): `pre-commit` runs `biome check --staged --write` (fixes and re-stages the staged files, blocks the commit on what it cannot fix; a partially staged file gets staged entirely), `pre-push` runs `pnpm lint:ci`, `pnpm check-types` then `pnpm test`. When a hook fails, fix the cause rather than bypassing it with `--no-verify`. **CI** (`.github/workflows/ci.yml`, GitHub Actions on pushes to `main`/`dev` and on pull requests) runs the same three checks on a clean checkout, with placeholder env values: it has no `.env`, database or storage.
-- **Tests**: Vitest, colocated `*.test.ts`, only for pure logic (rules, validation, parsing). Unit tests stay hermetic: they never import `@youlearn/db`, `@youlearn/config` or `@youlearn/storage` (no database, no `.env`, no mocking of those). When logic you want to test sits in a module that does, move it into a DB-free file (see `apps/api/src/lib/course-rules.ts`, `revision-rules.ts`, `image-type.ts`; the original module re-exports or imports it). Add or update tests with the rule you change. Routes and pages have no automated tests yet: verify them by exercising them (`curl` with a session cookie) and say what was not exercised.
+- **Tests**: Vitest, colocated `*.test.ts`, only for pure logic (rules, validation, parsing). Unit tests stay hermetic: they never import `@youlearn/db`, `@youlearn/config` or `@youlearn/storage` (no database, no `.env`, no mocking of those). When logic you want to test sits in a module that does, move it into a DB-free file (see `apps/api/src/lib/course-rules.ts`, `revision-rules.ts`, `image-type.ts`; the original module re-exports or imports it; `packages/content` is DB-free by construction). Add or update tests with the rule you change. Routes and pages have no automated tests yet: verify them by exercising them (`curl` with a session cookie) and say what was not exercised.
 
 ## Layout
 
@@ -46,6 +46,7 @@ pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 | `apps/web` | Next.js 16 App Router + shadcn (base-ui) + Tailwind 4. Conventions: `youlearn-ui` skill. |
 | `apps/api` | Fastify 5. Mounts Better Auth on `/api/auth/*`, exposes `/api/me`, `/api/admin/*`, `/api/writer/*` (courses, revisions), `/api/review/*`, the learner catalog (`/api/courses`) and the course files. |
 | `packages/config` | Loads the root `.env`, validates it with zod, exports `env`. |
+| `packages/content` | Pure course content: the `CourseContent` v2 types and zod schema (chapters, blocks, quiz), video URL allowlist, quiz rules, `diffContent`. Depends only on `zod` and `diff`. |
 | `packages/db` | Drizzle client (`pg`), schema, migrations (`drizzle/`). |
 | `packages/storage` | S3 client (`@aws-sdk/client-s3`) for course files: `ensureBucket`, `putObject`, `getObject` (streamed, `Range`), `objectExists`, `moveToDeprecated`, `presignGet`/`presignPut`. Only talks to the S3 API, so RustFS (dev) is swappable for any S3. |
 | `packages/events` | Event log registry (`feature.action` types, pure) and `recordEvent` (`@youlearn/events/server`). |
@@ -53,7 +54,7 @@ pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 | `packages/types` | Type-only: row types inferred from the schema and API response shapes. |
 | `packages/typescript-config`, `packages/biome-config` | Shared configs (`node.json` for packages and API, `nextjs.json` for web). |
 
-Dependency direction: `config` <- `db` <- `events` <- `auth` <- `types` (type-only imports) <- `api` / `web`; `storage` depends only on `config` and is used by `api`. Do not create cycles.
+Dependency direction: `content` (pure leaf) and `config` <- `db` (it types the `content` jsonb with `content`) <- `events` <- `auth` <- `types` (type-only imports) <- `api` / `web`; `storage` depends only on `config` and is used by `api`. Do not create cycles.
 
 ## Skills (read before working in the area)
 
@@ -63,7 +64,7 @@ Detailed conventions live in project skills (`.claude/skills/`), loaded when the
 |---|---|
 | `youlearn-ui` | anything under `apps/web`: pages, forms, tables, dialogs, icons, page headings |
 | `youlearn-api` | API routes, `packages/db` schema and migrations, events, shared types, auth rules, seeds |
-| `youlearn-courses` | courses, revisions, lessons, files and images, review links, group visibility |
+| `youlearn-courses` | courses, revisions, chapters/blocks/quizzes, content diff, files and images, review links, group visibility |
 
 ## Architecture rules (always apply)
 

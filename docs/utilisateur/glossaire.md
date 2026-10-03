@@ -20,12 +20,19 @@ conservé. Seul un administrateur le peut.
 **Groupe** : étiquette attribuée aux utilisateurs et aux cours ; un utilisateur voit un cours s'ils partagent un groupe (ou
 si le cours est dans Commun).
 
-**Leçon** : une unité de contenu d'une révision, écrite en Markdown.
+**Bloc** : un morceau d'un chapitre : un texte écrit en Markdown ou une vidéo intégrée (YouTube ou Vimeo).
+
+**But** : texte obligatoire qui explique pourquoi une révision a été créée.
+
+**Chapitre** : une unité d'un cours, faite de blocs dans l'ordre voulu et, éventuellement, d'un quiz qui la conclut.
 
 **Lien de relecture** : adresse qui permet à toute personne connectée de lire une révision en relecture, tant qu'elle y
 reste.
 
 **Markdown** : manière simple d'écrire du texte mis en forme (titres, listes, liens, images) avec quelques symboles.
+
+**Quiz** : questions qui concluent un chapitre. L'apprenant répond à *n* questions tirées parmi les *m* du quiz. Un quiz
+**bloquant** exige un taux de réussite pour passer au chapitre suivant.
 
 **Publiée** : statut de la révision que voient les apprenants. Elle ne change plus.
 

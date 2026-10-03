@@ -16,7 +16,7 @@ Next.js and `@tanstack/react-table` are recent majors that differ from older doc
 - The `(app)` layout puts the user in `UserProvider`: client components read it with `useUser()` instead of fetching it. After a change, call `router.refresh()` so the layout reloads it.
 - Client mutations: Better Auth calls through `authClient` (`@youlearn/auth/client`) or `callApi` (`lib/api-client.ts`, returns an error message or null) for our own routes, then `router.refresh()`. Turn Better Auth results into messages with `authError`.
 - Dynamic pages type their props with the generated `PageProps<"/route/[param]">` and `await props.params`.
-- Files (images of lessons, covers) are served by the API under `/api/courses/:id/assets/:assetId`; build URLs with `assetUrl` (`components/writer/markdown.tsx`) and render lesson markdown with its `Markdown` component (no raw HTML, `asset:<id>` links resolved).
+- Files (images of lessons, covers) are served by the API under `/api/courses/:id/assets/:assetId`; build URLs with `assetUrl` (`lib/asset-url.ts`, plain module so server components can use it) and render markdown with `Markdown` (`components/writer/markdown.tsx`: GFM, heading ids, Shiki code blocks with a copy button, no raw HTML, `asset:<id>` links resolved). Chapters are shown with `ChapterView`, videos with `VideoEmbed`, quizzes with `QuizView` and differences with `RevisionDiff` (`components/content/*`).
 
 ## Page headings
 
@@ -56,9 +56,14 @@ Icons are centralized in `lib/icons.ts`, by meaning (`add`, `edit`, `delete`, `o
 ## Components and styling
 
 - Add shadcn components with `pnpm dlx shadcn@latest add <name>` (style `base-mira`, built on `@base-ui/react`). Compose them, do not edit `components/ui/*` unless needed (the folder is excluded from Biome).
+- Toasts: `toast.add({ type: "success", title })` from `@/components/ui/toast` (shadcn's base-ui Toast, not Sonner); the `Toaster` is mounted once in the root layout. The viewport sits at `bottom-20` (a local edit of the generated file: `shadcn add toast --overwrite` would undo it) so it clears the sticky save bar of the revision editor.
 - Theme: `next-themes` through `ThemeProvider`; use `useThemeToggle()` rather than calling it directly.
 - Do not use unlayered global CSS resets: they override Tailwind utilities.
 
 ## Verifying
 
 There is no browser available to the agent and no automated UI test (unit tests exist for the pure helpers in `lib/`, e.g. `lib/query-params.test.ts`: run `pnpm --filter web test`): run `pnpm check-types`, Biome on the touched files, and load the pages with `curl` and a session cookie (sign in through the API) to check they render. State clearly what was not exercised interactively.
+
+## Revision editor
+
+`components/writer/revision-editor.tsx` edits a whole `CourseContent` tree saved in one go, so it is **not** a TanStack Form: state is a reducer over the pure `lib/content-editor.ts` (tested), validated live with `contentSchema` (`lib/content-issues.ts` turns issues into French messages with a "Chapitre 2 › Quiz › Question 1" location). Markdown is edited with CodeMirror 6 (`markdown-editor.tsx`, loaded with `next/dynamic`, `ssr: false`; toolbar commands in `lib/markdown-commands.ts`; paste/drop/button image upload through `lib/upload-image.ts`) next to a live preview (`markdown-field.tsx`). Chapters, blocks and questions are reordered with dnd-kit (`sortable-list.tsx`, keyboard accessible) and deleted through `ConfirmRemove`. Unsaved work is mirrored to `localStorage` (try/catch, never required) and offered back after a conflict. Server components that render the diff must not import from a `"use client"` module.

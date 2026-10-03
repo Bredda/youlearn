@@ -13,6 +13,7 @@
 	},
 	"dependencies": {
 		"@youlearn/config": "workspace:*",
+		"@youlearn/content": "workspace:*",
 		"drizzle-orm": "^0.45.3",
 		"pg": "^8.23.1"
 	},

@@ -1,21 +1,16 @@
 "use client";
 
+import { Children, isValidElement, type ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
-
-/** Lessons refer to uploaded files as `asset:<id>`: they are served by the API, checked against the course's groups. */
-export const assetUrl = (
-	courseId: string,
-	assetId: string,
-	/** Token of a review link: lets a reader without access to the course load the files of the revision. */
-	reviewToken?: string,
-) =>
-	`/api/courses/${courseId}/assets/${assetId}${
-		reviewToken ? `?review=${encodeURIComponent(reviewToken)}` : ""
-	}`;
+import rehypeSlug from "rehype-slug";
+import remarkGfm from "remark-gfm";
+import { CodeBlock } from "@/components/content/code-block";
+import { assetUrl } from "@/lib/asset-url";
 
 /**
- * Renders the markdown of a lesson. react-markdown does not render raw HTML, so lesson authors cannot inject
+ * Renders the markdown of a chapter. react-markdown does not render raw HTML, so authors cannot inject
  * scripts; links and images go through `urlTransform`, which only adds the `asset:` scheme to the safe ones.
+ * The same pipeline serves the editor preview, the review and the learner view.
  */
 export function Markdown({
 	courseId,
@@ -28,6 +23,8 @@ export function Markdown({
 }) {
 	return (
 		<ReactMarkdown
+			remarkPlugins={[remarkGfm]}
+			rehypePlugins={[rehypeSlug]}
 			urlTransform={(url) =>
 				url.startsWith("asset:")
 					? assetUrl(courseId, url.slice("asset:".length), reviewToken)
@@ -65,12 +62,33 @@ export function Markdown({
 						{...props}
 					/>
 				),
-				pre: (props) => (
-					<pre
-						className="my-2 overflow-x-auto rounded bg-muted p-3 text-xs [&>code]:bg-transparent [&>code]:p-0"
+				// A fenced block arrives as <pre><code class="language-x">: hand its text to the highlighter.
+				pre: ({ children }) => {
+					const [code] = Children.toArray(children);
+					if (
+						isValidElement<{ className?: string; children?: ReactNode }>(code)
+					) {
+						const lang = /language-([\w+-]+)/.exec(
+							code.props.className ?? "",
+						)?.[1];
+						const text = Children.toArray(code.props.children).join("");
+						return <CodeBlock code={text.replace(/\n$/, "")} lang={lang} />;
+					}
+					return <pre>{children}</pre>;
+				},
+				table: (props) => (
+					<div className="my-2 overflow-x-auto">
+						<table className="w-full border-collapse text-sm" {...props} />
+					</div>
+				),
+				th: (props) => (
+					<th
+						className="border bg-muted px-2 py-1 text-left font-medium"
 						{...props}
 					/>
 				),
+				td: (props) => <td className="border px-2 py-1" {...props} />,
+				hr: (props) => <hr className="my-4" {...props} />,
 				img: ({ alt, ...props }) => (
 					// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
 					<img alt={alt ?? ""} className="my-2 max-w-full rounded" {...props} />
