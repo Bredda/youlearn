@@ -18,3 +18,16 @@ export function authError(result: { error: { message?: string } | null }) {
 		? (result.error.message ?? "Une erreur est survenue")
 		: null;
 }
+
+/** Like `callApi`, for a call whose response body matters. */
+export async function fetchApi<T>(
+	method: string,
+	url: string,
+): Promise<{ data: T; error: null } | { data: null; error: string }> {
+	const response = await fetch(url, { method });
+	if (response.ok) return { data: (await response.json()) as T, error: null };
+	const data = (await response.json().catch(() => null)) as {
+		error?: string;
+	} | null;
+	return { data: null, error: data?.error ?? "Une erreur est survenue" };
+}

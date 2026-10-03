@@ -6,7 +6,7 @@ import { type CourseActor, canEditCourse, canViewCourse } from "./courses";
 import { sniffImageType } from "./image-type";
 import { escapeLike } from "./sql";
 
-const { courseAsset, courseRevision } = schema;
+const { courseAsset, courseRevision, enrollment } = schema;
 
 export const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -89,8 +89,9 @@ async function revisionUses(
 
 /**
  * Editors read every file of their courses. Everybody else only reads what is meant to be shown: the cover, and
- * the files used by the published revision (or, holding a valid review link, by the revision in review). That keeps
- * the files of drafts private even from the members of the groups of the course.
+ * the files used by the published revision (or, holding a valid review link, by the revision in review) and, for a
+ * learner, by the revision they follow. That keeps the files of drafts private even from the members of the groups
+ * of the course.
  */
 export async function canReadAsset(
 	actor: CourseActor,
@@ -127,8 +128,20 @@ export async function canReadAsset(
 	}
 
 	if (!canViewCourse(actor, course)) return false;
-	return (
+	if (
 		course.imageAssetId === assetId ||
 		(await revisionUses(course.id, assetId, { status: "published" }))
-	);
+	)
+		return true;
+
+	// A learner keeps the files of the revision they follow, even once it is no longer the published one.
+	const followed = await db
+		.select({ revisionId: enrollment.revisionId })
+		.from(enrollment)
+		.where(
+			and(eq(enrollment.userId, actor.id), eq(enrollment.courseId, course.id)),
+		);
+	for (const { revisionId } of followed)
+		if (await revisionUses(course.id, assetId, { id: revisionId })) return true;
+	return false;
 }

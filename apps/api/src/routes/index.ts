@@ -7,6 +7,7 @@ import { adminGroupRoutes } from "./admin/groups";
 import { adminUserRoutes } from "./admin/users";
 import { assetRoutes } from "./assets";
 import { catalogRoutes } from "./catalog";
+import { learningRoutes } from "./learning";
 import { reviewRoutes } from "./review";
 import { writerCourseRoutes } from "./writer/courses";
 import { writerRevisionRoutes } from "./writer/revisions";
@@ -40,5 +41,6 @@ export const routes: FastifyPluginAsync = async (app) => {
 	await app.register(writerRevisionRoutes);
 	await app.register(assetRoutes);
 	await app.register(catalogRoutes);
+	await app.register(learningRoutes);
 	await app.register(reviewRoutes);
 };

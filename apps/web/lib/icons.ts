@@ -41,8 +41,10 @@ import {
 	Moon02Icon,
 	MoreHorizontalIcon,
 	NotificationIcon,
+	PlayIcon,
 	QuoteDownIcon,
 	Refresh01Icon,
+	RepeatIcon,
 	Rocket01Icon,
 	RotateLeft01Icon,
 	SchoolIcon,
@@ -111,6 +113,12 @@ export const icons = {
 	certifying: Award01Icon,
 	/** Compare two revisions. */
 	compare: GitCompareIcon,
+
+	// Learner journey
+	/** Start or resume a course. */
+	start: PlayIcon,
+	/** Start a course over after a failure. */
+	retry: RepeatIcon,
 
 	// Markdown editor toolbar
 	bold: TextBoldIcon,

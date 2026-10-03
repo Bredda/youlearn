@@ -1,5 +1,9 @@
 import type { Role } from "@youlearn/auth/roles";
-import type { CourseContent } from "@youlearn/content";
+import type {
+	ChapterKind,
+	CourseContent,
+	LearnerContent,
+} from "@youlearn/content";
 import type { schema } from "@youlearn/db";
 import type { EventFilter } from "@youlearn/events";
 
@@ -276,4 +280,51 @@ export type ReviewBase = {
 	key: string;
 	status: RevisionStatus;
 	content: CourseContent;
+};
+
+export type EnrollmentStatus =
+	(typeof schema.enrollmentStatus.enumValues)[number];
+
+/** A learner's enrollment on a course (dates serialized by JSON). */
+export type LearnerEnrollment = {
+	id: string;
+	status: EnrollmentStatus;
+	/** Key of the revision the learner follows (pinned when they started). */
+	revisionKey: string;
+	startedAt: string;
+	finishedAt: string | null;
+	/** A more recent revision has been published since the learner started. */
+	outdated: boolean;
+};
+
+/** A published course as a learner opens it from the catalog. */
+export type LearnerCourse = Pick<
+	Course,
+	"id" | "name" | "description" | "categories" | "imageAssetId"
+> & {
+	publishedAt: string;
+	durationMinutes: number;
+	certifying: boolean;
+	chapters: {
+		id: string;
+		title: string;
+		kind: ChapterKind;
+		estimatedMinutes: number | null;
+	}[];
+	/** The learner's latest enrollment, a failed one included (they may start over). */
+	enrollment: LearnerEnrollment | null;
+};
+
+/** What the course player shows: the pinned revision, without any quiz question nor answer. */
+export type EnrollmentView = {
+	enrollment: LearnerEnrollment;
+	course: Pick<
+		Course,
+		"id" | "name" | "description" | "categories" | "imageAssetId"
+	>;
+	revision: Pick<
+		CourseRevision,
+		"id" | "key" | "durationMinutes" | "certifying"
+	>;
+	content: LearnerContent;
 };

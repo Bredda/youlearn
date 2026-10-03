@@ -29,7 +29,7 @@ const sortColumns = {
  * user's own groups. An admin sees every one of them, whatever its groups. Writers get the learner rule: their
  * view of unpublished work is the writer area.
  */
-function visibleTo(actor: CourseActor) {
+export function visibleTo(actor: CourseActor) {
 	return and(
 		isNull(course.deletedAt),
 		eq(courseRevision.status, "published"),
