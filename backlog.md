@@ -49,4 +49,5 @@ Une phase à part avant de passer en 1.0 : revue complète d'optimisation, estim
 
 ## À trier
 
-Rien pour le moment.
+- Chapitre de type « glossaire », transverse au e-learning : des définitions réutilisables d'un chapitre à l'autre (et peut-être d'un cours à l'autre), à cadrer (où vit le glossaire, comment un chapitre y renvoie).
+- Prise de notes de l'apprenant et marque-pages sur des passages d'un chapitre.
