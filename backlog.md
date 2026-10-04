@@ -15,7 +15,6 @@ Sujets et idées **non planifiés** : ils ne font pas partie de la [feuille de r
 ## Rédaction des cours
 
 - Proposer une durée estimée par chapitre : temps de lecture calculé sur le Markdown, durée des vidéos YouTube et Vimeo quand elle est connue.
-- Refonte de la relecture : associer des utilisateurs à une relecture depuis l'interface, gérer celle-ci avec des commentaires du relecteur (le lien de relecture est aujourd'hui en lecture seule), et peut-être permettre de modifier le contenu pendant la relecture. Ce dernier point remet en cause la règle actuelle (seul un brouillon est modifiable ; une révision en relecture repasse en brouillon pour être retravaillée) : à arbitrer avant de commencer.
 - Synchroniser les lignes, et donc le défilement, entre le Markdown brut et son rendu quand on édite un bloc texte d'une révision (à explorer : faisabilité avec CodeMirror et le rendu actuel).
 - Banque de questions partagée entre chapitres ou entre cours, au lieu d'un pool par quiz.
 - Importer ou exporter un cours (par exemple en Markdown ou en archive), pour le sauvegarder ou le transférer.
