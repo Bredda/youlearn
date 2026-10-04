@@ -56,7 +56,8 @@ export function CodeBlock({ code, lang }: { code: string; lang?: string }) {
 	};
 
 	return (
-		<div className="group relative my-2 overflow-hidden rounded-md border bg-muted">
+		// Fits its content (the header keeps a minimum width for the label and the copy button), and scrolls past the column.
+		<div className="group relative my-2 w-fit min-w-40 max-w-full overflow-hidden rounded-md border bg-muted">
 			<div className="flex items-center justify-between border-b px-3 py-1 text-muted-foreground text-xs">
 				<span className="font-mono">{lang ?? "texte"}</span>
 				<Button
