@@ -43,10 +43,12 @@ export function Markdown({
 				p: (props) => <p className="my-2 leading-relaxed" {...props} />,
 				ul: (props) => <ul className="my-2 list-disc pl-6" {...props} />,
 				ol: (props) => <ol className="my-2 list-decimal pl-6" {...props} />,
+				// Links open in a new tab so the learner keeps their place; in-page anchors (#heading) stay put.
 				a: (props) => (
 					<a
 						className="text-primary underline"
 						rel="noreferrer noopener"
+						target={props.href?.startsWith("#") ? undefined : "_blank"}
 						{...props}
 					/>
 				),

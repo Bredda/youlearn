@@ -7,9 +7,19 @@ import type {
 	LearnerAttempt,
 } from "@youlearn/types";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import {
+	createContext,
+	type ReactNode,
+	type RefObject,
+	useContext,
+	useEffect,
+	useRef,
+	useState,
+	useTransition,
+} from "react";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
+import { useReadingReached } from "@/components/learn/reading-gate";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -31,12 +41,41 @@ import { fetchApi } from "@/lib/api-client";
 
 type Answers = Record<string, string[]>;
 
+type Session = {
+	courseId: string;
+	quiz: LearnerQuiz;
+	finalExam: boolean;
+	active: boolean;
+	attempt: LearnerAttempt | null;
+	answers: Answers;
+	result: AttemptResult | null;
+	error: string | null;
+	pending: boolean;
+	submitted: AttemptSummary[];
+	best: number | null;
+	passed: boolean;
+	hasOpenAttempt: boolean;
+	start: () => void;
+	submit: () => void;
+	choose: (questionId: string, optionId: string, multiple: boolean) => void;
+	/** The quiz section, scrolled into view when an attempt starts. */
+	sectionRef: RefObject<HTMLElement | null>;
+};
+
+const QuizContext = createContext<Session | null>(null);
+
+function useQuiz() {
+	const session = useContext(QuizContext);
+	if (!session) throw new Error("Quiz components need a <QuizSession>");
+	return session;
+}
+
 /**
- * Plays the quiz of a chapter: the server draws the questions and grades the answers, the browser only shows
- * what it is given. A chapter quiz can be retried with a new draw and shows its correction; the final exam is a
- * single attempt and shows the score only.
+ * State of the quiz of a chapter: the server draws the questions and grades the answers, the browser only shows
+ * what it is given. It is split from `QuizRunner` (the quiz itself) and `QuizStartButton` so the start button can
+ * sit in the chapter header while the questions stay below the content.
  */
-export function QuizRunner({
+export function QuizSession({
 	enrollmentId,
 	courseId,
 	chapterId,
@@ -44,6 +83,7 @@ export function QuizRunner({
 	finalExam,
 	active,
 	attempts,
+	children,
 }: {
 	enrollmentId: string;
 	courseId: string;
@@ -54,8 +94,10 @@ export function QuizRunner({
 	active: boolean;
 	/** The attempts at this chapter's quiz. */
 	attempts: AttemptSummary[];
+	children: ReactNode;
 }) {
 	const router = useRouter();
+	const sectionRef = useRef<HTMLElement>(null);
 	const [attempt, setAttempt] = useState<LearnerAttempt | null>(null);
 	const [answers, setAnswers] = useState<Answers>({});
 	const [result, setResult] = useState<AttemptResult | null>(null);
@@ -70,6 +112,17 @@ export function QuizRunner({
 	);
 	const passed = submitted.some((a) => a.passed);
 	const hasOpenAttempt = attempts.some((a) => a.submittedAt === null);
+
+	// The button that starts the quiz may sit far from it (chapter bar): bring the questions into view.
+	const attemptId = attempt?.id;
+	useEffect(() => {
+		if (!attemptId) return;
+		const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+		sectionRef.current?.scrollIntoView({
+			behavior: reduced.matches ? "auto" : "smooth",
+			block: "start",
+		});
+	}, [attemptId]);
 
 	function start() {
 		setError(null);
@@ -113,37 +166,128 @@ export function QuizRunner({
 		});
 	}
 
-	const startButton = (label: string, confirm = false) =>
-		confirm ? (
-			<AlertDialog>
-				<AlertDialogTrigger render={<Button disabled={pending} />}>
-					<Icon name="start" /> {label}
-				</AlertDialogTrigger>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Passer l'examen final ?</AlertDialogTitle>
-						<AlertDialogDescription>
-							Vous n'avez qu'une seule tentative. Si vous ne réunissez pas{" "}
-							{quiz.passRate} % de bonnes réponses, le cours est considéré comme
-							échoué et il faudra le recommencer depuis le début.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Pas maintenant</AlertDialogCancel>
-						<AlertDialogAction onClick={start}>
-							<Icon name="start" /> Commencer l'examen
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		) : (
-			<Button onClick={start} disabled={pending}>
-				<PendingIcon pending={pending} name="start" /> {label}
-			</Button>
-		);
+	return (
+		<QuizContext
+			value={{
+				courseId,
+				quiz,
+				finalExam,
+				active,
+				attempt,
+				answers,
+				result,
+				error,
+				pending,
+				submitted,
+				best,
+				passed,
+				hasOpenAttempt,
+				start,
+				submit,
+				choose,
+				sectionRef,
+			}}
+		>
+			{children}
+		</QuizContext>
+	);
+}
+
+/** What the learner can start now, if anything: the label and whether it needs a confirmation (the final exam). */
+function startAction({
+	finalExam,
+	active,
+	attempt,
+	submitted,
+	hasOpenAttempt,
+}: Session) {
+	if (!active || attempt) return null;
+	if (hasOpenAttempt)
+		return {
+			label: finalExam ? "Reprendre l'examen" : "Reprendre le quiz",
+			confirm: false,
+		};
+	if (finalExam)
+		return submitted.length === 0
+			? { label: "Passer l'examen final", confirm: true }
+			: null;
+	return {
+		label: submitted.length > 0 ? "Nouvelle tentative" : "Commencer le quiz",
+		confirm: false,
+	};
+}
+
+/** Starts (or resumes) the quiz; renders nothing when there is nothing to start. */
+export function QuizStartButton() {
+	const session = useQuiz();
+	const { quiz, pending, start } = session;
+	const reached = useReadingReached();
+	const action = startAction(session);
+	if (!action) return null;
+	// Someone who already tried the quiz has read the chapter.
+	const gated =
+		!reached && !session.hasOpenAttempt && session.submitted.length === 0;
+	const hint = gated
+		? "Lisez le chapitre jusqu'en bas pour commencer"
+		: undefined;
+	return action.confirm ? (
+		<AlertDialog>
+			<AlertDialogTrigger
+				render={<Button disabled={pending || gated} title={hint} />}
+			>
+				<Icon name="start" /> {action.label}
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Passer l'examen final ?</AlertDialogTitle>
+					<AlertDialogDescription>
+						Vous n'avez qu'une seule tentative. Si vous ne réunissez pas{" "}
+						{quiz.passRate} % de bonnes réponses, le cours est considéré comme
+						échoué et il faudra le recommencer depuis le début.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Pas maintenant</AlertDialogCancel>
+					<AlertDialogAction onClick={start}>
+						<Icon name="start" /> Commencer l'examen
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	) : (
+		<Button onClick={start} disabled={pending || gated} title={hint}>
+			<PendingIcon pending={pending} name="start" /> {action.label}
+		</Button>
+	);
+}
+
+/** The quiz of the chapter: its rules, the questions in progress, then the result. */
+export function QuizRunner() {
+	const {
+		courseId,
+		quiz,
+		finalExam,
+		active,
+		attempt,
+		answers,
+		result,
+		error,
+		pending,
+		submitted,
+		best,
+		passed,
+		start,
+		submit,
+		choose,
+		sectionRef,
+	} = useQuiz();
 
 	return (
-		<section className="flex flex-col gap-3 rounded-md border p-3">
+		<section
+			ref={sectionRef}
+			// Clears the site header and the sticky chapter bar.
+			className="flex scroll-mt-[calc(var(--header-height)+5rem)] flex-col gap-3 rounded-md border p-3"
+		>
 			<header className="flex flex-wrap items-center gap-2">
 				<h3 className="flex items-center gap-1.5 font-semibold text-lg">
 					<Icon name="quiz" /> {finalExam ? "Examen final" : "Quiz"}
@@ -339,29 +483,12 @@ export function QuizRunner({
 				</div>
 			)}
 
-			{!attempt && (
-				<div className="flex flex-col gap-2">
-					{submitted.length > 0 && (
-						<p className="text-muted-foreground text-sm">
-							{finalExam
-								? `Examen passé : ${best ?? 0} %.`
-								: `${submitted.length} tentative${submitted.length > 1 ? "s" : ""}, meilleur score ${best ?? 0} %${passed ? " (réussi)" : ""}.`}
-						</p>
-					)}
-					{active &&
-						(hasOpenAttempt
-							? startButton(
-									finalExam ? "Reprendre l'examen" : "Reprendre le quiz",
-								)
-							: finalExam
-								? submitted.length === 0 &&
-									startButton("Passer l'examen final", true)
-								: startButton(
-										submitted.length > 0
-											? "Nouvelle tentative"
-											: "Commencer le quiz",
-									))}
-				</div>
+			{!attempt && submitted.length > 0 && (
+				<p className="text-muted-foreground text-sm">
+					{finalExam
+						? `Examen passé : ${best ?? 0} %.`
+						: `${submitted.length} tentative${submitted.length > 1 ? "s" : ""}, meilleur score ${best ?? 0} %${passed ? " (réussi)" : ""}.`}
+				</p>
 			)}
 		</section>
 	);

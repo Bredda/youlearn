@@ -1,5 +1,6 @@
 import type { MyEnrollment } from "@youlearn/types";
 import Link from "next/link";
+import { CoverPlaceholder } from "@/components/catalog/cover-placeholder";
 import { Icon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -56,12 +57,17 @@ function Session({ enrollment }: { enrollment: MyEnrollment }) {
 				);
 	return (
 		<Card>
-			{enrollment.imageAssetId && (
+			{enrollment.imageAssetId ? (
 				// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
 				<img
 					src={assetUrl(enrollment.courseId, enrollment.imageAssetId)}
 					alt=""
 					className="aspect-video w-full object-cover"
+				/>
+			) : (
+				<CoverPlaceholder
+					courseId={enrollment.courseId}
+					name={enrollment.courseName}
 				/>
 			)}
 			<CardHeader>
