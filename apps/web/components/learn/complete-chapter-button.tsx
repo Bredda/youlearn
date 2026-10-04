@@ -1,13 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { FormError } from "@/components/form-error";
+import { useTransition } from "react";
 import { PendingIcon } from "@/components/icon";
+import { useReadingReached } from "@/components/learn/reading-gate";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 import { callApi } from "@/lib/api-client";
 
-/** Marks the chapter as finished, then moves on to the next one (or refreshes when it was the last). */
+/**
+ * Marks the chapter as finished, then moves on to the next one (or refreshes when it was the last). Disabled until
+ * the content has been read; the error is a toast since the button lives in the compact chapter bar.
+ */
 export function CompleteChapterButton({
 	enrollmentId,
 	chapterId,
@@ -18,29 +22,34 @@ export function CompleteChapterButton({
 	nextHref?: string;
 }) {
 	const router = useRouter();
-	const [error, setError] = useState<string | null>(null);
+	const reached = useReadingReached();
 	const [pending, startTransition] = useTransition();
 
 	function complete() {
-		setError(null);
 		startTransition(async () => {
 			const message = await callApi(
 				"POST",
 				`/api/enrollments/${enrollmentId}/chapters/${chapterId}/complete`,
 			);
-			if (message) return setError(message);
+			if (message) {
+				toast.add({ type: "error", title: message });
+				return;
+			}
 			if (nextHref) router.push(nextHref);
 			router.refresh();
 		});
 	}
 
 	return (
-		<div className="flex flex-col gap-2">
-			{error && <FormError>{error}</FormError>}
-			<Button onClick={complete} disabled={pending} className="self-start">
-				<PendingIcon pending={pending} name="done" />
-				Terminer le chapitre
-			</Button>
-		</div>
+		<Button
+			onClick={complete}
+			disabled={pending || !reached}
+			title={
+				reached ? undefined : "Lisez le chapitre jusqu'en bas pour le terminer"
+			}
+		>
+			<PendingIcon pending={pending} name="done" />
+			Terminer le chapitre
+		</Button>
 	);
 }
