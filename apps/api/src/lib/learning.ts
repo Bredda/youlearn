@@ -11,14 +11,16 @@ import {
 	type QuizAnswers,
 	toLearnerContent,
 } from "@youlearn/content";
-import { and, asc, db, desc, eq, isNull, schema } from "@youlearn/db";
+import { and, asc, db, desc, eq, inArray, isNull, schema } from "@youlearn/db";
 import type {
 	AttemptResult,
 	AttemptSummary,
+	EnrollmentStatus,
 	EnrollmentView,
 	LearnerAttempt,
 	LearnerCourse,
 	LearnerEnrollment,
+	LearnerRevision,
 } from "@youlearn/types";
 import { visibleTo } from "./catalog";
 import { type CourseActor, canViewCourse, findCourse } from "./courses";
@@ -100,10 +102,53 @@ export async function findLearnerCourse(
 ): Promise<LearnerCourse | undefined> {
 	const published = await findPublished(actor, courseId);
 	if (!published) return undefined;
-	const latest = await findLatestEnrollment(actor.id, courseId);
+	const [latest, revisions, followed] = await Promise.all([
+		findLatestEnrollment(actor.id, courseId),
+		// Only what was published: a draft or a revision in review is somebody's unfinished work. Deprecating bumps
+		// `updatedAt` and only one revision is published at a time, so this is the publication order.
+		db
+			.select({
+				id: courseRevision.id,
+				key: courseRevision.key,
+				status: courseRevision.status,
+				purpose: courseRevision.purpose,
+			})
+			.from(courseRevision)
+			.where(
+				and(
+					eq(courseRevision.courseId, courseId),
+					inArray(courseRevision.status, ["published", "deprecated"]),
+				),
+			)
+			.orderBy(desc(courseRevision.updatedAt)),
+		db
+			.select({
+				revisionId: enrollment.revisionId,
+				status: enrollment.status,
+			})
+			.from(enrollment)
+			.where(
+				and(eq(enrollment.userId, actor.id), eq(enrollment.courseId, courseId)),
+			)
+			.orderBy(desc(enrollment.startedAt)),
+	]);
+	// The latest enrollment of the learner on each revision (the list is newest first).
+	const enrollmentOf = new Map<string, EnrollmentStatus>();
+	for (const entry of followed)
+		if (!enrollmentOf.has(entry.revisionId))
+			enrollmentOf.set(entry.revisionId, entry.status);
 	const { content, revisionId, revisionKey, publishedAt, ...rest } = published;
 	return {
 		...rest,
+		revisionKey,
+		revisions: revisions.map(
+			(revision): LearnerRevision => ({
+				key: revision.key,
+				status: revision.status === "published" ? "published" : "deprecated",
+				purpose: revision.purpose,
+				enrollmentStatus: enrollmentOf.get(revision.id) ?? null,
+			}),
+		),
 		publishedAt: publishedAt.toISOString(),
 		chapters: content.chapters.map((chapter) => ({
 			id: chapter.id,

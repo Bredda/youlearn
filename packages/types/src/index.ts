@@ -303,12 +303,26 @@ export type LearnerEnrollment = {
 	outdated: boolean;
 };
 
+/** A revision that was published, as the course sheet lists it to learners (never a draft or one in review). */
+export type LearnerRevision = {
+	key: string;
+	status: "published" | "deprecated";
+	/** Why the revision exists, as its writer wrote it. */
+	purpose: string;
+	/** The learner's latest enrollment on this revision, null when they never followed it. */
+	enrollmentStatus: EnrollmentStatus | null;
+};
+
 /** A published course as a learner opens it from the catalog. */
 export type LearnerCourse = Pick<
 	Course,
 	"id" | "name" | "description" | "categories" | "imageAssetId"
 > & {
 	publishedAt: string;
+	/** Key of the revision published now. */
+	revisionKey: string;
+	/** The revisions that were published, most recent first. */
+	revisions: LearnerRevision[];
 	durationMinutes: number;
 	certifying: boolean;
 	chapters: {

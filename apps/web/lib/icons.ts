@@ -32,6 +32,8 @@ import {
 	GitCompareIcon,
 	Heading01Icon,
 	HelpCircleIcon,
+	HistoryIcon,
+	HourglassIcon,
 	Image01Icon,
 	LeftToRightListBulletIcon,
 	Link01Icon,
@@ -124,6 +126,10 @@ export const icons = {
 	locked: LockIcon,
 	/** A chapter or a course the learner finished. */
 	done: CheckmarkCircle02Icon,
+	/** The revisions a course went through. */
+	history: HistoryIcon,
+	/** A course the learner has started and not finished. */
+	inProgress: HourglassIcon,
 	/** The learners following a course (writer area). */
 	learners: UsersIcon,
 

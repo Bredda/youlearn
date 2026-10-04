@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { EnrollButton } from "@/components/learn/enroll-button";
 import { EnrollmentSummary } from "@/components/learn/enrollment-summary";
+import { RevisionHistory } from "@/components/learn/revision-history";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,10 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 						{category}
 					</Badge>
 				))}
+				<RevisionHistory
+					currentKey={course.revisionKey}
+					revisions={course.revisions}
+				/>
 			</div>
 
 			<div className="grid gap-6 md:grid-cols-[1fr_20rem]">
