@@ -1,6 +1,6 @@
 # Backlog
 
-Sujets et idées **non planifiés** : ils ne font pas partie de la [feuille de route](roadmap.md) et ne sont pas dans le plan en cours ([todo.md](todo.md)). On n'y pioche pas sans demande. Quand un sujet devient une grosse fonctionnalité, il passe dans `roadmap.md` ; quand il est pris en charge, dans le plan de `todo.md`. Une entrée terminée ou abandonnée est supprimée.
+Sujets et idées **non planifiés** : ils ne font pas partie de la [feuille de route](roadmap.md) et ne sont pas dans le plan en cours ([todo.md](todo.md)). On n'y pioche pas sans demande. Quand un sujet devient une grosse fonctionnalité, il passe dans `roadmap.md` ; quand il est pris en charge, dans le plan de `todo.md`. Une entrée terminée ou abandonnée est supprimée. Une idée neuve est d'abord déposée dans « À trier », puis rangée dans la bonne section.
 
 ## Qualité et outillage
 
@@ -15,7 +15,8 @@ Sujets et idées **non planifiés** : ils ne font pas partie de la [feuille de r
 ## Rédaction des cours
 
 - Proposer une durée estimée par chapitre : temps de lecture calculé sur le Markdown, durée des vidéos YouTube et Vimeo quand elle est connue.
-- Commentaires du relecteur sur le lien de relecture, qui est aujourd'hui en lecture seule.
+- Refonte de la relecture : associer des utilisateurs à une relecture depuis l'interface, gérer celle-ci avec des commentaires du relecteur (le lien de relecture est aujourd'hui en lecture seule), et peut-être permettre de modifier le contenu pendant la relecture. Ce dernier point remet en cause la règle actuelle (seul un brouillon est modifiable ; une révision en relecture repasse en brouillon pour être retravaillée) : à arbitrer avant de commencer.
+- Synchroniser les lignes, et donc le défilement, entre le Markdown brut et son rendu quand on édite un bloc texte d'une révision (à explorer : faisabilité avec CodeMirror et le rendu actuel).
 - Banque de questions partagée entre chapitres ou entre cours, au lieu d'un pool par quiz.
 - Importer ou exporter un cours (par exemple en Markdown ou en archive), pour le sauvegarder ou le transférer.
 
@@ -23,6 +24,7 @@ Sujets et idées **non planifiés** : ils ne font pas partie de la [feuille de r
 
 - Trier le catalogue par durée et filtrer sur « Certifiant ».
 - Nombre maximal de tentatives et délai entre deux tentatives pour un quiz ou un examen final.
+- Date de validité optionnelle sur un cours (certifiant ou non) : passé ce délai, l'apprenant doit repasser le cours sur la révision alors publiée. À cadrer avec le parcours apprenant (progression rattachée à une révision) et avec la validité d'un certificat.
 - Notifications aux apprenants : nouvelle révision d'un cours suivi, certificat obtenu.
 
 ## Certification
@@ -30,3 +32,21 @@ Sujets et idées **non planifiés** : ils ne font pas partie de la [feuille de r
 - Gabarit de certificat personnalisable par cours (logo, signature, texte), au-delà du gabarit générique.
 - Stocker le PDF du certificat dans S3 au moment de la délivrance, comme preuve figée.
 - Open Badges 3.0 ou Verifiable Credentials, pour un certificat portable (LinkedIn et autres).
+
+## Interface et ergonomie
+
+- Passe sur les retours à l'utilisateur : ajouter des toasts là où une action n'en donne pas encore.
+- Cohérence des boutons de la page d'une révision selon son statut : pouvoir la promouvoir (relecture, publication...) directement depuis cette page, au lieu de revenir à la liste des révisions.
+
+## IA générative
+
+- Proposer un quiz généré à partir du contenu d'un chapitre, avec un prompt que l'utilisateur peut surcharger.
+- Relecture assistée par IA d'une révision (propositions de corrections ou de remarques, à valider par le relecteur).
+
+## Stabilisation avant la 1.0
+
+Une phase à part avant de passer en 1.0 : revue complète d'optimisation, estimation de la dette technique, passe accessibilité, passe sécurité, extension de la couverture de tests. Elle produit une liste de correctifs priorisés, et la feuille de route est ajustée en conséquence (ce sujet passera alors dans `roadmap.md`).
+
+## À trier
+
+Rien pour le moment.
