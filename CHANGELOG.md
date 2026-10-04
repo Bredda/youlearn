@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/Bredda/youlearn/compare/v0.0.2...v0.1.0) (2026-10-04)
+
+
+### Features
+
+* learner journey ([#9](https://github.com/Bredda/youlearn/issues/9)) ([3444142](https://github.com/Bredda/youlearn/commit/3444142eefb3aa41779fd5830ae6479ad7507d57))
+
 ## [0.0.2](https://github.com/Bredda/youlearn/compare/v0.0.1...v0.0.2) (2026-10-04)
 
 
