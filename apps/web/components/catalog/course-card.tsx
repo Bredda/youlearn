@@ -11,6 +11,11 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { assetUrl } from "@/lib/asset-url";
+import {
+	ENROLLMENT_STATUS_ICONS,
+	ENROLLMENT_STATUS_LABELS,
+	ENROLLMENT_STATUS_VARIANTS,
+} from "@/lib/enrollments";
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" });
 
@@ -45,7 +50,9 @@ export function CourseCard({ course }: { course: CatalogCourse }) {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="flex flex-1 flex-col gap-3">
-					{(course.durationMinutes > 0 || course.certifying) && (
+					{(course.durationMinutes > 0 ||
+						course.certifying ||
+						course.enrollmentStatus) && (
 						<div className="flex flex-wrap items-center gap-2 text-sm">
 							{course.durationMinutes > 0 && (
 								<span className="flex items-center gap-1 text-muted-foreground">
@@ -56,6 +63,16 @@ export function CourseCard({ course }: { course: CatalogCourse }) {
 							{course.certifying && (
 								<Badge variant="secondary">
 									<Icon name="certifying" /> Certifiant
+								</Badge>
+							)}
+							{course.enrollmentStatus && (
+								<Badge
+									variant={ENROLLMENT_STATUS_VARIANTS[course.enrollmentStatus]}
+								>
+									<Icon
+										name={ENROLLMENT_STATUS_ICONS[course.enrollmentStatus]}
+									/>
+									{ENROLLMENT_STATUS_LABELS[course.enrollmentStatus]}
 								</Badge>
 							)}
 						</div>

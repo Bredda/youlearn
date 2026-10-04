@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useStore } from "@tanstack/react-form";
-import type { CatalogQuery, PublicGroup } from "@youlearn/types";
+import type { CatalogQuery, CatalogStatus, PublicGroup } from "@youlearn/types";
 import { FilterSelect } from "@/components/data-table/filter-select";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,20 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { CATALOG_DEFAULT_PAGE_SIZE } from "@/lib/catalog-query";
+import { ENROLLMENT_STATUS_LABELS } from "@/lib/enrollments";
 
 const SORTS = [
 	{ value: "publishedAt:desc", label: "Les plus récents" },
 	{ value: "publishedAt:asc", label: "Les plus anciens" },
 	{ value: "name:asc", label: "Nom (A → Z)" },
 	{ value: "name:desc", label: "Nom (Z → A)" },
+];
+
+const STATUSES: { value: CatalogStatus; label: string }[] = [
+	{ value: "none", label: "Pas commencés" },
+	{ value: "in_progress", label: ENROLLMENT_STATUS_LABELS.in_progress },
+	{ value: "completed", label: ENROLLMENT_STATUS_LABELS.completed },
+	{ value: "failed", label: ENROLLMENT_STATUS_LABELS.failed },
 ];
 
 // Remounted by the parent (`key`) when the search term changes from the outside, so the form follows the URL.
@@ -49,6 +57,7 @@ export function CatalogToolbar({
 			query.q ||
 			query.category ||
 			query.groupId ||
+			query.status ||
 			query.sort !== "publishedAt" ||
 			query.order !== "desc" ||
 			query.pageSize !== CATALOG_DEFAULT_PAGE_SIZE,
@@ -96,6 +105,13 @@ export function CatalogToolbar({
 					label: category,
 				}))}
 				onChange={(category) => onChange({ category })}
+			/>
+			<FilterSelect
+				label="Tous les statuts"
+				className="w-48"
+				value={query.status}
+				options={STATUSES}
+				onChange={(status) => onChange({ status: status as CatalogStatus })}
 			/>
 			{groups.length > 0 && (
 				<FilterSelect

@@ -8,6 +8,7 @@ const listQuery = z.object({
 	q: z.string().trim().max(100).optional(),
 	category: z.string().trim().min(1).max(40).optional(),
 	groupId: z.string().min(1).optional(),
+	status: z.enum(["in_progress", "completed", "failed", "none"]).optional(),
 	sort: z.enum(["name", "publishedAt"]).default("publishedAt"),
 	order: z.enum(["asc", "desc"]).default("desc"),
 	page: z.coerce.number().int().min(1).default(1),

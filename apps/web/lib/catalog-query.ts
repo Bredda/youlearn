@@ -16,6 +16,10 @@ const schema = z.object({
 	q: optionalText,
 	category: optionalText,
 	groupId: optionalText,
+	status: z
+		.enum(["in_progress", "completed", "failed", "none"])
+		.optional()
+		.catch(undefined),
 	sort: z.enum(["name", "publishedAt"]).catch("publishedAt"),
 	order: z.enum(["asc", "desc"]).catch("desc"),
 	page: z.coerce.number().int().min(1).catch(1),
@@ -47,6 +51,7 @@ export function catalogQueryToSearchParams(
 	if (query.q) params.set("q", query.q);
 	if (query.category) params.set("category", query.category);
 	if (query.groupId) params.set("groupId", query.groupId);
+	if (query.status) params.set("status", query.status);
 	if (query.sort !== "publishedAt") params.set("sort", query.sort);
 	if (query.order !== "desc") params.set("order", query.order);
 	if (query.page > 1) params.set("page", String(query.page));

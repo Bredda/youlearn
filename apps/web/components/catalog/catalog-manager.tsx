@@ -67,6 +67,7 @@ export function CatalogManager({
 						q: undefined,
 						category: undefined,
 						groupId: undefined,
+						status: undefined,
 						sort: "publishedAt",
 						order: "desc",
 						pageSize: CATALOG_DEFAULT_PAGE_SIZE,

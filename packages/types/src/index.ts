@@ -230,7 +230,12 @@ export type CatalogCourse = Pick<
 	durationMinutes: number;
 	/** The published revision ends with a final exam. */
 	certifying: boolean;
+	/** The learner's most recent enrollment on the course, whatever its revision. Null when they never started it. */
+	enrollmentStatus: EnrollmentStatus | null;
 };
+
+/** What the catalog can be filtered on: the status of the learner's latest enrollment, or `none` (never started). */
+export type CatalogStatus = EnrollmentStatus | "none";
 
 export type CatalogSort = "name" | "publishedAt";
 
@@ -241,6 +246,7 @@ export type CatalogQuery = {
 	category?: string;
 	/** One of the user's own groups (an admin: any group). */
 	groupId?: string;
+	status?: CatalogStatus;
 	sort: CatalogSort;
 	order: "asc" | "desc";
 	page: number;
