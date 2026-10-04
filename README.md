@@ -96,8 +96,8 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 1. Merge pull requests into `main` (squash, Conventional Commit title). The first release is `0.0.1` (`initial-version`;
    without it release-please starts at 1.0.0). After that, and while the version is below 1.0, `feat` bumps the minor,
-   `fix` the patch, and a breaking change also the minor. `chore`, `ci`, `build`, `style` and `test` do not appear
-   in the changelog.
+   `fix` the patch, and a breaking change also the minor. `chore`, `docs`, `ci`, `build`, `style` and `test` do
+   not appear in the changelog, and a push made only of them does not open a release pull request.
 2. release-please keeps a pull request titled `chore(main): release x.y.z` up to date: the version in `package.json` and
    `CHANGELOG.md`. Never edit either by hand.
 3. Merging that pull request creates the tag `vx.y.z`, the GitHub release and publishes the images
