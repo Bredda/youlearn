@@ -1,6 +1,7 @@
 import { formatDuration } from "@youlearn/content";
 import type { CatalogCourse } from "@youlearn/types";
 import Link from "next/link";
+import { CoverPlaceholder } from "@/components/catalog/cover-placeholder";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,11 +36,7 @@ export function CourseCard({ course }: { course: CatalogCourse }) {
 						className="aspect-video w-full object-cover"
 					/>
 				) : (
-					<div
-						aria-hidden="true"
-						className="aspect-video w-full bg-muted"
-						data-slot="cover-placeholder"
-					/>
+					<CoverPlaceholder courseId={course.id} name={course.name} />
 				)}
 				<CardHeader>
 					<CardTitle className="line-clamp-2 text-base" title={course.name}>
