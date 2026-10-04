@@ -33,6 +33,8 @@ Derive from the schema (`typeof schema.x.$inferSelect`) and keep the package fre
 
 Every notable action is recorded in the `event` table with `recordEvent` (`@youlearn/events/server`): actor, `feature.action` type, target, metadata. Types are declared in `packages/events/src/index.ts` (`EVENTS`); adding one also requires its labels in `apps/web/lib/events.ts` (compile-checked, including `describeEvent` when the metadata is worth showing). User mutations are captured in one place, the Better Auth hooks in `packages/auth/src/user-events.ts`; other features call `recordEvent` after their change is committed. It never throws, and never put secrets in `metadata`. Do not log high-frequency actions (content saves): contributors record who worked. System actions have no actor (`asset.deprecate`).
 
+Learner journey routes (`routes/learning.ts`) are `requireAuth` and scoped to the caller (`getCourseActor`); an enrollment that is not the caller's answers 404. Anything a learner receives goes through `LearnerContent` / `LearnerAttempt` (no `correct`): see the `youlearn-courses` skill ("Learner journey") before adding a route that returns course content.
+
 ## Auth
 
 The browser only talks to the web origin; Next rewrites `/api/*` to the API (first-party cookies, no CORS). Sign-up is disabled; users are created by admins or the startup seed. A user holds several roles (`user`, `writer`, `admin`) stored comma separated in `user.role`: use `Role[]` through `@youlearn/auth/roles` (`parseRoles`, `isAdmin`, `canWrite`), never compare `user.role` as a string. Business rules on user creation / email change live in the Better Auth `databaseHooks` so every path is covered.

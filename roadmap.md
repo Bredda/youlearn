@@ -27,7 +27,7 @@ Le socle côté formateur est là ; ce qui manque pour boucler ce parcours, c'es
 | --- | --- | --- | --- |
 | 1 | Socle du projet | Fait | Suivi du travail, images Docker et stack complète, CI et releases (premières exécutions à constater sur GitHub) |
 | 2 | Rédaction des cours | Fait | Révisions, éditeur, relecture, durées estimées et examen final disponibles côté formateur |
-| 3 | Parcours apprenant | Ensuite | Catalogue seul : les cartes ne mènent encore nulle part |
+| 3 | Parcours apprenant | Fait | Fiche du cours, inscription figée sur une révision, lecteur, verrouillage, quiz (tirage et correction côté serveur), examen final en une tentative, « Mes sessions » et suivi formateur |
 | 4 | Certification | Plus tard | Dépend de l'axe 3 ; conception arrêtée, rien d'écrit |
 | 5 | Programmes | Plus tard | Pas commencé |
 | 6 | Médias et fichiers lourds | Plus tard | Images seulement ; vidéos YouTube et Vimeo en lien |
@@ -52,9 +52,9 @@ Disponible : cours et groupes, révisions (brouillon, relecture, publié, dépr�
 
 **But :** qu'un apprenant puisse réellement suivre un cours publié.
 
-Lecture d'une révision publiée depuis la carte du catalogue ; exécution des quiz (tirage de n questions sur m côté serveur, tentatives, correction, chapitre suivant verrouillé par un quiz bloquant) ; inscription à un cours et progression, rattachée à la révision suivie. C'est le prérequis de la certification.
+Disponible : fiche du cours depuis la carte du catalogue, inscription explicite qui fige la révision publiée, lecteur chapitre par chapitre, chapitre suivant verrouillé par un quiz bloquant, quiz (tirage de n questions sur m et correction côté serveur, tentatives illimitées avec corrigé), examen final en une seule tentative sans corrigé (l'échec marque l'inscription `failed`, tracée pour formateurs et administrateurs, et l'apprenant recommence depuis le début), page « Mes sessions » et liste des apprenants d'un cours. C'est le prérequis de la certification.
 
-**Terminé quand :** un apprenant ouvre un cours depuis le catalogue, le lit jusqu'au bout, réussit ses quiz et retrouve sa progression à son retour.
+**Terminé quand :** un apprenant ouvre un cours depuis le catalogue, le lit jusqu'au bout, réussit ses quiz et retrouve sa progression à son retour. Les parcours côté API et pages sont vérifiés ; le jeu interactif du quiz dans le navigateur n'a pas été exercé à la main.
 
 ## 4. Certification
 

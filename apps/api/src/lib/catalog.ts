@@ -13,23 +13,31 @@ import {
 	schema,
 	sql,
 } from "@youlearn/db";
-import type { CatalogPage, CatalogQuery } from "@youlearn/types";
+import type {
+	CatalogPage,
+	CatalogQuery,
+	EnrollmentStatus,
+} from "@youlearn/types";
 import type { CourseActor } from "./courses";
 import { escapeLike } from "./sql";
 
-const { course, courseGroup, courseRevision, group } = schema;
+const { course, courseGroup, courseRevision, enrollment, group } = schema;
 
 const sortColumns = {
 	name: sql`lower(${course.name})`,
 	publishedAt: courseRevision.updatedAt,
 };
 
+/** The status of the user's most recent enrollment on the course, whatever its revision (null: never started). */
+const latestStatus = (actor: CourseActor) =>
+	sql<EnrollmentStatus | null>`(select ${enrollment.status} from ${enrollment} where ${enrollment.userId} = ${actor.id} and ${enrollment.courseId} = ${course.id} order by ${enrollment.startedAt} desc limit 1)`;
+
 /**
  * What a learner sees: living courses with a published revision that are tagged "Commun" or with one of the
  * user's own groups. An admin sees every one of them, whatever its groups. Writers get the learner rule: their
  * view of unpublished work is the writer area.
  */
-function visibleTo(actor: CourseActor) {
+export function visibleTo(actor: CourseActor) {
 	return and(
 		isNull(course.deletedAt),
 		eq(courseRevision.status, "published"),
@@ -60,13 +68,14 @@ export async function listCatalog(
 	actor: CourseActor,
 	query: CatalogQuery,
 ): Promise<CatalogPage> {
-	const { q, category, groupId, sort, order, page, pageSize } = query;
+	const { q, category, groupId, status, sort, order, page, pageSize } = query;
 	const search = q ? `%${escapeLike(q)}%` : undefined;
 	const published = and(
 		eq(courseRevision.courseId, course.id),
 		eq(courseRevision.status, "published"),
 	);
 	const visible = visibleTo(actor);
+	const learnerStatus = latestStatus(actor);
 
 	const where = and(
 		visible,
@@ -89,6 +98,11 @@ export async function listCatalog(
 					)
 				: sql`false`
 			: undefined,
+		status === "none"
+			? sql`${learnerStatus} is null`
+			: status
+				? sql`${learnerStatus} = ${status}`
+				: undefined,
 	);
 	const direction = order === "asc" ? asc : desc;
 
@@ -108,6 +122,7 @@ export async function listCatalog(
 			publishedAt: courseRevision.updatedAt,
 			durationMinutes: courseRevision.durationMinutes,
 			certifying: courseRevision.certifying,
+			enrollmentStatus: learnerStatus,
 		})
 		.from(course)
 		.innerJoin(courseRevision, published)

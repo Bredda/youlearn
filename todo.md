@@ -17,6 +17,6 @@ Un plan contient : un but, un « où on en est », des **Décisions** (chacune a
 
 ## Plan en cours
 
-Aucun. Le socle du projet (suivi du travail, conteneurisation, CI et releases) est écrit et vérifié en local ; ce qui ne se prouve que sur GitHub est listé dans la pull request qui l'a porté : première exécution des jobs `docker` et `pr-title`, première pull request de release (`chore(main): release 0.1.0`) puis sa fusion, première publication des images sur GHCR (et leur visibilité). Prochains candidats : le parcours apprenant (roadmap, axe 3), en commençant par la lecture d'un cours publié depuis la carte du catalogue.
+Aucun. L'axe 3 (parcours apprenant) est terminé : voir `roadmap.md`.
 
 Un plan dans ce fichier contient : un but, un « où on en est », des **Décisions** (chacune avec une recommandation, confirmée par l'utilisateur avant les tâches qui en dépendent), des tâches regroupées en phases (un commit par phase), chacune avec les fichiers touchés et une ligne **Vérif.**, et un bloc « Terminé quand ».

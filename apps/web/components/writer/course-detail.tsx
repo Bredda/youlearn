@@ -144,6 +144,14 @@ export function CourseDetail({
 					title={course.name}
 					description={course.description || undefined}
 				>
+					<Button
+						variant="outline"
+						nativeButton={false}
+						render={<Link href={`/writer/courses/${course.id}/learners`} />}
+					>
+						<Icon name="learners" />
+						Apprenants
+					</Button>
 					<Button variant="outline" onClick={() => setEditing(true)}>
 						<Icon name="edit" />
 						Modifier

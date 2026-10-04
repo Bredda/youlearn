@@ -1,5 +1,12 @@
 import type { Role } from "@youlearn/auth/roles";
-import type { CourseContent } from "@youlearn/content";
+import type {
+	ChapterKind,
+	ChapterState,
+	CourseContent,
+	LearnerContent,
+	LearnerQuestion,
+	QuestionCorrection,
+} from "@youlearn/content";
 import type { schema } from "@youlearn/db";
 import type { EventFilter } from "@youlearn/events";
 
@@ -126,6 +133,7 @@ export type {
 	Block,
 	Chapter,
 	ChapterKind,
+	ChapterState,
 	CourseContent,
 	MarkdownBlock,
 	Question,
@@ -222,7 +230,12 @@ export type CatalogCourse = Pick<
 	durationMinutes: number;
 	/** The published revision ends with a final exam. */
 	certifying: boolean;
+	/** The learner's most recent enrollment on the course, whatever its revision. Null when they never started it. */
+	enrollmentStatus: EnrollmentStatus | null;
 };
+
+/** What the catalog can be filtered on: the status of the learner's latest enrollment, or `none` (never started). */
+export type CatalogStatus = EnrollmentStatus | "none";
 
 export type CatalogSort = "name" | "publishedAt";
 
@@ -233,6 +246,7 @@ export type CatalogQuery = {
 	category?: string;
 	/** One of the user's own groups (an admin: any group). */
 	groupId?: string;
+	status?: CatalogStatus;
 	sort: CatalogSort;
 	order: "asc" | "desc";
 	page: number;
@@ -276,4 +290,167 @@ export type ReviewBase = {
 	key: string;
 	status: RevisionStatus;
 	content: CourseContent;
+};
+
+export type EnrollmentStatus =
+	(typeof schema.enrollmentStatus.enumValues)[number];
+
+/** A learner's enrollment on a course (dates serialized by JSON). */
+export type LearnerEnrollment = {
+	id: string;
+	status: EnrollmentStatus;
+	/** Key of the revision the learner follows (pinned when they started). */
+	revisionKey: string;
+	startedAt: string;
+	finishedAt: string | null;
+	/** Score of the final exam, null while it was not taken. */
+	finalExamScore: number | null;
+	/** A more recent revision has been published since the learner started. */
+	outdated: boolean;
+};
+
+/** A revision that was published, as the course sheet lists it to learners (never a draft or one in review). */
+export type LearnerRevision = {
+	key: string;
+	status: "published" | "deprecated";
+	/** Why the revision exists, as its writer wrote it. */
+	purpose: string;
+	/** The learner's latest enrollment on this revision, null when they never followed it. */
+	enrollmentStatus: EnrollmentStatus | null;
+};
+
+/** A published course as a learner opens it from the catalog. */
+export type LearnerCourse = Pick<
+	Course,
+	"id" | "name" | "description" | "categories" | "imageAssetId"
+> & {
+	publishedAt: string;
+	/** Key of the revision published now. */
+	revisionKey: string;
+	/** The revisions that were published, most recent first. */
+	revisions: LearnerRevision[];
+	durationMinutes: number;
+	certifying: boolean;
+	chapters: {
+		id: string;
+		title: string;
+		kind: ChapterKind;
+		estimatedMinutes: number | null;
+	}[];
+	/** The learner's latest enrollment, a failed one included (they may start over). */
+	enrollment: LearnerEnrollment | null;
+};
+
+/** What the course player shows: the pinned revision, without any quiz question nor answer. */
+export type EnrollmentView = {
+	enrollment: LearnerEnrollment;
+	course: Pick<
+		Course,
+		"id" | "name" | "description" | "categories" | "imageAssetId"
+	>;
+	revision: Pick<
+		CourseRevision,
+		"id" | "key" | "durationMinutes" | "certifying"
+	>;
+	content: LearnerContent;
+	/** Where the learner stands in each chapter, by chapter id. A locked chapter comes without its blocks. */
+	chapterStates: Record<string, ChapterState>;
+	/** Ids of the chapters whose quiz the learner passed at least once. */
+	passedQuizzes: string[];
+	/** Every attempt at a quiz of this enrollment, oldest first (an open one has no score). */
+	attempts: AttemptSummary[];
+};
+
+export type AttemptSummary = {
+	id: string;
+	chapterId: string;
+	finalExam: boolean;
+	score: number | null;
+	passed: boolean | null;
+	startedAt: string;
+	submittedAt: string | null;
+};
+
+/** An attempt in progress: the questions drawn for it, without any answer. */
+export type LearnerAttempt = {
+	id: string;
+	chapterId: string;
+	finalExam: boolean;
+	questions: LearnerQuestion[];
+};
+
+/** The outcome of a submitted attempt. */
+export type AttemptResult = {
+	score: number;
+	passed: boolean;
+	passRate: number;
+	/** Right answers and explanations, for the quizzes of a chapter. Never for the final exam. */
+	corrections: QuestionCorrection[] | null;
+	/** The enrollment after this attempt: a final exam passed or failed ends it. */
+	enrollmentStatus: EnrollmentStatus;
+};
+
+/** An enrollment of the current learner, as listed in "Mes sessions" (dates serialized by JSON). */
+export type MyEnrollment = {
+	id: string;
+	status: EnrollmentStatus;
+	courseId: string;
+	courseName: string;
+	imageAssetId: string | null;
+	revisionKey: string;
+	certifying: boolean;
+	startedAt: string;
+	finishedAt: string | null;
+	/** A more recent revision has been published since. */
+	outdated: boolean;
+	completedChapters: number;
+	totalChapters: number;
+};
+
+export type CourseEnrollmentSort = "startedAt" | "learner" | "status";
+
+/** Query of the learners of a course (writer area), shared by the API and the web app. */
+export type CourseEnrollmentQuery = {
+	/** Searches the learner's name and email. */
+	q?: string;
+	status?: EnrollmentStatus;
+	sort: CourseEnrollmentSort;
+	order: "asc" | "desc";
+	page: number;
+	pageSize: number;
+};
+
+/** A learner's enrollment on a course, for the people who write it (traceability). */
+export type CourseEnrollment = {
+	id: string;
+	learner: { id: string; name: string; email: string };
+	status: EnrollmentStatus;
+	/** The revision the learner follows. */
+	revisionKey: string;
+	startedAt: string;
+	finishedAt: string | null;
+	completedChapters: number;
+	totalChapters: number;
+	/** Number of submitted quiz attempts, the final exam included. */
+	attemptCount: number;
+	/** Score of the final exam, null while it was not taken. */
+	finalExamScore: number | null;
+};
+
+export type CourseEnrollmentPage = {
+	enrollments: CourseEnrollment[];
+	total: number;
+	page: number;
+	pageSize: number;
+};
+
+export type CourseEnrollmentDetail = CourseEnrollment & {
+	chapters: {
+		id: string;
+		title: string;
+		kind: ChapterKind;
+		completed: boolean;
+	}[];
+	/** Every attempt, oldest first. */
+	attempts: (AttemptSummary & { chapterTitle: string })[];
 };

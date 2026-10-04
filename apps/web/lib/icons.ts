@@ -14,6 +14,7 @@ import {
 	Award01Icon,
 	BookOpen01Icon,
 	Cancel01Icon,
+	CheckmarkCircle02Icon,
 	Clock01Icon,
 	CodeIcon,
 	Copy01Icon,
@@ -31,6 +32,8 @@ import {
 	GitCompareIcon,
 	Heading01Icon,
 	HelpCircleIcon,
+	HistoryIcon,
+	HourglassIcon,
 	Image01Icon,
 	LeftToRightListBulletIcon,
 	Link01Icon,
@@ -41,8 +44,10 @@ import {
 	Moon02Icon,
 	MoreHorizontalIcon,
 	NotificationIcon,
+	PlayIcon,
 	QuoteDownIcon,
 	Refresh01Icon,
+	RepeatIcon,
 	Rocket01Icon,
 	RotateLeft01Icon,
 	SchoolIcon,
@@ -111,6 +116,22 @@ export const icons = {
 	certifying: Award01Icon,
 	/** Compare two revisions. */
 	compare: GitCompareIcon,
+
+	// Learner journey
+	/** Start or resume a course. */
+	start: PlayIcon,
+	/** Start a course over after a failure. */
+	retry: RepeatIcon,
+	/** A chapter the learner cannot open yet. */
+	locked: LockIcon,
+	/** A chapter or a course the learner finished. */
+	done: CheckmarkCircle02Icon,
+	/** The revisions a course went through. */
+	history: HistoryIcon,
+	/** A course the learner has started and not finished. */
+	inProgress: HourglassIcon,
+	/** The learners following a course (writer area). */
+	learners: UsersIcon,
 
 	// Markdown editor toolbar
 	bold: TextBoldIcon,
