@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.2](https://github.com/Bredda/youlearn/compare/v0.0.1...v0.0.2) (2026-10-04)
+
+
+### Documentation
+
+* triage the backlog ideas into their sections ([#8](https://github.com/Bredda/youlearn/issues/8)) ([894fdd2](https://github.com/Bredda/youlearn/commit/894fdd23bfdb4f993b2c331b4d84005f676a7e38))
+
 ## 0.0.1 (2026-10-03)
 
 
