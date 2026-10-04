@@ -5,11 +5,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { EnrollButton } from "@/components/learn/enroll-button";
+import { EnrollmentSummary } from "@/components/learn/enrollment-summary";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { assetUrl } from "@/lib/asset-url";
+
+const startedFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" });
 
 export const metadata: Metadata = { title: "Cours" };
 
@@ -84,35 +87,57 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 					)}
 					{!enrollment && <EnrollButton courseId={course.id} />}
 					{enrollment?.status === "in_progress" && (
-						<Button
-							nativeButton={false}
-							render={<Link href={`/learn/${enrollment.id}`} />}
-						>
-							<Icon name="start" /> Continuer le cours
-						</Button>
-					)}
-					{enrollment?.status === "completed" && (
 						<>
-							<Badge variant="secondary" className="self-start">
-								Cours terminé
-							</Badge>
 							<Button
-								variant="outline"
 								nativeButton={false}
 								render={<Link href={`/learn/${enrollment.id}`} />}
 							>
-								<Icon name="open" /> Relire le cours
+								<Icon name="start" /> Continuer le cours
 							</Button>
+							<p className="text-muted-foreground text-sm">
+								Commencé le{" "}
+								{startedFormat.format(new Date(enrollment.startedAt))}
+							</p>
 						</>
 					)}
-					{enrollment?.status === "failed" && (
-						<>
-							<p className="text-sm">
-								L'examen final n'a pas été réussi. Vous pouvez recommencer le
-								cours depuis le début.
-							</p>
-							<EnrollButton courseId={course.id} restart />
-						</>
+					{enrollment && enrollment.status !== "in_progress" && (
+						<section
+							className={`flex flex-col gap-3 rounded-md border-2 p-4 ${
+								enrollment.status === "completed"
+									? "border-primary bg-primary/10"
+									: "border-destructive bg-destructive/10"
+							}`}
+						>
+							<h2 className="flex items-center gap-2 font-semibold">
+								<Icon
+									name={enrollment.status === "completed" ? "done" : "alert"}
+									className="size-5"
+								/>
+								{enrollment.status === "completed"
+									? "Cours terminé"
+									: "Examen final non réussi"}
+							</h2>
+							<EnrollmentSummary
+								enrollment={enrollment}
+								certifying={course.certifying}
+							/>
+							{enrollment.status === "completed" ? (
+								<Button
+									variant="outline"
+									nativeButton={false}
+									render={<Link href={`/learn/${enrollment.id}`} />}
+								>
+									<Icon name="open" /> Relire le cours
+								</Button>
+							) : (
+								<>
+									<p className="text-sm">
+										Vous pouvez recommencer le cours depuis le début.
+									</p>
+									<EnrollButton courseId={course.id} restart />
+								</>
+							)}
+						</section>
 					)}
 					{enrollment &&
 						enrollment.status !== "failed" &&

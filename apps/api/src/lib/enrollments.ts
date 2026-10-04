@@ -33,7 +33,7 @@ const {
 const completedChapters = sql<number>`(select count(*)::int from ${chapterProgress} where ${chapterProgress.enrollmentId} = ${enrollment.id})`;
 const totalChapters = sql<number>`coalesce(jsonb_array_length(${courseRevision.content} -> 'chapters'), 0)::int`;
 const submittedAttempts = sql<number>`(select count(*)::int from ${quizAttempt} where ${quizAttempt.enrollmentId} = ${enrollment.id} and ${quizAttempt.submittedAt} is not null)`;
-const finalExamScore = sql<
+export const finalExamScore = sql<
 	number | null
 >`(select ${quizAttempt.score} from ${quizAttempt} where ${quizAttempt.enrollmentId} = ${enrollment.id} and ${quizAttempt.finalExam} limit 1)`;
 const publishedRevisionId = sql<

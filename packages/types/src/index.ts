@@ -297,6 +297,8 @@ export type LearnerEnrollment = {
 	revisionKey: string;
 	startedAt: string;
 	finishedAt: string | null;
+	/** Score of the final exam, null while it was not taken. */
+	finalExamScore: number | null;
 	/** A more recent revision has been published since the learner started. */
 	outdated: boolean;
 };

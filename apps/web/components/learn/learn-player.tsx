@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChapterView } from "@/components/content/chapter-view";
 import { Icon } from "@/components/icon";
 import { CompleteChapterButton } from "@/components/learn/complete-chapter-button";
+import { CompletionDialog } from "@/components/learn/completion-dialog";
 import { QuizRunner } from "@/components/learn/quiz-runner";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,12 @@ export function LearnPlayer({
 				</Button>
 			</PageHeader>
 
+			<CompletionDialog
+				enrollment={enrollment}
+				courseId={course.id}
+				courseName={course.name}
+				certifying={revision.certifying}
+			/>
 			{enrollment.status === "completed" && (
 				<p className="flex items-center gap-2 rounded-md border border-primary bg-primary/10 px-3 py-2 text-sm">
 					<Icon name="done" /> Vous avez terminé ce cours.

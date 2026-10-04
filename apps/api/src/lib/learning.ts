@@ -22,6 +22,7 @@ import type {
 } from "@youlearn/types";
 import { visibleTo } from "./catalog";
 import { type CourseActor, canViewCourse, findCourse } from "./courses";
+import { finalExamScore } from "./enrollments";
 import { isUniqueViolation } from "./groups";
 
 const { chapterProgress, course, courseRevision, enrollment, quizAttempt } =
@@ -34,12 +35,14 @@ const toLearnerEnrollment = (
 	revisionKey: string,
 	/** The revision published now, if any. */
 	currentRevisionId: string | undefined,
+	finalExamScore: number | null,
 ): LearnerEnrollment => ({
 	id: row.id,
 	status: row.status,
 	revisionKey,
 	startedAt: row.startedAt.toISOString(),
 	finishedAt: row.finishedAt?.toISOString() ?? null,
+	finalExamScore,
 	outdated:
 		currentRevisionId !== undefined && currentRevisionId !== row.revisionId,
 });
@@ -75,7 +78,11 @@ async function findPublished(actor: CourseActor, courseId: string) {
 /** The learner's latest enrollment on a course, a failed one included. */
 async function findLatestEnrollment(userId: string, courseId: string) {
 	const [row] = await db
-		.select({ enrollment, revisionKey: courseRevision.key })
+		.select({
+			enrollment,
+			revisionKey: courseRevision.key,
+			finalExamScore,
+		})
 		.from(enrollment)
 		.innerJoin(courseRevision, eq(courseRevision.id, enrollment.revisionId))
 		.where(
@@ -105,7 +112,12 @@ export async function findLearnerCourse(
 			estimatedMinutes: chapter.estimatedMinutes ?? null,
 		})),
 		enrollment: latest
-			? toLearnerEnrollment(latest.enrollment, latest.revisionKey, revisionId)
+			? toLearnerEnrollment(
+					latest.enrollment,
+					latest.revisionKey,
+					revisionId,
+					latest.finalExamScore,
+				)
 			: null,
 	};
 }
@@ -152,6 +164,7 @@ export async function startEnrollment(
 				created,
 				published.revisionKey,
 				published.revisionId,
+				null,
 			),
 			courseName: published.name,
 			restart: failedBefore > 0,
@@ -246,6 +259,7 @@ export async function findEnrollmentView(
 			row.enrollment,
 			row.revision.key,
 			current?.id,
+			attempts.find((attempt) => attempt.finalExam)?.score ?? null,
 		),
 		course: {
 			id: row.course.id,
