@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/Bredda/youlearn/compare/v0.1.0...v0.1.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **web:** learner player UX and course cards polish ([#13](https://github.com/Bredda/youlearn/issues/13)) ([a8a7c34](https://github.com/Bredda/youlearn/commit/a8a7c34a373fa587af0e361a7ee991da0b8b272f))
+
 ## [0.1.0](https://github.com/Bredda/youlearn/compare/v0.0.2...v0.1.0) (2026-10-04)
 
 
