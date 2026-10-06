@@ -1,4 +1,5 @@
 import type { Quiz } from "@youlearn/content";
+import type { ReactNode } from "react";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { Markdown } from "@/components/writer/markdown";
@@ -7,7 +8,16 @@ import { Markdown } from "@/components/writer/markdown";
  * Read-only view of a chapter quiz for writers and reviewers: settings, questions and the correct answers.
  * Never meant for learners (the answers are shown): their view comes from a dedicated API route.
  */
-export function QuizView({ quiz, courseId }: { quiz: Quiz; courseId: string }) {
+export function QuizView({
+	quiz,
+	courseId,
+	annotate,
+}: {
+	quiz: Quiz;
+	courseId: string;
+	/** Extra content under each question (the review hangs its remarks there). */
+	annotate?: (questionId: string) => ReactNode;
+}) {
 	return (
 		<section className="mt-4 flex flex-col gap-3 rounded-md border p-3">
 			<header className="flex flex-wrap items-center gap-2">
@@ -18,7 +28,11 @@ export function QuizView({ quiz, courseId }: { quiz: Quiz; courseId: string }) {
 			</header>
 			<ol className="flex flex-col gap-3">
 				{quiz.questions.map((question, index) => (
-					<li key={question.id} className="rounded-md border bg-muted/30 p-3">
+					<li
+						key={question.id}
+						className="group/block rounded-md border bg-muted/30 p-3"
+						data-annotate
+					>
 						<div className="mb-1 flex items-center gap-2 text-muted-foreground text-xs">
 							<span>Question {index + 1}</span>
 							<Badge variant="outline">
@@ -51,6 +65,7 @@ export function QuizView({ quiz, courseId }: { quiz: Quiz; courseId: string }) {
 								<Markdown courseId={courseId}>{question.explanation}</Markdown>
 							</div>
 						)}
+						{annotate?.(question.id)}
 					</li>
 				))}
 			</ol>

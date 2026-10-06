@@ -1,4 +1,4 @@
-import type { ReviewView } from "@youlearn/types";
+import type { ReviewThread, ReviewView } from "@youlearn/types";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ReviewViewer } from "@/components/review/review-viewer";
@@ -16,5 +16,12 @@ export default async function ReviewPage(
 	if (response.status === 404) notFound();
 	if (!response.ok) throw new Error("Impossible de charger la relecture");
 
-	return <ReviewViewer view={(await response.json()) as ReviewView} />;
+	const view = (await response.json()) as ReviewView;
+	const remarks = await apiFetch(`/api/revisions/${revisionId}/comments`);
+	if (!remarks.ok) throw new Error("Impossible de charger les remarques");
+	const initial = (await remarks.json()) as {
+		threads: ReviewThread[];
+		canWrite: boolean;
+	};
+	return <ReviewViewer view={view} initialRemarks={initial} />;
 }

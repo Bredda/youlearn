@@ -17,6 +17,7 @@ import {
 	CheckmarkCircle02Icon,
 	Clock01Icon,
 	CodeIcon,
+	Comment01Icon,
 	Copy01Icon,
 	CourseIcon,
 	CrowdfundingIcon,
@@ -83,6 +84,8 @@ export const icons = {
 	open: ArrowUpRight01Icon,
 	/** Look at something read-only. */
 	view: ViewIcon,
+	/** A remark made while a revision is reviewed. */
+	remark: Comment01Icon,
 	save: FloppyDiskIcon,
 	confirm: Tick02Icon,
 	cancel: Cancel01Icon,

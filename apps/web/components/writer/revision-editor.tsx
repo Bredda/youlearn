@@ -25,6 +25,8 @@ import { DiffSummary, RevisionDiff } from "@/components/content/revision-diff";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
+import { RemarksPanel } from "@/components/review/remarks-panel";
+import { OpenRemarksBadge } from "@/components/review/review-threads";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -517,6 +519,8 @@ export function RevisionEditor({
 				</div>
 			)}
 
+			<RemarksPanel content={content} onSelectChapter={setSelectedId} />
+
 			{base && liveDiff && (
 				<div className="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2">
 					<Switch
@@ -577,6 +581,7 @@ export function RevisionEditor({
 										>
 											{index + 1}. {chapter.title || "(sans titre)"}
 										</button>
+										<OpenRemarksBadge chapterId={chapter.id} />
 										{chapter.estimatedMinutes !== undefined && (
 											<span className="shrink-0 text-muted-foreground text-xs">
 												{formatDuration(chapter.estimatedMinutes)}
@@ -631,6 +636,7 @@ export function RevisionEditor({
 								>
 									{finalExam.title || "(sans titre)"}
 								</button>
+								<OpenRemarksBadge chapterId={finalExam.id} />
 								{finalExam.estimatedMinutes !== undefined && (
 									<span className="shrink-0 text-muted-foreground text-xs">
 										{formatDuration(finalExam.estimatedMinutes)}

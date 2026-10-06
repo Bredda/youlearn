@@ -1,6 +1,11 @@
-import type { WriterCourse, WriterRevisionDetail } from "@youlearn/types";
+import type {
+	ReviewThread,
+	WriterCourse,
+	WriterRevisionDetail,
+} from "@youlearn/types";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { RemarksProvider } from "@/components/review/review-threads";
 import { RevisionEditor } from "@/components/writer/revision-editor";
 import { apiFetch } from "@/lib/api";
 
@@ -41,5 +46,20 @@ export default async function RevisionPage(
 		}
 	}
 
-	return <RevisionEditor course={course} revision={revision} base={base} />;
+	// The remarks of the reviewers (kept as history once the review is over).
+	const remarksResponse = await apiFetch(
+		`/api/revisions/${revision.id}/comments`,
+	);
+	const remarks = remarksResponse.ok
+		? ((await remarksResponse.json()) as {
+				threads: ReviewThread[];
+				canWrite: boolean;
+			})
+		: { threads: [], canWrite: false };
+
+	return (
+		<RemarksProvider revisionId={revision.id} initial={remarks}>
+			<RevisionEditor course={course} revision={revision} base={base} />
+		</RemarksProvider>
+	);
 }

@@ -51,9 +51,9 @@ Ordre retenu : les relecteurs ne sont **obligatoires qu'en phase 2**, quand le l
 
 ### Phase 3 : remarques et fils
 
-- [ ] Table `review_comment` (révision, cible : type + `chapterId` + `itemId`, extrait cité, auteur et instantané du nom, parent du fil, statut, traitée par, dates). Routes pour créer, répondre, marquer traité ou rouvert (relecteurs affectés et éditeurs du cours). **Vérif. :** `curl`, droits et 404 hors affectation.
-- [ ] Web, relecteur : bouton « Commenter » sur chaque titre de chapitre, bloc et question (extrait cité si du texte est sélectionné), fils dépliables. Composants dans `components/review/*` et `components/content/*`.
-- [ ] Web, formateur : pastille de remarques ouvertes sur les mêmes éléments dans l'éditeur et panneau « Remarques » groupé par chapitre avec défilement vers l'élément et liste « éléments supprimés ». **Vérif. :** types, Biome, rendu des pages ; l'interaction dans le navigateur est à tester à la main.
+- [x] Table `review_comment` (révision, cible : type + `chapterId` + `itemId`, extrait cité, auteur et instantané du nom, parent du fil, statut, traitée par, dates). Routes pour créer, répondre, marquer traité ou rouvert (relecteurs affectés et éditeurs du cours). **Vérif. :** 32 contrôles `curl` avec un relecteur et un utilisateur étranger jetables (création sur révision, chapitre, bloc, question, cible inconnue ou incomplète refusée, réponses, traitée et rouverte, élément supprimé donc fil orphelin, lecture seule en brouillon, 404 hors affectation) ; fonction pure `reviewTargetExists` testée.
+- [x] Web, relecteur : bouton « Commenter » sur chaque titre de chapitre, bloc et question (extrait cité si du texte est sélectionné), fils dépliables. Composants dans `components/review/*` et `components/content/*`.
+- [x] Web, formateur : pastille de remarques ouvertes sur les mêmes éléments dans l'éditeur et panneau « Remarques » groupé par chapitre avec défilement vers l'élément et liste « éléments supprimés ». **Vérif. :** types, Biome, tests (`lib/review-targets`) et rendu des pages en `curl` (fils, citation, boutons, panneau et pastilles). **Non exercé dans un navigateur** : l'envoi d'une remarque, la réponse, « Marquer traitée », la sélection de texte citée et le survol qui révèle « Commenter ». Pas de pastille sur chaque bloc dans l'éditeur : le panneau groupé par chapitre et la pastille de chapitre portent le suivi.
 
 ### Phase 4 : avis et publication
 

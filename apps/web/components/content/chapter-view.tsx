@@ -1,4 +1,5 @@
 import { type Chapter, formatDuration } from "@youlearn/content";
+import type { Annotator } from "@/components/content/annotator";
 import { QuizView } from "@/components/content/quiz-view";
 import { VideoEmbed } from "@/components/content/video-embed";
 import { Icon } from "@/components/icon";
@@ -35,35 +36,46 @@ export function ChapterView({
 	chapter,
 	courseId,
 	heading = true,
+	annotate,
 }: {
 	chapter: Chapter;
 	courseId: string;
 	/** False when the caller draws the heading itself (the learner player pins it). */
 	heading?: boolean;
+	/** Extra content under the heading, each block and each question (the review hangs its remarks there). */
+	annotate?: Annotator;
 }) {
 	return (
 		<article className="min-w-0 rounded-md border p-4">
 			{heading && <ChapterHeading chapter={chapter} className="mb-2" />}
+			{annotate?.chapter}
 			{chapter.blocks.length === 0 && !chapter.quiz && (
 				<p className="text-muted-foreground text-sm">Ce chapitre est vide.</p>
 			)}
-			{chapter.blocks.map((block) =>
-				block.type === "markdown" ? (
-					<Markdown key={block.id} courseId={courseId}>
-						{block.body}
-					</Markdown>
-				) : (
-					<figure key={block.id}>
-						<VideoEmbed url={block.url} title={block.title} />
-						{block.title && (
-							<figcaption className="text-muted-foreground text-xs">
-								{block.title}
-							</figcaption>
-						)}
-					</figure>
-				),
+			{chapter.blocks.map((block) => (
+				<div key={block.id} className="group/block" data-annotate>
+					{block.type === "markdown" ? (
+						<Markdown courseId={courseId}>{block.body}</Markdown>
+					) : (
+						<figure>
+							<VideoEmbed url={block.url} title={block.title} />
+							{block.title && (
+								<figcaption className="text-muted-foreground text-xs">
+									{block.title}
+								</figcaption>
+							)}
+						</figure>
+					)}
+					{annotate?.block?.(block.id)}
+				</div>
+			))}
+			{chapter.quiz && (
+				<QuizView
+					quiz={chapter.quiz}
+					courseId={courseId}
+					{...(annotate?.question && { annotate: annotate.question })}
+				/>
 			)}
-			{chapter.quiz && <QuizView quiz={chapter.quiz} courseId={courseId} />}
 		</article>
 	);
 }
