@@ -172,9 +172,11 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 				reviewerIds,
 			);
 			if (!result.ok)
-				return reply
-					.code(result.status)
-					.send({ error: result.error, code: result.code });
+				return reply.code(result.status).send({
+					error: result.error,
+					code: result.code,
+					warnings: result.warnings,
+				});
 
 			const by = { id: actor.id, label: actor.label };
 			await recordEvent(

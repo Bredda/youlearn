@@ -1,5 +1,11 @@
 import { chaptersMissingDuration } from "@youlearn/content";
-import type { CourseContent, RevisionStatus } from "@youlearn/types";
+import type {
+	CourseContent,
+	ReviewerState,
+	ReviewSummary,
+	ReviewVerdict,
+	RevisionStatus,
+} from "@youlearn/types";
 
 /**
  * The workflow: draft -> preview -> published -> deprecated, with preview -> draft to rework. There is no way
@@ -59,4 +65,56 @@ export function reviewersBlocker(count: number): string | null {
 	return count > 0
 		? null
 		: "Choose at least one reviewer before sending a revision to review";
+}
+
+/**
+ * What a reviewer thinks of the revision as it is now: their verdict, `none` before they gave one, and `stale`
+ * when the revision changed after it (the verdict was about an earlier version). Times are in milliseconds.
+ */
+export function reviewerState(
+	reviewer: {
+		verdict: ReviewVerdict | null;
+		verdictRevisionUpdatedAt: number | null;
+	},
+	revisionUpdatedAt: number,
+): ReviewerState {
+	if (!reviewer.verdict) return "none";
+	return reviewer.verdictRevisionUpdatedAt !== null &&
+		reviewer.verdictRevisionUpdatedAt >= revisionUpdatedAt
+		? reviewer.verdict
+		: "stale";
+}
+
+export function summarizeReview(
+	states: ReviewerState[],
+	openThreads: number,
+): ReviewSummary {
+	const count = (state: ReviewerState) =>
+		states.filter((s) => s === state).length;
+	return {
+		approved: count("approved"),
+		changesRequested: count("changes_requested"),
+		pending: count("none"),
+		stale: count("stale"),
+		openThreads,
+	};
+}
+
+/**
+ * What is still open in a review, as messages: publishing is the writer's call, but not without being told (the
+ * API asks for a confirmation while this list is not empty).
+ */
+export function reviewWarnings(summary: ReviewSummary): string[] {
+	const plural = (n: number, one: string, many: string) =>
+		`${n} ${n === 1 ? one : many}`;
+	return [
+		summary.changesRequested > 0 &&
+			`${plural(summary.changesRequested, "reviewer asked", "reviewers asked")} for changes`,
+		summary.pending > 0 &&
+			`${plural(summary.pending, "reviewer has", "reviewers have")} not given a verdict`,
+		summary.stale > 0 &&
+			`${plural(summary.stale, "verdict predates", "verdicts predate")} the latest changes`,
+		summary.openThreads > 0 &&
+			`${plural(summary.openThreads, "remark is", "remarks are")} still open`,
+	].filter((message): message is string => message !== false);
 }

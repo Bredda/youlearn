@@ -27,6 +27,7 @@ export const EVENTS = {
 		"revoke-link",
 		"reviewer-add",
 		"reviewer-remove",
+		"verdict",
 	],
 	enrollment: ["start", "complete", "fail"],
 } as const;

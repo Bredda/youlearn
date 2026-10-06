@@ -26,6 +26,7 @@ import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
 import { RemarksPanel } from "@/components/review/remarks-panel";
+import { ReviewState } from "@/components/review/review-state";
 import { OpenRemarksBadge } from "@/components/review/review-threads";
 import {
 	AlertDialog,
@@ -54,6 +55,7 @@ import {
 	newFinalExam,
 } from "@/lib/content-editor";
 import { describeIssues, type EditorIssue } from "@/lib/content-issues";
+import { reviewWarnings } from "@/lib/review-summary";
 import {
 	REVISION_STATUS_LABELS,
 	REVISION_STATUS_VARIANTS,
@@ -379,7 +381,9 @@ export function RevisionEditor({
 					<Button
 						disabled={publishing}
 						onClick={() =>
-							published ? setConfirmingPublish(true) : publishRevision(false)
+							published || reviewWarnings(revision.review).length > 0
+								? setConfirmingPublish(true)
+								: publishRevision(false)
 						}
 					>
 						<PendingIcon pending={publishing} name="publish" />
@@ -393,6 +397,7 @@ export function RevisionEditor({
 					revisionKey={revision.key}
 					to="published"
 					publishedKey={published?.key}
+					review={revision.review}
 					pending={publishing}
 					onConfirm={() => publishRevision(true)}
 					onClose={() => setConfirmingPublish(false)}
@@ -519,6 +524,7 @@ export function RevisionEditor({
 				</div>
 			)}
 
+			<ReviewState revision={revision} />
 			<RemarksPanel content={content} onSelectChapter={setSelectedId} />
 
 			{base && liveDiff && (

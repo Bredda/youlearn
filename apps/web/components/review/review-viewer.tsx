@@ -12,6 +12,7 @@ import {
 	OpenRemarksBadge,
 	RemarksProvider,
 } from "@/components/review/review-threads";
+import { VerdictBar } from "@/components/review/verdict-bar";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -48,6 +49,8 @@ export function ReviewViewer({
 						{revision.purpose}
 					</p>
 				</div>
+
+				<VerdictBar revisionId={revision.id} state={view.myState} />
 
 				<PageHeader
 					title={course.name}

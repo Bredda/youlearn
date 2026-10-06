@@ -170,6 +170,11 @@ export const revisionContributor = pgTable(
 	(table) => [primaryKey({ columns: [table.revisionId, table.userId] })],
 );
 
+export const reviewVerdict = pgEnum("review_verdict", [
+	"approved",
+	"changes_requested",
+]);
+
 /**
  * Users picked by a writer to review a revision. Being assigned is what gives access to it (there is no global
  * reviewer role), and only while the revision is in `preview`. The rows stay as history once it moves on.
@@ -183,6 +188,14 @@ export const revisionReviewer = pgTable(
 		userId: text()
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
+		/** The reviewer's opinion, null until they give one. */
+		verdict: reviewVerdict(),
+		verdictAt: timestamp(),
+		/**
+		 * `updatedAt` of the revision when the verdict was given: a later change to the revision makes the verdict
+		 * stale (it was about an earlier version).
+		 */
+		verdictRevisionUpdatedAt: timestamp(),
 		createdAt: timestamp().notNull().defaultNow(),
 	},
 	(table) => [

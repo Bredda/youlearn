@@ -37,6 +37,7 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"revision.revoke-link": "Lien de relecture révoqué",
 	"revision.reviewer-add": "Relecteur ajouté",
 	"revision.reviewer-remove": "Relecteur retiré",
+	"revision.verdict": "Avis de relecture",
 	"asset.deprecate": "Fichier mis de côté",
 	"enrollment.start": "Inscription",
 	"enrollment.complete": "Cours terminé",
@@ -67,6 +68,7 @@ export const EVENT_BADGE_LABELS: Record<EventType, string> = {
 	"revision.revoke-link": "Lien de relecture révoqué",
 	"revision.reviewer-add": "Relecteur ajouté à une révision",
 	"revision.reviewer-remove": "Relecteur retiré d'une révision",
+	"revision.verdict": "Avis de relecture sur une révision",
 	"asset.deprecate": "Fichier mis de côté",
 	"enrollment.start": "Inscription à un cours",
 	"enrollment.complete": "Cours terminé",
@@ -159,6 +161,12 @@ export function describeEvent({
 			].filter(Boolean);
 			return parts.join(" ; ") || null;
 		}
+		case "revision.verdict":
+			return data.verdict === "approved"
+				? "Validé"
+				: data.verdict === "changes_requested"
+					? "Modifications demandées"
+					: null;
 		case "revision.reviewer-add":
 		case "revision.reviewer-remove":
 			return typeof data.reviewer === "string" ? data.reviewer : null;

@@ -1,6 +1,10 @@
 "use client";
 
-import type { ReviewerRef, WriterRevision } from "@youlearn/types";
+import type {
+	ReviewerRef,
+	ReviewerState,
+	WriterRevision,
+} from "@youlearn/types";
 import { useEffect, useState } from "react";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
@@ -16,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { callApi, fetchApi } from "@/lib/api-client";
+import { REVIEWER_STATE_LABELS } from "@/lib/review-summary";
 
 /**
  * Chooses who reviews a revision. From a draft ("send"), the choice is kept here and goes with the status change;
@@ -36,7 +41,10 @@ export function ReviewersDialog({
 }) {
 	const sending = revision.status === "draft";
 	const api = `/api/writer/courses/${courseId}/revisions/${revision.id}`;
-	const [selected, setSelected] = useState<ReviewerRef[]>(revision.reviewers);
+	// The state (verdict) is known for reviewers already in the revision, not for the ones being picked.
+	const [selected, setSelected] = useState<
+		(ReviewerRef & { state?: ReviewerState })[]
+	>(revision.reviewers);
 	const [search, setSearch] = useState("");
 	const [candidates, setCandidates] = useState<ReviewerRef[]>([]);
 	const [pending, setPending] = useState(false);
@@ -119,6 +127,11 @@ export function ReviewersDialog({
 								<li key={user.userId}>
 									<Badge variant="secondary" className="gap-1 pr-1">
 										{user.name}
+										{!sending && user.state && (
+											<span className="font-normal text-muted-foreground">
+												· {REVIEWER_STATE_LABELS[user.state]}
+											</span>
+										)}
 										<Button
 											type="button"
 											variant="ghost"

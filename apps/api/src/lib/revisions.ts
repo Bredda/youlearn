@@ -11,12 +11,14 @@ import {
 	notInArray,
 	or,
 	schema,
+	sql,
 } from "@youlearn/db";
 import type {
 	CourseContent,
 	MyReview,
 	ReviewBase,
 	ReviewerRef,
+	ReviewVerdict,
 	RevisionStatus,
 	WriterRevision,
 	WriterRevisionDetail,
@@ -32,13 +34,22 @@ import {
 	normalizeReviewerIds,
 	openRevisionBlocker,
 	previewBlocker,
+	reviewerState,
 	reviewersBlocker,
+	reviewWarnings,
+	summarizeReview,
 	TRANSITIONS,
 } from "./revision-rules";
 import { escapeLike } from "./sql";
 
-const { course, courseRevision, revisionContributor, revisionReviewer, user } =
-	schema;
+const {
+	course,
+	courseRevision,
+	reviewComment,
+	revisionContributor,
+	revisionReviewer,
+	user,
+} = schema;
 
 /** Docker-like business id: `whispering_toucan`. */
 export const generateRevisionKey = () =>
@@ -96,6 +107,8 @@ async function toWriterRevisions(rows: Revision[]): Promise<WriterRevision[]> {
 			userId: user.id,
 			name: user.name,
 			email: user.email,
+			verdict: revisionReviewer.verdict,
+			verdictRevisionUpdatedAt: revisionReviewer.verdictRevisionUpdatedAt,
 		})
 		.from(revisionReviewer)
 		.innerJoin(user, eq(user.id, revisionReviewer.userId))
@@ -106,24 +119,69 @@ async function toWriterRevisions(rows: Revision[]): Promise<WriterRevision[]> {
 			),
 		)
 		.orderBy(asc(revisionReviewer.createdAt));
-	return rows.map((row) => ({
-		id: row.id,
-		courseId: row.courseId,
-		key: row.key,
-		status: row.status,
-		parentId: row.parentId,
-		purpose: row.purpose,
-		durationMinutes: row.durationMinutes,
-		certifying: row.certifying,
-		createdAt: row.createdAt.toISOString(),
-		updatedAt: row.updatedAt.toISOString(),
-		contributors: contributors
-			.filter((c) => c.revisionId === row.id)
-			.map((c) => ({ userId: c.userId, name: c.userLabel })),
-		reviewers: reviewers
+	const openCounts = await openThreadCounts(
+		rows.filter((row) => row.status === "preview").map((row) => row.id),
+	);
+	return rows.map((row) => {
+		const mine = reviewers
 			.filter((r) => r.revisionId === row.id)
-			.map(({ userId, name, email }) => ({ userId, name, email })),
-	}));
+			.map(({ revisionId: _, verdict, verdictRevisionUpdatedAt, ...who }) => ({
+				...who,
+				state: reviewerState(
+					{
+						verdict,
+						verdictRevisionUpdatedAt:
+							verdictRevisionUpdatedAt?.getTime() ?? null,
+					},
+					row.updatedAt.getTime(),
+				),
+			}));
+		return {
+			id: row.id,
+			courseId: row.courseId,
+			key: row.key,
+			status: row.status,
+			parentId: row.parentId,
+			purpose: row.purpose,
+			durationMinutes: row.durationMinutes,
+			certifying: row.certifying,
+			createdAt: row.createdAt.toISOString(),
+			updatedAt: row.updatedAt.toISOString(),
+			contributors: contributors
+				.filter((c) => c.revisionId === row.id)
+				.map((c) => ({ userId: c.userId, name: c.userLabel })),
+			reviewers: mine,
+			review:
+				row.status === "preview"
+					? summarizeReview(
+							mine.map((r) => r.state),
+							openCounts.get(row.id) ?? 0,
+						)
+					: null,
+		};
+	});
+}
+
+/** Open remarks per revision (the roots of the threads still open). */
+async function openThreadCounts(revisionIds: string[]) {
+	const counts = new Map<string, number>();
+	if (revisionIds.length === 0) return counts;
+	const rows = await db
+		.select({
+			revisionId: reviewComment.revisionId,
+			count: sql<number>`count(*)::int`,
+		})
+		.from(reviewComment)
+		.where(
+			and(
+				inArray(reviewComment.revisionId, revisionIds),
+				isNull(reviewComment.parentId),
+				eq(reviewComment.status, "open"),
+			),
+		)
+		.groupBy(reviewComment.revisionId);
+	for (const row of rows) counts.set(row.revisionId, row.count);
+	return counts;
 }
 
 /** Newest first. */
@@ -166,7 +224,13 @@ export async function findRevisionDetail(
 	return revision && row && { ...revision, content: row.content };
 }
 
-export type Failure = { error: string; status: 400 | 404 | 409; code?: string };
+export type Failure = {
+	error: string;
+	status: 400 | 404 | 409;
+	code?: string;
+	/** For `CONFIRM_REQUIRED`: what is still open in the review. */
+	warnings?: string[];
+};
 type Outcome<T> = ({ ok: true } & T) | ({ ok: false } & Failure);
 
 /** Creates a draft, optionally cloned from another revision of the same course. */
@@ -373,12 +437,51 @@ export async function changeStatus(
 				error: `Revision ${occupant.key} is already ${to}`,
 			};
 
-		if (deprecated && !confirm)
+		// Publishing a revision whose review is not finished is allowed, but not without being told.
+		let warnings: string[] = [];
+		if (to === "published" && revision.status === "preview") {
+			const reviewers = await tx
+				.select({
+					verdict: revisionReviewer.verdict,
+					verdictRevisionUpdatedAt: revisionReviewer.verdictRevisionUpdatedAt,
+				})
+				.from(revisionReviewer)
+				.where(eq(revisionReviewer.revisionId, revision.id));
+			const open =
+				(await openThreadCounts([revision.id])).get(revision.id) ?? 0;
+			warnings = reviewWarnings(
+				summarizeReview(
+					reviewers.map((r) =>
+						reviewerState(
+							{
+								verdict: r.verdict,
+								verdictRevisionUpdatedAt:
+									r.verdictRevisionUpdatedAt?.getTime() ?? null,
+							},
+							revision.updatedAt.getTime(),
+						),
+					),
+					open,
+				),
+			);
+		}
+
+		if ((deprecated || warnings.length > 0) && !confirm)
 			return {
 				ok: false,
 				status: 409,
 				code: "CONFIRM_REQUIRED",
-				error: `Revision ${deprecated.key} will be deprecated: confirmation required`,
+				error: [
+					deprecated
+						? `Revision ${deprecated.key} will be deprecated: confirmation required`
+						: null,
+					warnings.length > 0
+						? `The review is not finished (${warnings.join(", ")}): confirmation required`
+						: null,
+				]
+					.filter(Boolean)
+					.join(". "),
+				warnings,
 			};
 
 		// The old published revision goes first: only one revision can hold the status at a time.
@@ -497,7 +600,11 @@ export async function findReviewForReviewer(
 	revisionId: string,
 ) {
 	const [row] = await db
-		.select({ revision: courseRevision, course: schema.course })
+		.select({
+			revision: courseRevision,
+			course: schema.course,
+			reviewer: revisionReviewer,
+		})
 		.from(revisionReviewer)
 		.innerJoin(
 			courseRevision,
@@ -512,7 +619,57 @@ export async function findReviewForReviewer(
 				isNull(course.deletedAt),
 			),
 		);
-	return row;
+	return (
+		row && {
+			revision: row.revision,
+			course: row.course,
+			state: reviewerState(
+				{
+					verdict: row.reviewer.verdict,
+					verdictRevisionUpdatedAt:
+						row.reviewer.verdictRevisionUpdatedAt?.getTime() ?? null,
+				},
+				row.revision.updatedAt.getTime(),
+			),
+		}
+	);
+}
+
+/**
+ * Records the verdict of a reviewer of a revision in review, remembering which version of the revision it is
+ * about (a later change makes it stale).
+ */
+export async function setVerdict(
+	userId: string,
+	revisionId: string,
+	verdict: ReviewVerdict,
+): Promise<Outcome<{ key: string; courseId: string }>> {
+	return db.transaction(async (tx) => {
+		const [revision] = await tx
+			.select()
+			.from(courseRevision)
+			.where(eq(courseRevision.id, revisionId))
+			.for("update");
+		if (!revision || revision.status !== "preview")
+			return { ok: false, status: 404, error: "Review not found" };
+		const updated = await tx
+			.update(revisionReviewer)
+			.set({
+				verdict,
+				verdictAt: new Date(),
+				verdictRevisionUpdatedAt: revision.updatedAt,
+			})
+			.where(
+				and(
+					eq(revisionReviewer.revisionId, revisionId),
+					eq(revisionReviewer.userId, userId),
+				),
+			)
+			.returning({ userId: revisionReviewer.userId });
+		if (updated.length === 0)
+			return { ok: false, status: 404, error: "Review not found" };
+		return { ok: true, key: revision.key, courseId: revision.courseId };
+	});
 }
 
 /** The revisions waiting for this user's review, most recently modified first. */

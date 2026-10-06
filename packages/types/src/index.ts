@@ -163,11 +163,29 @@ export type WriterRevision = Pick<
 	updatedAt: string;
 	contributors: { userId: string; name: string }[];
 	/** The users asked to review it (they can read it while it is in preview). */
-	reviewers: ReviewerRef[];
+	reviewers: RevisionReviewer[];
+	/** Where the review stands; null unless the revision is in review. */
+	review: ReviewSummary | null;
 };
 
 /** A user picked to review a revision. */
 export type ReviewerRef = { userId: string; name: string; email: string };
+
+export type ReviewVerdict = "approved" | "changes_requested";
+
+/** What a reviewer thinks: their verdict, `none` before they gave one, `stale` once the revision changed after it. */
+export type ReviewerState = ReviewVerdict | "none" | "stale";
+
+export type RevisionReviewer = ReviewerRef & { state: ReviewerState };
+
+/** Counts that say whether a revision in review is ready to be published (`pending` = no verdict yet). */
+export type ReviewSummary = {
+	approved: number;
+	changesRequested: number;
+	pending: number;
+	stale: number;
+	openThreads: number;
+};
 
 /** A revision with its content, as opened in the editor. */
 export type WriterRevisionDetail = WriterRevision & {
@@ -287,6 +305,8 @@ export type ReviewView = {
 	 * somebody's unpublished work). The reader can show what changed.
 	 */
 	base: ReviewBase | null;
+	/** The signed-in reviewer's own verdict state. */
+	myState: ReviewerState;
 };
 
 export type { ReviewTarget };

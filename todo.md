@@ -57,10 +57,14 @@ Ordre retenu : les relecteurs ne sont **obligatoires qu'en phase 2**, quand le l
 
 ### Phase 4 : avis et publication
 
-- [ ] Avis par relecteur (« validé » ou « modifications demandées »), avis périmé quand `updatedAt` a changé depuis. Affichage de l'état de la relecture (avis, remarques ouvertes) sur la page de la révision.
-- [ ] Publication : `409 CONFIRM_REQUIRED` s'il reste des remarques ouvertes ou des avis manquants ou périmés, avec le détail dans la confirmation. **Vérif. :** `curl` des deux cas, test des règles pures.
-- [ ] Documentation : skill `youlearn-courses` (workflow, une révision ouverte, relecteurs, remarques), `roadmap.md`, entrée « Refonte de la relecture » du backlog supprimée.
+- [x] Avis par relecteur (« validé » ou « modifications demandées », `PUT /api/reviews/:revisionId/verdict`, événement `revision.verdict`), avis **périmé** quand la révision a changé depuis (`verdict_revision_updated_at`, migration `0014`). Affichage de l'état de la relecture sur la page de la révision (`ReviewState`) et dans le dialogue des relecteurs. **Vérif. :** règles pures testées (`reviewerState`, `summarizeReview`) et `curl` (avis sur un brouillon refusé, non-relecteur 404, avis invalide 400, état périmé après une modification).
+- [x] Publication : `409 CONFIRM_REQUIRED` avec `warnings` tant qu'il reste des remarques ouvertes ou des avis manquants, périmés ou « modifications demandées » ; la confirmation du web les liste avec celle de la dépréciation. **Vérif. :** `curl` des quatre cas, puis publication sans confirmation une fois tout traité ; règle pure `reviewWarnings` testée côté API et côté web.
+- [x] Documentation : skill `youlearn-courses`, `roadmap.md`, entrée « Refonte de la relecture » du backlog supprimée.
 
 ### Terminé quand
 
 Un formateur envoie la seule révision ouverte d'un cours en relecture en choisissant des utilisateurs ; ceux-ci la retrouvent dans « Relectures », commentent des blocs, des questions ou des chapitres ; le formateur corrige pendant la relecture, traite les fils et publie (avec confirmation s'il reste des points ouverts) sans jamais repasser par le brouillon ; il n'existe plus aucun lien de relecture. Toujours finir par `pnpm lint:ci`, `pnpm check-types` et `pnpm test`.
+
+### Reste à vérifier à la main avant de clore ce plan
+
+Tout ce qui précède est vérifié contre la vraie base (`curl` avec des utilisateurs jetables préfixés `zz-`) et par le rendu des pages, mais **rien n'a été exercé dans un navigateur** : le dialogue des relecteurs (recherche, ajout, retrait, envoi en relecture), l'envoi d'une remarque, la réponse, « Marquer traitée », la citation du texte sélectionné et le bouton « Commenter » au survol, les boutons d'avis, la confirmation de publication avec ses avertissements, et le défilement d'une page de relecture sur écran étroit. La garde de la migration `0011` (cours ayant déjà un brouillon et une relecture) n'a pas été exercée sur un cas réel. Quand c'est fait : remplacer ce plan par « Aucun » et passer le statut de l'axe 7 dans `roadmap.md`.

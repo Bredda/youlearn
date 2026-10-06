@@ -1,3 +1,4 @@
+import { recordEvent } from "@youlearn/events/server";
 import type { ReviewView } from "@youlearn/types";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
@@ -5,9 +6,13 @@ import {
 	findReviewBase,
 	findReviewForReviewer,
 	listMyReviews,
+	setVerdict,
 } from "../lib/revisions";
 
 const params = z.object({ revisionId: z.string().min(1) });
+const verdictBody = z.object({
+	verdict: z.enum(["approved", "changes_requested"]),
+});
 
 /**
  * What a reviewer reads. Being asked to review a revision (an assignment written by the course's editors) is the
@@ -32,7 +37,7 @@ export const reviewRoutes: FastifyPluginAsync = async (app) => {
 				revisionId,
 			);
 			if (!found) return reply.code(404).send({ error: "Review not found" });
-			const { course, revision } = found;
+			const { course, revision, state } = found;
 			return {
 				course: {
 					id: course.id,
@@ -50,7 +55,30 @@ export const reviewRoutes: FastifyPluginAsync = async (app) => {
 				},
 				content: revision.content,
 				base: await findReviewBase(revision),
+				myState: state,
 			};
 		},
 	);
+
+	// The reviewer's opinion; it can be changed until the revision leaves the review.
+	app.put("/api/reviews/:revisionId/verdict", async (request, reply) => {
+		if (!request.auth) return reply.code(401).send({ error: "Unauthorized" });
+		const { revisionId } = params.parse(request.params);
+		const { verdict } = verdictBody.parse(request.body);
+		const { id, email } = request.auth.user;
+
+		const result = await setVerdict(id, revisionId, verdict);
+		if (!result.ok)
+			return reply.code(result.status).send({ error: result.error });
+		await recordEvent(
+			{
+				type: "revision.verdict",
+				actor: { id, label: email },
+				target: { type: "revision", id: revisionId, label: result.key },
+				metadata: { courseId: result.courseId, verdict },
+			},
+			request.log,
+		);
+		return reply.code(204).send();
+	});
 };

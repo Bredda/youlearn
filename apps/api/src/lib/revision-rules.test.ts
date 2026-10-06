@@ -6,7 +6,10 @@ import {
 	normalizeReviewerIds,
 	openRevisionBlocker,
 	previewBlocker,
+	reviewerState,
 	reviewersBlocker,
+	reviewWarnings,
+	summarizeReview,
 	TRANSITIONS,
 } from "./revision-rules";
 
@@ -120,5 +123,69 @@ describe("reviewersBlocker", () => {
 		);
 		expect(reviewersBlocker(1)).toBeNull();
 		expect(reviewersBlocker(3)).toBeNull();
+	});
+});
+
+describe("reviewerState", () => {
+	it("is none before a verdict", () => {
+		expect(
+			reviewerState({ verdict: null, verdictRevisionUpdatedAt: null }, 1000),
+		).toBe("none");
+	});
+
+	it("keeps the verdict while the revision has not changed since", () => {
+		const given = {
+			verdict: "approved" as const,
+			verdictRevisionUpdatedAt: 1000,
+		};
+		expect(reviewerState(given, 1000)).toBe("approved");
+		expect(reviewerState({ ...given, verdict: "changes_requested" }, 900)).toBe(
+			"changes_requested",
+		);
+	});
+
+	it("goes stale once the revision changed after the verdict", () => {
+		expect(
+			reviewerState(
+				{ verdict: "approved", verdictRevisionUpdatedAt: 1000 },
+				1001,
+			),
+		).toBe("stale");
+	});
+});
+
+describe("summarizeReview and reviewWarnings", () => {
+	it("counts each state", () => {
+		expect(
+			summarizeReview(
+				["approved", "approved", "none", "stale", "changes_requested"],
+				3,
+			),
+		).toEqual({
+			approved: 2,
+			changesRequested: 1,
+			pending: 1,
+			stale: 1,
+			openThreads: 3,
+		});
+	});
+
+	it("has nothing to say about a review that is done", () => {
+		expect(
+			reviewWarnings(summarizeReview(["approved", "approved"], 0)),
+		).toEqual([]);
+	});
+
+	it("lists everything still open, singular and plural", () => {
+		expect(
+			reviewWarnings(
+				summarizeReview(["changes_requested", "none", "none", "stale"], 1),
+			),
+		).toEqual([
+			"1 reviewer asked for changes",
+			"2 reviewers have not given a verdict",
+			"1 verdict predates the latest changes",
+			"1 remark is still open",
+		]);
 	});
 });

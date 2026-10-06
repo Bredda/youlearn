@@ -34,6 +34,7 @@ import {
 import { RevisionStatusDialog } from "@/components/writer/revision-status-dialog";
 import { callApi } from "@/lib/api-client";
 import { assetUrl } from "@/lib/asset-url";
+import { reviewWarnings } from "@/lib/review-summary";
 import {
 	REVISION_STATUS_LABELS,
 	REVISION_STATUS_VARIANTS,
@@ -108,7 +109,11 @@ export function CourseDetail({
 	function changeStatus(revision: WriterRevision, to: RevisionStatus) {
 		// Going to review starts by choosing the reviewers.
 		if (to === "preview") return setReviewing(revision);
-		if ((to === "published" && published) || to === "deprecated")
+		const unfinishedReview = reviewWarnings(revision.review).length > 0;
+		if (
+			(to === "published" && (published || unfinishedReview)) ||
+			to === "deprecated"
+		)
 			return setConfirming({ revision, to });
 		return setStatus(revision, to);
 	}
@@ -348,6 +353,7 @@ export function CourseDetail({
 					revisionKey={confirming.revision.key}
 					to={confirming.to}
 					publishedKey={published?.key}
+					review={confirming.revision.review}
 					pending={pending}
 					onConfirm={confirmed}
 					onClose={() => setConfirming(undefined)}
