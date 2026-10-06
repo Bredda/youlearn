@@ -154,7 +154,6 @@ export type WriterRevision = Pick<
 	| "key"
 	| "status"
 	| "parentId"
-	| "previewToken"
 	| "purpose"
 	| "durationMinutes"
 	| "certifying"
@@ -271,7 +270,7 @@ export type CatalogPage = {
 /** Groups the current user may put on a course: their own for a writer, every group for an admin. */
 export type AssignableGroups = { groups: CourseGroupTag[] };
 
-/** What a review link shows: the revision being proofread, read-only. */
+/** What a reviewer sees: the revision they were asked to proofread, read-only. */
 export type ReviewView = {
 	course: Pick<
 		Course,
@@ -287,8 +286,16 @@ export type ReviewView = {
 	 * somebody's unpublished work). The reader can show what changed.
 	 */
 	base: ReviewBase | null;
-	/** The token of the link, needed to load the files of the revision. */
-	token: string;
+};
+
+/** A revision waiting for the signed-in user's review ("Relectures"). */
+export type MyReview = {
+	revisionId: string;
+	revisionKey: string;
+	purpose: string;
+	course: Pick<Course, "id" | "name" | "imageAssetId">;
+	/** When the revision was last modified (JSON date). */
+	updatedAt: string;
 };
 
 export type ReviewBase = {

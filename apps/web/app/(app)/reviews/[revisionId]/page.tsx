@@ -6,9 +6,13 @@ import { apiFetch } from "@/lib/api";
 
 export const metadata: Metadata = { title: "Relecture" };
 
-export default async function ReviewPage(props: PageProps<"/review/[token]">) {
-	const { token } = await props.params;
-	const response = await apiFetch(`/api/review/${encodeURIComponent(token)}`);
+export default async function ReviewPage(
+	props: PageProps<"/reviews/[revisionId]">,
+) {
+	const { revisionId } = await props.params;
+	const response = await apiFetch(
+		`/api/reviews/${encodeURIComponent(revisionId)}`,
+	);
 	if (response.status === 404) notFound();
 	if (!response.ok) throw new Error("Impossible de charger la relecture");
 

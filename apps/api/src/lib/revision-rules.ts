@@ -53,3 +53,10 @@ export function normalizeReviewerIds(ids: string[]): string[] | null {
 	const unique = [...new Set(ids)];
 	return unique.length <= MAX_REVIEWERS ? unique : null;
 }
+
+/** A revision cannot be reviewed by nobody: a message when no reviewer would be left, null otherwise. */
+export function reviewersBlocker(count: number): string | null {
+	return count > 0
+		? null
+		: "Choose at least one reviewer before sending a revision to review";
+}

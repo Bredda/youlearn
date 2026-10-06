@@ -129,11 +129,6 @@ export const courseRevision = pgTable(
 		durationMinutes: integer().notNull().default(0),
 		/** Mirrors `content.certifying`, derived on every save. */
 		certifying: boolean().notNull().default(false),
-		/**
-		 * Secret of the review link, set while the revision is in `preview` and cleared as soon as it leaves that
-		 * status (or when an editor revokes it). Whoever is signed in and holds the link can read the revision.
-		 */
-		previewToken: text().unique(),
 		/** The revision this one was cloned from, if any. */
 		parentId: text().references((): AnyPgColumn => courseRevision.id, {
 			onDelete: "set null",

@@ -13,9 +13,9 @@ import { Switch } from "@/components/ui/switch";
 import { assetUrl } from "@/lib/asset-url";
 import { REVISION_STATUS_LABELS } from "@/lib/revisions";
 
-/** Read-only view of the revision under review, with the changes since its base hidden behind a toggle. */
+/** Read-only view of the revision a reviewer was asked to proofread, with the changes since its base behind a toggle. */
 export function ReviewViewer({ view }: { view: ReviewView }) {
-	const { course, revision, content, base, token } = view;
+	const { course, revision, content, base } = view;
 	const [selectedId, setSelectedId] = useState(content.chapters[0]?.id);
 	const [showChanges, setShowChanges] = useState(false);
 	const chapter = content.chapters.find((c) => c.id === selectedId);
@@ -57,7 +57,7 @@ export function ReviewViewer({ view }: { view: ReviewView }) {
 					{course.imageAssetId && (
 						// biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image
 						<img
-							src={assetUrl(course.id, course.imageAssetId, token)}
+							src={assetUrl(course.id, course.imageAssetId)}
 							alt=""
 							className="h-24 w-40 rounded-md border object-cover"
 						/>
@@ -90,7 +90,7 @@ export function ReviewViewer({ view }: { view: ReviewView }) {
 			)}
 
 			{showChanges && diff ? (
-				<RevisionDiff diff={diff} courseId={course.id} reviewToken={token} />
+				<RevisionDiff diff={diff} courseId={course.id} />
 			) : content.chapters.length === 0 ? (
 				<p className="text-muted-foreground text-sm">
 					Cette révision n'a pas encore de chapitre.
@@ -112,13 +112,7 @@ export function ReviewViewer({ view }: { view: ReviewView }) {
 							</li>
 						))}
 					</ol>
-					{chapter && (
-						<ChapterView
-							chapter={chapter}
-							courseId={course.id}
-							reviewToken={token}
-						/>
-					)}
+					{chapter && <ChapterView chapter={chapter} courseId={course.id} />}
 				</div>
 			)}
 		</div>

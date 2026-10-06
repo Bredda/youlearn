@@ -7,15 +7,7 @@ import { Markdown } from "@/components/writer/markdown";
  * Read-only view of a chapter quiz for writers and reviewers: settings, questions and the correct answers.
  * Never meant for learners (the answers are shown): their view comes from a dedicated API route.
  */
-export function QuizView({
-	quiz,
-	courseId,
-	reviewToken,
-}: {
-	quiz: Quiz;
-	courseId: string;
-	reviewToken?: string;
-}) {
+export function QuizView({ quiz, courseId }: { quiz: Quiz; courseId: string }) {
 	return (
 		<section className="mt-4 flex flex-col gap-3 rounded-md border p-3">
 			<header className="flex flex-wrap items-center gap-2">
@@ -33,9 +25,7 @@ export function QuizView({
 								{question.type === "single" ? "Choix unique" : "Choix multiple"}
 							</Badge>
 						</div>
-						<Markdown courseId={courseId} reviewToken={reviewToken}>
-							{question.prompt}
-						</Markdown>
+						<Markdown courseId={courseId}>{question.prompt}</Markdown>
 						<ul className="mt-2 flex flex-col gap-1">
 							{question.options.map((option) => (
 								<li
@@ -58,9 +48,7 @@ export function QuizView({
 						</ul>
 						{question.explanation && (
 							<div className="mt-2 border-l-2 pl-3 text-muted-foreground text-sm">
-								<Markdown courseId={courseId} reviewToken={reviewToken}>
-									{question.explanation}
-								</Markdown>
+								<Markdown courseId={courseId}>{question.explanation}</Markdown>
 							</div>
 						)}
 					</li>

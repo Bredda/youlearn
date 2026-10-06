@@ -1,9 +1,9 @@
-import { randomBytes } from "node:crypto";
 import { courseDurationMinutes } from "@youlearn/content";
 import {
 	and,
 	asc,
 	db,
+	desc,
 	eq,
 	ilike,
 	inArray,
@@ -14,6 +14,7 @@ import {
 } from "@youlearn/db";
 import type {
 	CourseContent,
+	MyReview,
 	ReviewBase,
 	ReviewerRef,
 	RevisionStatus,
@@ -31,15 +32,13 @@ import {
 	normalizeReviewerIds,
 	openRevisionBlocker,
 	previewBlocker,
+	reviewersBlocker,
 	TRANSITIONS,
 } from "./revision-rules";
 import { escapeLike } from "./sql";
 
 const { course, courseRevision, revisionContributor, revisionReviewer, user } =
 	schema;
-
-/** Secret of a review link (256 bits, URL-safe). */
-const newPreviewToken = () => randomBytes(32).toString("base64url");
 
 /** Docker-like business id: `whispering_toucan`. */
 export const generateRevisionKey = () =>
@@ -113,7 +112,6 @@ async function toWriterRevisions(rows: Revision[]): Promise<WriterRevision[]> {
 		key: row.key,
 		status: row.status,
 		parentId: row.parentId,
-		previewToken: row.previewToken,
 		purpose: row.purpose,
 		durationMinutes: row.durationMinutes,
 		certifying: row.certifying,
@@ -350,6 +348,20 @@ export async function changeStatus(
 				};
 		}
 
+		if (to === "preview") {
+			const count = wanted
+				? wanted.length
+				: (await reviewersOf(tx, revision.id)).length;
+			const noReviewer = reviewersBlocker(count);
+			if (noReviewer)
+				return {
+					ok: false,
+					status: 409,
+					code: "NO_REVIEWER",
+					error: noReviewer,
+				};
+		}
+
 		const occupant = rows.find((r) => r.status === to && r.id !== revision.id);
 		let deprecated: Revision | null = null;
 		if (to === "published") deprecated = occupant ?? null;
@@ -375,13 +387,9 @@ export async function changeStatus(
 				.update(courseRevision)
 				.set({ status: "deprecated" })
 				.where(eq(courseRevision.id, deprecated.id));
-		// The review link lives exactly as long as the revision stays in preview.
 		await tx
 			.update(courseRevision)
-			.set({
-				status: to,
-				previewToken: to === "preview" ? newPreviewToken() : null,
-			})
+			.set({ status: to })
 			.where(eq(courseRevision.id, revision.id));
 
 		const reviewers = wanted
@@ -483,56 +491,55 @@ export async function saveContent(
 	});
 }
 
-/** Replaces (or, with `revoke`, removes) the review link of a revision in preview. */
-export async function resetPreviewToken(
-	courseId: string,
+/** A revision in preview and its course, for a user who was asked to review it (anybody else gets nothing). */
+export async function findReviewForReviewer(
+	userId: string,
 	revisionId: string,
-	revoke: boolean,
-): Promise<Outcome<{ key: string }>> {
-	return db.transaction(async (tx) => {
-		await lockCourse(tx, courseId);
-		const [revision] = await tx
-			.select()
-			.from(courseRevision)
-			.where(
-				and(
-					eq(courseRevision.courseId, courseId),
-					eq(courseRevision.id, revisionId),
-				),
-			);
-		if (!revision)
-			return { ok: false, status: 404, error: "Revision not found" };
-		if (revision.status !== "preview")
-			return {
-				ok: false,
-				status: 409,
-				error: "Only a revision in preview has a review link",
-			};
-		await tx
-			.update(courseRevision)
-			.set({ previewToken: revoke ? null : newPreviewToken() })
-			.where(eq(courseRevision.id, revision.id));
-		return { ok: true, key: revision.key };
-	});
-}
-
-/** The revision a review link points to, as long as that revision is still in preview. */
-export async function findRevisionByToken(token: string) {
+) {
 	const [row] = await db
-		.select({
-			revision: courseRevision,
-			course: schema.course,
-		})
-		.from(courseRevision)
+		.select({ revision: courseRevision, course: schema.course })
+		.from(revisionReviewer)
+		.innerJoin(
+			courseRevision,
+			eq(courseRevision.id, revisionReviewer.revisionId),
+		)
 		.innerJoin(course, eq(course.id, courseRevision.courseId))
 		.where(
 			and(
-				eq(courseRevision.previewToken, token),
+				eq(revisionReviewer.userId, userId),
+				eq(revisionReviewer.revisionId, revisionId),
 				eq(courseRevision.status, "preview"),
 				isNull(course.deletedAt),
 			),
 		);
 	return row;
+}
+
+/** The revisions waiting for this user's review, most recently modified first. */
+export async function listMyReviews(userId: string): Promise<MyReview[]> {
+	const rows = await db
+		.select({ revision: courseRevision, course: schema.course })
+		.from(revisionReviewer)
+		.innerJoin(
+			courseRevision,
+			eq(courseRevision.id, revisionReviewer.revisionId),
+		)
+		.innerJoin(course, eq(course.id, courseRevision.courseId))
+		.where(
+			and(
+				eq(revisionReviewer.userId, userId),
+				eq(courseRevision.status, "preview"),
+				isNull(course.deletedAt),
+			),
+		)
+		.orderBy(desc(courseRevision.updatedAt), asc(courseRevision.id));
+	return rows.map(({ revision, course: c }) => ({
+		revisionId: revision.id,
+		revisionKey: revision.key,
+		purpose: revision.purpose,
+		course: { id: c.id, name: c.name, imageAssetId: c.imageAssetId },
+		updatedAt: revision.updatedAt.toISOString(),
+	}));
 }
 
 /**
@@ -634,6 +641,10 @@ export async function removeReviewer(
 		);
 		if (!reviewer)
 			return { ok: false, status: 404, error: "This user is not a reviewer" };
+		const left = await reviewersOf(tx, revisionId);
+		const noReviewer = reviewersBlocker(left.length - 1);
+		if (noReviewer)
+			return { ok: false, status: 409, code: "NO_REVIEWER", error: noReviewer };
 		await tx
 			.delete(revisionReviewer)
 			.where(

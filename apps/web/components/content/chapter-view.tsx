@@ -34,12 +34,10 @@ export function ChapterHeading({
 export function ChapterView({
 	chapter,
 	courseId,
-	reviewToken,
 	heading = true,
 }: {
 	chapter: Chapter;
 	courseId: string;
-	reviewToken?: string;
 	/** False when the caller draws the heading itself (the learner player pins it). */
 	heading?: boolean;
 }) {
@@ -51,11 +49,7 @@ export function ChapterView({
 			)}
 			{chapter.blocks.map((block) =>
 				block.type === "markdown" ? (
-					<Markdown
-						key={block.id}
-						courseId={courseId}
-						reviewToken={reviewToken}
-					>
+					<Markdown key={block.id} courseId={courseId}>
 						{block.body}
 					</Markdown>
 				) : (
@@ -69,13 +63,7 @@ export function ChapterView({
 					</figure>
 				),
 			)}
-			{chapter.quiz && (
-				<QuizView
-					quiz={chapter.quiz}
-					courseId={courseId}
-					reviewToken={reviewToken}
-				/>
-			)}
+			{chapter.quiz && <QuizView quiz={chapter.quiz} courseId={courseId} />}
 		</article>
 	);
 }

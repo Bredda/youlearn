@@ -44,10 +44,10 @@ Ordre retenu : les relecteurs ne sont **obligatoires qu'en phase 2**, quand le l
 
 ### Phase 2 : accès relecteur et fin du lien secret
 
-- [ ] `GET /api/me/reviews` (mes relectures) et `GET /api/reviews/:revisionId` (contenu, base, avis du relecteur, remarques). `canReadAsset` s'appuie sur l'affectation, plus sur `?review=<token>`. Fichiers : `routes/review.ts`, `lib/assets.ts`, `routes/assets.ts`. **Vérif. :** un relecteur lit la révision et ses images, un autre utilisateur reçoit 404.
-- [ ] Web : menu « Relectures » avec compteur, pages `/reviews` et `/reviews/[revisionId]` (reprend `review-viewer.tsx`), dialogue de choix des relecteurs à la place de `review-link-dialog.tsx`. **Vérif. :** types, Biome, pages chargées avec `curl` ; ce qui n'a pas été exercé à la main est dit.
-- [ ] Relecteurs **obligatoires** pour passer en relecture (au moins un, validé côté API, l'auteur peut se choisir ; on ne peut pas retirer le dernier). **Vérif. :** règle pure testée, `curl`.
-- [ ] Suppression de `previewToken`, des routes `preview-link`, de `/review/[token]` et de `?review=` dans `lib/asset-url.ts` (migration). **Vérif. :** plus aucune référence (`grep`), `pnpm check-types`.
+- [x] `GET /api/me/reviews` (mes relectures) et `GET /api/reviews/:revisionId` (contenu, base, avis du relecteur, remarques). `canReadAsset` s'appuie sur l'affectation, plus sur `?review=<token>`. Fichiers : `routes/review.ts`, `lib/assets.ts`, `routes/assets.ts`. **Vérif. :** `curl` avec un second utilisateur jetable (hors groupes) : il liste, lit la révision et ses images, un non-relecteur (même admin) reçoit 404, l'accès cesse au retour en brouillon ou au retrait ; tous passés.
+- [x] Web : menu « Relectures » avec compteur, pages `/reviews` et `/reviews/[revisionId]` (reprend `review-viewer.tsx`), dialogue de choix des relecteurs à la place de `review-link-dialog.tsx`. **Vérif. :** types, Biome et pages chargées avec `curl` (relecteur et non-relecteur, entrée de menu, anciennes pages 404). **Non exercé dans un navigateur** : le dialogue des relecteurs (recherche, ajout, retrait) et le clic sur les boutons.
+- [x] Relecteurs **obligatoires** pour passer en relecture (au moins un, validé côté API, l'auteur peut se choisir ; on ne peut pas retirer le dernier). **Vérif. :** règle pure testée, `curl` (409 `NO_REVIEWER`).
+- [x] Suppression de `previewToken`, des routes `preview-link`, de `/review/[token]` et de `?review=` dans `lib/asset-url.ts` (migration). **Vérif. :** plus aucune référence (`grep`), `pnpm check-types`, migration `0012` appliquée. Une révision déjà en relecture avant cette migration n'a pas de relecteur : il faut en ajouter depuis « Relecteurs ».
 
 ### Phase 3 : remarques et fils
 

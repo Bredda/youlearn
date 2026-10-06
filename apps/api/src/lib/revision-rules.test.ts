@@ -6,6 +6,7 @@ import {
 	normalizeReviewerIds,
 	openRevisionBlocker,
 	previewBlocker,
+	reviewersBlocker,
 	TRANSITIONS,
 } from "./revision-rules";
 
@@ -109,5 +110,15 @@ describe("normalizeReviewerIds", () => {
 		expect(normalizeReviewerIds(many.slice(0, MAX_REVIEWERS))).toHaveLength(
 			MAX_REVIEWERS,
 		);
+	});
+});
+
+describe("reviewersBlocker", () => {
+	it("needs at least one reviewer", () => {
+		expect(reviewersBlocker(0)).toBe(
+			"Choose at least one reviewer before sending a revision to review",
+		);
+		expect(reviewersBlocker(1)).toBeNull();
+		expect(reviewersBlocker(3)).toBeNull();
 	});
 });

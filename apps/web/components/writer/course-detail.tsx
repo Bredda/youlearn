@@ -25,7 +25,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { CourseFormDialog } from "@/components/writer/course-form-dialog";
-import { ReviewLinkDialog } from "@/components/writer/review-link-dialog";
+import { ReviewersDialog } from "@/components/writer/reviewers-dialog";
 import { RevisionFormDialog } from "@/components/writer/revision-form-dialog";
 import {
 	type RevisionAction,
@@ -55,20 +55,17 @@ export function CourseDetail({
 	revisions,
 	assignableGroups,
 	suggestedKey,
-	webUrl,
 }: {
 	course: WriterCourse;
 	revisions: WriterRevision[];
 	assignableGroups: CourseGroupTag[];
 	suggestedKey: string;
-	/** Public origin of the app (`WEB_URL`), the base of the review links. */
-	webUrl: string;
 }) {
 	const router = useRouter();
 	const [editing, setEditing] = useState(false);
 	// `undefined` = closed, otherwise the revision to start from (`null` = default).
 	const [creating, setCreating] = useState<{ baseId?: string }>();
-	const [linking, setLinking] = useState<WriterRevision>();
+	const [reviewing, setReviewing] = useState<WriterRevision>();
 	const [confirming, setConfirming] = useState<Confirmation>();
 	const [deleting, setDeleting] = useState<WriterRevision>();
 	const [error, setError] = useState<string>();
@@ -109,6 +106,8 @@ export function CourseDetail({
 
 	/** Publishing over a published revision and deprecating both retire a live revision: ask first. */
 	function changeStatus(revision: WriterRevision, to: RevisionStatus) {
+		// Going to review starts by choosing the reviewers.
+		if (to === "preview") return setReviewing(revision);
 		if ((to === "published" && published) || to === "deprecated")
 			return setConfirming({ revision, to });
 		return setStatus(revision, to);
@@ -120,8 +119,8 @@ export function CourseDetail({
 				return changeStatus(revision, action.to);
 			case "clone":
 				return setCreating({ baseId: revision.id });
-			case "link":
-				return setLinking(revision);
+			case "reviewers":
+				return setReviewing(revision);
 			case "delete":
 				return setDeleting(revision);
 		}
@@ -330,14 +329,17 @@ export function CourseDetail({
 				/>
 			)}
 
-			{linking && (
-				<ReviewLinkDialog
+			{reviewing && (
+				<ReviewersDialog
 					courseId={course.id}
-					webUrl={webUrl}
-					// Read from the refreshed list so a regenerated link is not shown stale.
-					revision={revisions.find((r) => r.id === linking.id) ?? linking}
-					onClose={() => setLinking(undefined)}
-					onChanged={() => router.refresh()}
+					// Read from the refreshed list so the reviewers are not shown stale.
+					revision={revisions.find((r) => r.id === reviewing.id) ?? reviewing}
+					onClose={() => setReviewing(undefined)}
+					onDone={() => {
+						// Sending to review closes the dialog; changing the reviewers of a revision already in review does not.
+						if (reviewing.status === "draft") setReviewing(undefined);
+						router.refresh();
+					}}
 				/>
 			)}
 

@@ -22,6 +22,7 @@ export const EVENTS = {
 		"create",
 		"set-status",
 		"delete",
+		// Review links no longer exist: these two stay so the rows already logged keep their labels.
 		"new-link",
 		"revoke-link",
 		"reviewer-add",

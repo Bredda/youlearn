@@ -15,7 +15,7 @@ import {
 export type RevisionAction =
 	| { type: "status"; to: RevisionStatus }
 	| { type: "clone" }
-	| { type: "link" }
+	| { type: "reviewers" }
 	| { type: "delete" };
 
 /** The actions offered depend on the status of the revision (the API enforces the workflow too). */
@@ -83,9 +83,9 @@ export function RevisionRowActions({
 				)}
 				{status === "preview" && (
 					<>
-						<DropdownMenuItem onClick={run({ type: "link" })}>
-							<Icon name="link" />
-							Lien de relecture
+						<DropdownMenuItem onClick={run({ type: "reviewers" })}>
+							<Icon name="learners" />
+							Relecteurs
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							disabled={pending}
