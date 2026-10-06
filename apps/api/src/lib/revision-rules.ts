@@ -26,3 +26,30 @@ export function previewBlocker(content: CourseContent): string | null {
 	const more = missing.length > 3 ? ` and ${missing.length - 3} more` : "";
 	return `Every chapter needs an estimated duration before review: missing for ${titles}${more}`;
 }
+
+/** Statuses of a revision that is being worked on or reviewed: a course has at most one at a time. */
+export const OPEN_STATUSES: RevisionStatus[] = ["draft", "preview"];
+
+export const isOpen = (status: RevisionStatus) =>
+	OPEN_STATUSES.includes(status);
+
+/** A revision in review stays editable (the writer fixes as the remarks come in); published ones never change. */
+export const isEditable = isOpen;
+
+/** What keeps a new revision from being created: another one is still open. Returns a message, or null. */
+export function openRevisionBlocker(
+	revisions: { key: string; status: RevisionStatus }[],
+): string | null {
+	const open = revisions.find((r) => isOpen(r.status));
+	if (!open) return null;
+	const where = open.status === "draft" ? "a draft" : "in review";
+	return `Revision ${open.key} is already ${where}: publish or delete it first`;
+}
+
+export const MAX_REVIEWERS = 20;
+
+/** The reviewers asked for, without duplicates and in order; null when there are too many. */
+export function normalizeReviewerIds(ids: string[]): string[] | null {
+	const unique = [...new Set(ids)];
+	return unique.length <= MAX_REVIEWERS ? unique : null;
+}

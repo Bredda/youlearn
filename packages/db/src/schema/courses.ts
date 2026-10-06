@@ -15,6 +15,7 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { user } from "./auth";
 import { group } from "./groups";
 
 /**
@@ -103,8 +104,8 @@ export const revisionStatus = pgEnum("revision_status", [
 ]);
 
 /**
- * One version of a course. A course has at most one `draft`, one `preview` and one `published` revision at the
- * same time (any number of `deprecated` ones), and a published revision never changes.
+ * One version of a course. A course has at most one open revision (`draft` or `preview`) and one `published`
+ * revision at the same time (any number of `deprecated` ones), and a published revision never changes.
  */
 export const courseRevision = pgTable(
 	"course_revision",
@@ -145,9 +146,14 @@ export const courseRevision = pgTable(
 	},
 	(table) => [
 		uniqueIndex("course_revision_key_idx").on(table.courseId, table.key),
-		uniqueIndex("course_revision_active_status_idx")
-			.on(table.courseId, table.status)
-			.where(sql`${table.status} <> 'deprecated'`),
+		// One revision at a time is being worked on or reviewed (a draft or a preview, never both) ...
+		uniqueIndex("course_revision_open_idx")
+			.on(table.courseId)
+			.where(sql`${table.status} in ('draft', 'preview')`),
+		// ... and one is published (any number are deprecated).
+		uniqueIndex("course_revision_published_idx")
+			.on(table.courseId)
+			.where(sql`${table.status} = 'published'`),
 	],
 );
 
@@ -167,4 +173,25 @@ export const revisionContributor = pgTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [primaryKey({ columns: [table.revisionId, table.userId] })],
+);
+
+/**
+ * Users picked by a writer to review a revision. Being assigned is what gives access to it (there is no global
+ * reviewer role), and only while the revision is in `preview`. The rows stay as history once it moves on.
+ */
+export const revisionReviewer = pgTable(
+	"revision_reviewer",
+	{
+		revisionId: text()
+			.notNull()
+			.references(() => courseRevision.id, { onDelete: "cascade" }),
+		userId: text()
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		createdAt: timestamp().notNull().defaultNow(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.revisionId, table.userId] }),
+		index("revision_reviewer_user_id_idx").on(table.userId),
+	],
 );

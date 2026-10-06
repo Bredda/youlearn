@@ -22,18 +22,19 @@ export type RevisionAction =
 export function RevisionRowActions({
 	courseId,
 	revision,
-	hasDraft,
+	hasOpen,
 	pending,
 	onAction,
 }: {
 	courseId: string;
 	revision: WriterRevision;
-	/** A course has one draft at a time: it blocks everything that would create another. */
-	hasDraft: boolean;
+	/** Another revision is already being worked on or reviewed: a new one cannot start. */
+	hasOpen: boolean;
 	pending: boolean;
 	onAction: (action: RevisionAction, revision: WriterRevision) => void;
 }) {
 	const { status } = revision;
+	const editable = status === "draft" || status === "preview";
 	const run = (action: RevisionAction) => () => onAction(action, revision);
 
 	return (
@@ -57,8 +58,8 @@ export function RevisionRowActions({
 						/>
 					}
 				>
-					<Icon name={status === "draft" ? "edit" : "view"} />
-					{status === "draft" ? "Éditer" : "Voir"}
+					<Icon name={editable ? "edit" : "view"} />
+					{editable ? "Éditer" : "Voir"}
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					render={
@@ -94,7 +95,7 @@ export function RevisionRowActions({
 							Publier
 						</DropdownMenuItem>
 						<DropdownMenuItem
-							disabled={pending || hasDraft}
+							disabled={pending}
 							onClick={run({ type: "status", to: "draft" })}
 						>
 							<Icon name="toDraft" />
@@ -104,7 +105,7 @@ export function RevisionRowActions({
 				)}
 				{(status === "published" || status === "deprecated") && (
 					<DropdownMenuItem
-						disabled={pending || hasDraft}
+						disabled={pending || hasOpen}
 						onClick={run({ type: "clone" })}
 					>
 						<Icon name={status === "deprecated" ? "toDraft" : "clone"} />

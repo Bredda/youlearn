@@ -80,7 +80,8 @@ export function CourseDetail({
 		[revisions],
 	);
 
-	const draft = course.current.draft;
+	// Only one revision at a time is being worked on or reviewed.
+	const open = course.current.draft ?? course.current.preview;
 	const published = course.current.published;
 	const api = `/api/writer/courses/${course.id}/revisions`;
 
@@ -195,10 +196,10 @@ export function CourseDetail({
 					</div>
 					<Button
 						onClick={() => setCreating({})}
-						disabled={draft !== undefined}
+						disabled={open !== undefined}
 						title={
-							draft
-								? `Le brouillon « ${draft.key} » est déjà en cours`
+							open
+								? `La révision « ${open.key} » est déjà en cours : publiez-la ou supprimez-la d'abord`
 								: undefined
 						}
 					>
@@ -240,7 +241,7 @@ export function CourseDetail({
 									<Link
 										href={`/writer/courses/${course.id}/revisions/${revision.id}`}
 										className="hover:underline"
-										title={`${revision.status === "draft" ? "Éditer" : "Voir"} la révision ${revision.key}`}
+										title={`${revision.status === "draft" || revision.status === "preview" ? "Éditer" : "Voir"} la révision ${revision.key}`}
 									>
 										{revision.key}
 									</Link>
@@ -278,7 +279,7 @@ export function CourseDetail({
 									<RevisionRowActions
 										courseId={course.id}
 										revision={revision}
-										hasDraft={draft !== undefined}
+										hasOpen={open !== undefined}
 										pending={pending}
 										onAction={onRevisionAction}
 									/>

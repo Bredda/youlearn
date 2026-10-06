@@ -162,7 +162,12 @@ export type WriterRevision = Pick<
 	createdAt: string;
 	updatedAt: string;
 	contributors: { userId: string; name: string }[];
+	/** The users asked to review it (they can read it while it is in preview). */
+	reviewers: ReviewerRef[];
 };
+
+/** A user picked to review a revision. */
+export type ReviewerRef = { userId: string; name: string; email: string };
 
 /** A revision with its content, as opened in the editor. */
 export type WriterRevisionDetail = WriterRevision & {

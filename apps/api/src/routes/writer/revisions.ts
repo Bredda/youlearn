@@ -5,6 +5,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { authorizeCourse } from "../../lib/courses";
 import {
+	addReviewer,
 	changeStatus,
 	createRevision,
 	deleteRevision,
@@ -12,8 +13,10 @@ import {
 	findRevisionDetail,
 	generateRevisionKey,
 	listRevisions,
+	removeReviewer,
 	resetPreviewToken,
 	saveContent,
+	searchReviewerCandidates,
 } from "../../lib/revisions";
 
 const CONTENT_BODY_LIMIT = 8 * 1024 * 1024;
@@ -45,6 +48,20 @@ const statusBody = z.object({
 	to: z.enum(schema.revisionStatus.enumValues),
 	/** Acknowledges that another revision gets deprecated by this change. */
 	confirm: z.boolean().default(false),
+	/** The reviewers of a revision going to preview (replaces the current ones; left alone when omitted). */
+	reviewerIds: z.array(z.string().min(1)).max(100).optional(),
+});
+
+const reviewerParams = revisionParams.extend({ userId: z.string().min(1) });
+const reviewerBody = z.object({ userId: z.string().min(1) });
+
+const candidatesQuery = z.object({
+	q: z.string().trim().max(100).default(""),
+	/** Users already chosen, comma separated. */
+	exclude: z
+		.string()
+		.default("")
+		.transform((value) => value.split(",").filter(Boolean)),
 });
 
 /** Revisions of a course (writer area): same access rule as the course itself. */
@@ -111,7 +128,9 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 
 		const result = await createRevision(id, actor, body);
 		if (!result.ok)
-			return reply.code(result.status).send({ error: result.error });
+			return reply
+				.code(result.status)
+				.send({ error: result.error, code: result.code });
 
 		const revision = await findRevision(id, result.revisionId);
 		if (!revision) throw new Error("Created revision not found");
@@ -141,12 +160,18 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 		"/api/writer/courses/:id/revisions/:revisionId/status",
 		async (request, reply) => {
 			const { id, revisionId } = revisionParams.parse(request.params);
-			const { to, confirm } = statusBody.parse(request.body);
+			const { to, confirm, reviewerIds } = statusBody.parse(request.body);
 			const access = await authorizeCourse(request, reply, id);
 			if (!access) return;
 			const { actor, course } = access;
 
-			const result = await changeStatus(id, revisionId, to, confirm);
+			const result = await changeStatus(
+				id,
+				revisionId,
+				to,
+				confirm,
+				reviewerIds,
+			);
 			if (!result.ok)
 				return reply
 					.code(result.status)
@@ -166,6 +191,31 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 				},
 				request.log,
 			);
+			const target = {
+				type: "revision",
+				id: revisionId,
+				label: `${course.name} · ${result.key}`,
+			};
+			for (const reviewer of result.reviewers.added)
+				await recordEvent(
+					{
+						type: "revision.reviewer-add",
+						actor: by,
+						target,
+						metadata: { courseId: id, reviewer: reviewer.name },
+					},
+					request.log,
+				);
+			for (const reviewer of result.reviewers.removed)
+				await recordEvent(
+					{
+						type: "revision.reviewer-remove",
+						actor: by,
+						target,
+						metadata: { courseId: id, reviewer: reviewer.name },
+					},
+					request.log,
+				);
 			// Publishing took the place of another revision: log it too, or the history would not explain it.
 			if (result.deprecated)
 				await recordEvent(
@@ -187,6 +237,72 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 					request.log,
 				);
 
+			return { revision: await findRevision(id, revisionId) };
+		},
+	);
+
+	// Candidates for the reviewer picker: any active user, by name or email.
+	app.get("/api/writer/reviewer-candidates", async (request) => {
+		const { q, exclude } = candidatesQuery.parse(request.query);
+		return { users: await searchReviewerCandidates(q, exclude) };
+	});
+
+	app.post(
+		"/api/writer/courses/:id/revisions/:revisionId/reviewers",
+		async (request, reply) => {
+			const { id, revisionId } = revisionParams.parse(request.params);
+			const { userId } = reviewerBody.parse(request.body);
+			const access = await authorizeCourse(request, reply, id);
+			if (!access) return;
+			const { actor, course } = access;
+
+			const result = await addReviewer(id, revisionId, userId);
+			if (!result.ok)
+				return reply
+					.code(result.status)
+					.send({ error: result.error, code: result.code });
+			if (result.reviewer)
+				await recordEvent(
+					{
+						type: "revision.reviewer-add",
+						actor: { id: actor.id, label: actor.label },
+						target: {
+							type: "revision",
+							id: revisionId,
+							label: `${course.name} · ${result.key}`,
+						},
+						metadata: { courseId: id, reviewer: result.reviewer.name },
+					},
+					request.log,
+				);
+			return { revision: await findRevision(id, revisionId) };
+		},
+	);
+
+	app.delete(
+		"/api/writer/courses/:id/revisions/:revisionId/reviewers/:userId",
+		async (request, reply) => {
+			const { id, revisionId, userId } = reviewerParams.parse(request.params);
+			const access = await authorizeCourse(request, reply, id);
+			if (!access) return;
+			const { actor, course } = access;
+
+			const result = await removeReviewer(id, revisionId, userId);
+			if (!result.ok)
+				return reply.code(result.status).send({ error: result.error });
+			await recordEvent(
+				{
+					type: "revision.reviewer-remove",
+					actor: { id: actor.id, label: actor.label },
+					target: {
+						type: "revision",
+						id: revisionId,
+						label: `${course.name} · ${result.key}`,
+					},
+					metadata: { courseId: id, reviewer: result.reviewer.name },
+				},
+				request.log,
+			);
 			return { revision: await findRevision(id, revisionId) };
 		},
 	);

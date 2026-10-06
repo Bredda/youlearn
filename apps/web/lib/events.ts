@@ -35,6 +35,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"revision.delete": "Suppression",
 	"revision.new-link": "Nouveau lien de relecture",
 	"revision.revoke-link": "Lien de relecture révoqué",
+	"revision.reviewer-add": "Relecteur ajouté",
+	"revision.reviewer-remove": "Relecteur retiré",
 	"asset.deprecate": "Fichier mis de côté",
 	"enrollment.start": "Inscription",
 	"enrollment.complete": "Cours terminé",
@@ -63,6 +65,8 @@ export const EVENT_BADGE_LABELS: Record<EventType, string> = {
 	"revision.delete": "Suppression de révision",
 	"revision.new-link": "Nouveau lien de relecture",
 	"revision.revoke-link": "Lien de relecture révoqué",
+	"revision.reviewer-add": "Relecteur ajouté à une révision",
+	"revision.reviewer-remove": "Relecteur retiré d'une révision",
 	"asset.deprecate": "Fichier mis de côté",
 	"enrollment.start": "Inscription à un cours",
 	"enrollment.complete": "Cours terminé",
@@ -155,6 +159,9 @@ export function describeEvent({
 			].filter(Boolean);
 			return parts.join(" ; ") || null;
 		}
+		case "revision.reviewer-add":
+		case "revision.reviewer-remove":
+			return typeof data.reviewer === "string" ? data.reviewer : null;
 		case "enrollment.complete":
 		case "enrollment.fail": {
 			const score =

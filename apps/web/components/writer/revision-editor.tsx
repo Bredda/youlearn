@@ -121,7 +121,7 @@ const dateFormat = new Intl.DateTimeFormat("fr-FR", {
 });
 
 /**
- * Edits the chapters of a revision. Only a draft is editable: any other status shows the content read-only.
+ * Edits the chapters of a revision. A draft and a revision in review are editable (the writer fixes as the remarks come in): any other status shows the content read-only.
  * `base` (the parent revision) feeds the live diff: badges in the outline, inline diff in text blocks and a
  * panel listing every change.
  */
@@ -135,7 +135,7 @@ export function RevisionEditor({
 	base: WriterRevisionDetail | null;
 }) {
 	const router = useRouter();
-	const readOnly = revision.status !== "draft";
+	const readOnly = revision.status !== "draft" && revision.status !== "preview";
 	// A revision in review can be published from here; that deprecates the published one, which is confirmed first.
 	const published = course.current.published;
 	const [confirmingPublish, setConfirmingPublish] = useState(false);
@@ -341,8 +341,9 @@ export function RevisionEditor({
 						</span>
 						{readOnly && (
 							<span className="mt-1 block">
-								Seul un brouillon est modifiable : pour corriger cette révision,
-								clonez-la en brouillon depuis la page du cours.
+								Seuls un brouillon ou une révision en relecture sont modifiables
+								: pour corriger cette révision, clonez-la en brouillon depuis la
+								page du cours.
 							</span>
 						)}
 					</>
