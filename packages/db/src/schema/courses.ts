@@ -190,3 +190,56 @@ export const revisionReviewer = pgTable(
 		index("revision_reviewer_user_id_idx").on(table.userId),
 	],
 );
+
+export const reviewTargetType = pgEnum("review_target_type", [
+	"revision",
+	"chapter",
+	"block",
+	"question",
+]);
+
+export const reviewThreadStatus = pgEnum("review_thread_status", [
+	"open",
+	"resolved",
+]);
+
+/**
+ * A remark made while a revision is reviewed. A thread is a root comment (`parentId` null, which holds the target,
+ * the quoted excerpt and the status) and its replies. The target is named by the stable ids of the content, so a
+ * remark follows its element through edits; authors are snapshots (no foreign key) so the history survives
+ * the deletion of an account. Kept with the revision.
+ */
+export const reviewComment = pgTable(
+	"review_comment",
+	{
+		id: text()
+			.primaryKey()
+			.$defaultFn(() => randomUUID()),
+		revisionId: text()
+			.notNull()
+			.references(() => courseRevision.id, { onDelete: "cascade" }),
+		parentId: text().references((): AnyPgColumn => reviewComment.id, {
+			onDelete: "cascade",
+		}),
+		/** Root comments only: what the thread is about. */
+		targetType: reviewTargetType(),
+		chapterId: text(),
+		/** The block or question id for those two target types. */
+		itemId: text(),
+		/** Root comments only: the text the reviewer had selected, shown for context (never used to locate). */
+		quote: text(),
+		body: text().notNull(),
+		authorId: text().notNull(),
+		authorLabel: text().notNull(),
+		/** Root comments only. */
+		status: reviewThreadStatus().notNull().default("open"),
+		resolvedById: text(),
+		resolvedByLabel: text(),
+		resolvedAt: timestamp(),
+		createdAt: timestamp().notNull().defaultNow(),
+	},
+	(table) => [
+		index("review_comment_revision_id_idx").on(table.revisionId),
+		index("review_comment_parent_id_idx").on(table.parentId),
+	],
+);

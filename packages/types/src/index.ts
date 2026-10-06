@@ -6,6 +6,7 @@ import type {
 	LearnerContent,
 	LearnerQuestion,
 	QuestionCorrection,
+	ReviewTarget,
 } from "@youlearn/content";
 import type { schema } from "@youlearn/db";
 import type { EventFilter } from "@youlearn/events";
@@ -286,6 +287,32 @@ export type ReviewView = {
 	 * somebody's unpublished work). The reader can show what changed.
 	 */
 	base: ReviewBase | null;
+};
+
+export type { ReviewTarget };
+
+/** One comment of a review thread (dates serialized by JSON). */
+export type ReviewComment = {
+	id: string;
+	authorId: string;
+	author: string;
+	body: string;
+	createdAt: string;
+};
+
+/** A remark on an element of a revision and the replies to it. */
+export type ReviewThread = {
+	id: string;
+	target: ReviewTarget;
+	/** The text the reviewer had selected, for context. */
+	quote: string | null;
+	status: "open" | "resolved";
+	resolvedBy: string | null;
+	resolvedAt: string | null;
+	/** The element it points at is no longer in the content. */
+	orphaned: boolean;
+	/** The root comment first, then the replies in order. */
+	comments: ReviewComment[];
 };
 
 /** A revision waiting for the signed-in user's review ("Relectures"). */
