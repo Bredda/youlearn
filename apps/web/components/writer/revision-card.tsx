@@ -23,10 +23,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { RevisionAction } from "@/components/writer/revision-row-actions";
-import {
-	REVISION_STATUS_LABELS,
-	REVISION_STATUS_VARIANTS,
-} from "@/lib/revisions";
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", {
 	dateStyle: "medium",
@@ -67,9 +63,6 @@ export function RevisionCard({
 					>
 						{revision.key}
 					</Link>
-					<Badge variant={REVISION_STATUS_VARIANTS[status]}>
-						{REVISION_STATUS_LABELS[status]}
-					</Badge>
 					{revision.certifying && (
 						<Badge variant="outline">
 							<Icon name="certifying" /> Certifiant
