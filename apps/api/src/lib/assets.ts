@@ -6,7 +6,7 @@ import { type CourseActor, canEditCourse, canViewCourse } from "./courses";
 import { sniffImageType } from "./image-type";
 import { escapeLike } from "./sql";
 
-const { courseAsset, courseRevision, enrollment } = schema;
+const { courseAsset, courseRevision, enrollment, revisionReviewer } = schema;
 
 export const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -60,14 +60,13 @@ export async function storeImage(
 	return existing;
 }
 
-/** A revision of the course (optionally in a given status / with a given review token) whose content uses the file. */
+/** A revision of the course (optionally in a given status or with a given id) whose content uses the file. */
 async function revisionUses(
 	courseId: string,
 	assetId: string,
 	where: {
 		status?: "published" | "preview";
 		statuses?: ("published" | "deprecated")[];
-		token?: string;
 		id?: string;
 	},
 ) {
@@ -79,7 +78,6 @@ async function revisionUses(
 			where.statuses
 				? inArray(courseRevision.status, where.statuses)
 				: undefined,
-			where.token ? eq(courseRevision.previewToken, where.token) : undefined,
 			where.id ? eq(courseRevision.id, where.id) : undefined,
 			sql`${courseRevision.content}::text like ${`%asset:${escapeLike(assetId)}%`}`,
 		),
@@ -88,51 +86,63 @@ async function revisionUses(
 }
 
 /**
+ * Whether a reviewer may read the file: the cover, the files of the revision they are asked to review and, since
+ * the review shows what changed, those of its base (an image that was replaced must still load). Same rule as
+ * `findReviewBase`: a published or deprecated parent only, never somebody's unpublished work.
+ */
+async function reviewerCanRead(
+	actor: CourseActor,
+	course: WriterCourse,
+	assetId: string,
+) {
+	const [reviewed] = await db
+		.select({ id: courseRevision.id, parentId: courseRevision.parentId })
+		.from(courseRevision)
+		.innerJoin(
+			revisionReviewer,
+			eq(revisionReviewer.revisionId, courseRevision.id),
+		)
+		.where(
+			and(
+				eq(courseRevision.courseId, course.id),
+				eq(courseRevision.status, "preview"),
+				eq(revisionReviewer.userId, actor.id),
+			),
+		);
+	if (!reviewed) return false;
+	return (
+		course.imageAssetId === assetId ||
+		(await revisionUses(course.id, assetId, { id: reviewed.id })) ||
+		(reviewed.parentId !== null &&
+			(await revisionUses(course.id, assetId, {
+				id: reviewed.parentId,
+				statuses: ["published", "deprecated"],
+			})))
+	);
+}
+
+/**
  * Editors read every file of their courses. Everybody else only reads what is meant to be shown: the cover, and
- * the files used by the published revision (or, holding a valid review link, by the revision in review) and, for a
- * learner, by the revision they follow. That keeps the files of drafts private even from the members of the groups
- * of the course.
+ * the files used by the published revision and, for a learner, by the revision they follow; a reviewer also reads
+ * the files of the revision they review (even outside the course's groups). That keeps the files of drafts
+ * private even from the members of the groups of the course.
  */
 export async function canReadAsset(
 	actor: CourseActor,
 	course: WriterCourse,
 	assetId: string,
-	reviewToken?: string,
 ) {
 	if (canEditCourse(actor, course)) return true;
 
-	if (reviewToken) {
-		const [reviewed] = await db
-			.select({ parentId: courseRevision.parentId })
-			.from(courseRevision)
-			.where(
-				and(
-					eq(courseRevision.courseId, course.id),
-					eq(courseRevision.status, "preview"),
-					eq(courseRevision.previewToken, reviewToken),
-				),
-			);
-		if (
-			reviewed &&
-			(course.imageAssetId === assetId ||
-				(await revisionUses(course.id, assetId, { token: reviewToken })) ||
-				// The review shows what changed since the base, so the files only the base uses (an image that was
-				// replaced) must load too. Same rule as `findReviewBase`: a published or deprecated parent only.
-				(reviewed.parentId !== null &&
-					(await revisionUses(course.id, assetId, {
-						id: reviewed.parentId,
-						statuses: ["published", "deprecated"],
-					}))))
-		)
-			return true;
-	}
-
-	if (!canViewCourse(actor, course)) return false;
+	const visible = canViewCourse(actor, course);
 	if (
-		course.imageAssetId === assetId ||
-		(await revisionUses(course.id, assetId, { status: "published" }))
+		visible &&
+		(course.imageAssetId === assetId ||
+			(await revisionUses(course.id, assetId, { status: "published" })))
 	)
 		return true;
+	if (await reviewerCanRead(actor, course, assetId)) return true;
+	if (!visible) return false;
 
 	// A learner keeps the files of the revision they follow, even once it is no longer the published one.
 	const followed = await db

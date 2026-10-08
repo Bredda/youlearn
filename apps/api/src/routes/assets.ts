@@ -15,8 +15,6 @@ const { courseAsset } = schema;
 
 const courseParams = z.object({ id: z.string().min(1) });
 const assetParams = courseParams.extend({ assetId: z.string().min(1) });
-/** A review link's token lets its holder read the files of the revision under review. */
-const assetQuery = z.object({ review: z.string().min(1).max(200).optional() });
 
 /**
  * Files of a course. Everything goes through the API (the browser only talks to the web origin): uploads here,
@@ -55,7 +53,6 @@ export const assetRoutes: FastifyPluginAsync = async (app) => {
 		{ preHandler: app.requireAuth },
 		async (request, reply) => {
 			const { id, assetId } = assetParams.parse(request.params);
-			const { review } = assetQuery.parse(request.query);
 			const [asset] = await db
 				.select()
 				.from(courseAsset)
@@ -64,7 +61,7 @@ export const assetRoutes: FastifyPluginAsync = async (app) => {
 			if (!asset || !target)
 				return reply.code(404).send({ error: "File not found" });
 			const actor = await getCourseActor(request);
-			if (!(await canReadAsset(actor, target, assetId, review)))
+			if (!(await canReadAsset(actor, target, assetId)))
 				return reply.code(403).send({ error: "Forbidden" });
 
 			const stored = await getObject(

@@ -6,6 +6,7 @@ import type {
 	LearnerContent,
 	LearnerQuestion,
 	QuestionCorrection,
+	ReviewTarget,
 } from "@youlearn/content";
 import type { schema } from "@youlearn/db";
 import type { EventFilter } from "@youlearn/events";
@@ -154,7 +155,6 @@ export type WriterRevision = Pick<
 	| "key"
 	| "status"
 	| "parentId"
-	| "previewToken"
 	| "purpose"
 	| "durationMinutes"
 	| "certifying"
@@ -162,6 +162,29 @@ export type WriterRevision = Pick<
 	createdAt: string;
 	updatedAt: string;
 	contributors: { userId: string; name: string }[];
+	/** The users asked to review it (they can read it while it is in preview). */
+	reviewers: RevisionReviewer[];
+	/** Where the review stands; null unless the revision is in review. */
+	review: ReviewSummary | null;
+};
+
+/** A user picked to review a revision. */
+export type ReviewerRef = { userId: string; name: string; email: string };
+
+export type ReviewVerdict = "approved" | "changes_requested";
+
+/** What a reviewer thinks: their verdict, `none` before they gave one, `stale` once the revision changed after it. */
+export type ReviewerState = ReviewVerdict | "none" | "stale";
+
+export type RevisionReviewer = ReviewerRef & { state: ReviewerState };
+
+/** Counts that say whether a revision in review is ready to be published (`pending` = no verdict yet). */
+export type ReviewSummary = {
+	approved: number;
+	changesRequested: number;
+	pending: number;
+	stale: number;
+	openThreads: number;
 };
 
 /** A revision with its content, as opened in the editor. */
@@ -266,7 +289,7 @@ export type CatalogPage = {
 /** Groups the current user may put on a course: their own for a writer, every group for an admin. */
 export type AssignableGroups = { groups: CourseGroupTag[] };
 
-/** What a review link shows: the revision being proofread, read-only. */
+/** What a reviewer sees: the revision they were asked to proofread, read-only. */
 export type ReviewView = {
 	course: Pick<
 		Course,
@@ -282,8 +305,44 @@ export type ReviewView = {
 	 * somebody's unpublished work). The reader can show what changed.
 	 */
 	base: ReviewBase | null;
-	/** The token of the link, needed to load the files of the revision. */
-	token: string;
+	/** The signed-in reviewer's own verdict state. */
+	myState: ReviewerState;
+};
+
+export type { ReviewTarget };
+
+/** One comment of a review thread (dates serialized by JSON). */
+export type ReviewComment = {
+	id: string;
+	authorId: string;
+	author: string;
+	body: string;
+	createdAt: string;
+};
+
+/** A remark on an element of a revision and the replies to it. */
+export type ReviewThread = {
+	id: string;
+	target: ReviewTarget;
+	/** The text the reviewer had selected, for context. */
+	quote: string | null;
+	status: "open" | "resolved";
+	resolvedBy: string | null;
+	resolvedAt: string | null;
+	/** The element it points at is no longer in the content. */
+	orphaned: boolean;
+	/** The root comment first, then the replies in order. */
+	comments: ReviewComment[];
+};
+
+/** A revision waiting for the signed-in user's review ("Relectures"). */
+export type MyReview = {
+	revisionId: string;
+	revisionKey: string;
+	purpose: string;
+	course: Pick<Course, "id" | "name" | "imageAssetId">;
+	/** When the revision was last modified (JSON date). */
+	updatedAt: string;
 };
 
 export type ReviewBase = {

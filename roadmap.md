@@ -31,7 +31,7 @@ Le socle côté formateur est là ; ce qui manque pour boucler ce parcours, c'es
 | 4 | Certification | Plus tard | Dépend de l'axe 3 ; conception arrêtée, rien d'écrit |
 | 5 | Programmes | Plus tard | Pas commencé |
 | 6 | Médias et fichiers lourds | Plus tard | Images seulement ; vidéos YouTube et Vimeo en lien |
-| 7 | Relecture et cycle de vie des révisions | En cours | Relecture : plan en cours (`todo.md`). Cycle de vie des inscriptions face à une nouvelle révision : à cadrer après |
+| 7 | Relecture et cycle de vie des révisions | En cours | Relecture : écrite, à valider à la main (`todo.md`). Cycle de vie des inscriptions face à une nouvelle révision : à cadrer après |
 
 ## 1. Socle du projet
 
@@ -85,7 +85,7 @@ Vidéos hébergées par l'application, envoi de gros fichiers par URL présigné
 
 **But :** que relire et publier une révision soit fluide pour le formateur, et que les apprenants déjà inscrits sur une révision précédente soient traités correctement.
 
-Relecture (plan en cours) : une seule révision ouverte par cours, des relecteurs choisis parmi les utilisateurs sans nouveau rôle, un menu « Relectures » à la place du lien secret, des remarques ancrées sur les chapitres, blocs et questions, et un contenu qui reste modifiable pendant la relecture.
+Relecture (écrite, à valider à la main) : une seule révision ouverte par cours, des relecteurs choisis parmi les utilisateurs sans nouveau rôle, un menu « Relectures » à la place du lien secret, des remarques ancrées sur les chapitres, blocs et questions, un avis par relecteur (périmé si le contenu change) et un contenu qui reste modifiable pendant la relecture ; publier avec une relecture inachevée demande une confirmation.
 
 Cycle de vie des inscriptions (à cadrer après) : que devient un apprenant qui a commencé ou terminé une révision quand une plus récente est publiée (migration de l'inscription en gardant les chapitres inchangés, refaire ce qui a changé, impact d'un changement déduit du diff ou déclaré à la publication).
 

@@ -15,6 +15,7 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { user } from "./auth";
 import { group } from "./groups";
 
 /**
@@ -103,8 +104,8 @@ export const revisionStatus = pgEnum("revision_status", [
 ]);
 
 /**
- * One version of a course. A course has at most one `draft`, one `preview` and one `published` revision at the
- * same time (any number of `deprecated` ones), and a published revision never changes.
+ * One version of a course. A course has at most one open revision (`draft` or `preview`) and one `published`
+ * revision at the same time (any number of `deprecated` ones), and a published revision never changes.
  */
 export const courseRevision = pgTable(
 	"course_revision",
@@ -128,11 +129,6 @@ export const courseRevision = pgTable(
 		durationMinutes: integer().notNull().default(0),
 		/** Mirrors `content.certifying`, derived on every save. */
 		certifying: boolean().notNull().default(false),
-		/**
-		 * Secret of the review link, set while the revision is in `preview` and cleared as soon as it leaves that
-		 * status (or when an editor revokes it). Whoever is signed in and holds the link can read the revision.
-		 */
-		previewToken: text().unique(),
 		/** The revision this one was cloned from, if any. */
 		parentId: text().references((): AnyPgColumn => courseRevision.id, {
 			onDelete: "set null",
@@ -145,9 +141,14 @@ export const courseRevision = pgTable(
 	},
 	(table) => [
 		uniqueIndex("course_revision_key_idx").on(table.courseId, table.key),
-		uniqueIndex("course_revision_active_status_idx")
-			.on(table.courseId, table.status)
-			.where(sql`${table.status} <> 'deprecated'`),
+		// One revision at a time is being worked on or reviewed (a draft or a preview, never both) ...
+		uniqueIndex("course_revision_open_idx")
+			.on(table.courseId)
+			.where(sql`${table.status} in ('draft', 'preview')`),
+		// ... and one is published (any number are deprecated).
+		uniqueIndex("course_revision_published_idx")
+			.on(table.courseId)
+			.where(sql`${table.status} = 'published'`),
 	],
 );
 
@@ -167,4 +168,91 @@ export const revisionContributor = pgTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [primaryKey({ columns: [table.revisionId, table.userId] })],
+);
+
+export const reviewVerdict = pgEnum("review_verdict", [
+	"approved",
+	"changes_requested",
+]);
+
+/**
+ * Users picked by a writer to review a revision. Being assigned is what gives access to it (there is no global
+ * reviewer role), and only while the revision is in `preview`. The rows stay as history once it moves on.
+ */
+export const revisionReviewer = pgTable(
+	"revision_reviewer",
+	{
+		revisionId: text()
+			.notNull()
+			.references(() => courseRevision.id, { onDelete: "cascade" }),
+		userId: text()
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		/** The reviewer's opinion, null until they give one. */
+		verdict: reviewVerdict(),
+		verdictAt: timestamp(),
+		/**
+		 * `updatedAt` of the revision when the verdict was given: a later change to the revision makes the verdict
+		 * stale (it was about an earlier version).
+		 */
+		verdictRevisionUpdatedAt: timestamp(),
+		createdAt: timestamp().notNull().defaultNow(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.revisionId, table.userId] }),
+		index("revision_reviewer_user_id_idx").on(table.userId),
+	],
+);
+
+export const reviewTargetType = pgEnum("review_target_type", [
+	"revision",
+	"chapter",
+	"block",
+	"question",
+]);
+
+export const reviewThreadStatus = pgEnum("review_thread_status", [
+	"open",
+	"resolved",
+]);
+
+/**
+ * A remark made while a revision is reviewed. A thread is a root comment (`parentId` null, which holds the target,
+ * the quoted excerpt and the status) and its replies. The target is named by the stable ids of the content, so a
+ * remark follows its element through edits; authors are snapshots (no foreign key) so the history survives
+ * the deletion of an account. Kept with the revision.
+ */
+export const reviewComment = pgTable(
+	"review_comment",
+	{
+		id: text()
+			.primaryKey()
+			.$defaultFn(() => randomUUID()),
+		revisionId: text()
+			.notNull()
+			.references(() => courseRevision.id, { onDelete: "cascade" }),
+		parentId: text().references((): AnyPgColumn => reviewComment.id, {
+			onDelete: "cascade",
+		}),
+		/** Root comments only: what the thread is about. */
+		targetType: reviewTargetType(),
+		chapterId: text(),
+		/** The block or question id for those two target types. */
+		itemId: text(),
+		/** Root comments only: the text the reviewer had selected, shown for context (never used to locate). */
+		quote: text(),
+		body: text().notNull(),
+		authorId: text().notNull(),
+		authorLabel: text().notNull(),
+		/** Root comments only. */
+		status: reviewThreadStatus().notNull().default("open"),
+		resolvedById: text(),
+		resolvedByLabel: text(),
+		resolvedAt: timestamp(),
+		createdAt: timestamp().notNull().defaultNow(),
+	},
+	(table) => [
+		index("review_comment_revision_id_idx").on(table.revisionId),
+		index("review_comment_parent_id_idx").on(table.parentId),
+	],
 );

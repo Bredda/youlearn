@@ -6,8 +6,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 /**
  * Sticky header spanning the full width, above the sidebar. Its height is the
  * `--header-height` variable set by the layout, which the sidebar uses to start below it.
+ * `children` is the breadcrumb, after the brand.
  */
-export function SiteHeader() {
+export function SiteHeader({ children }: { children?: React.ReactNode }) {
 	return (
 		<header className="sticky top-0 z-50 flex w-full items-center border-b bg-background">
 			<div className="flex h-(--header-height) w-full items-center gap-2 pr-4 pl-3">
@@ -22,6 +23,15 @@ export function SiteHeader() {
 					</div>
 					<span className="truncate font-medium text-sm">YouLearn</span>
 				</Link>
+				{children && (
+					<>
+						<Separator
+							orientation="vertical"
+							className="mx-2 data-vertical:h-4 data-vertical:self-auto"
+						/>
+						{children}
+					</>
+				)}
 			</div>
 		</header>
 	);

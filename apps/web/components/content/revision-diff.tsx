@@ -70,11 +70,9 @@ const assetIds = (text: string) =>
 function ImageChanges({
 	block,
 	courseId,
-	reviewToken,
 }: {
 	block: BlockDiff;
 	courseId: string;
-	reviewToken?: string | undefined;
 }) {
 	const before = assetIds(
 		block.before?.type === "markdown" ? block.before.body : "",
@@ -89,7 +87,7 @@ function ImageChanges({
 		<figure key={`${label}${id}`} className="flex flex-col gap-1">
 			{/* biome-ignore lint/performance/noImgElement: asset URLs are API routes, not optimizable by next/image */}
 			<img
-				src={assetUrl(courseId, id, reviewToken)}
+				src={assetUrl(courseId, id)}
 				alt={label}
 				className={`h-24 rounded border-2 object-contain ${tint}`}
 			/>
@@ -107,11 +105,9 @@ function ImageChanges({
 function BlockChange({
 	block,
 	courseId,
-	reviewToken,
 }: {
 	block: BlockDiff;
 	courseId: string;
-	reviewToken?: string | undefined;
 }) {
 	const kind = (block.after ?? block.before)?.type;
 	const video = (b: BlockDiff["before"]) => (b?.type === "video" ? b : null);
@@ -130,11 +126,7 @@ function BlockChange({
 			{block.lines.length > 0 && block.status !== "unchanged" && (
 				<LineDiff changes={block.lines} />
 			)}
-			<ImageChanges
-				block={block}
-				courseId={courseId}
-				reviewToken={reviewToken}
-			/>
+			<ImageChanges block={block} courseId={courseId} />
 			{(video(block.before) || video(block.after)) &&
 				block.status !== "unchanged" && (
 					<dl className="grid gap-1 text-sm">
@@ -291,11 +283,9 @@ function QuizChange({ quiz }: { quiz: QuizDiff }) {
 function ChapterChange({
 	chapter,
 	courseId,
-	reviewToken,
 }: {
 	chapter: ChapterDiff;
 	courseId: string;
-	reviewToken?: string | undefined;
 }) {
 	const title = (chapter.after ?? chapter.before)?.title ?? "";
 	const { linesAdded, linesRemoved } = chapter.stats;
@@ -345,12 +335,7 @@ function ChapterChange({
 				{chapter.blocks.some(changed) && (
 					<ul className="flex flex-col gap-3">
 						{chapter.blocks.filter(changed).map((block) => (
-							<BlockChange
-								key={block.id}
-								block={block}
-								courseId={courseId}
-								reviewToken={reviewToken}
-							/>
+							<BlockChange key={block.id} block={block} courseId={courseId} />
 						))}
 					</ul>
 				)}
@@ -389,11 +374,9 @@ export function DiffSummary({ diff }: { diff: ContentDiff }) {
 export function RevisionDiff({
 	diff,
 	courseId,
-	reviewToken,
 }: {
 	diff: ContentDiff;
 	courseId: string;
-	reviewToken?: string | undefined;
 }) {
 	const unchanged = diff.chapters.filter((c) => !changed(c));
 	return (
@@ -412,12 +395,7 @@ export function RevisionDiff({
 				</p>
 			)}
 			{diff.chapters.filter(changed).map((chapter) => (
-				<ChapterChange
-					key={chapter.id}
-					chapter={chapter}
-					courseId={courseId}
-					reviewToken={reviewToken}
-				/>
+				<ChapterChange key={chapter.id} chapter={chapter} courseId={courseId} />
 			))}
 			{unchanged.length > 0 && (
 				<details className="text-sm">

@@ -11,14 +11,12 @@ import type {
 	CourseEnrollmentPage,
 	CourseEnrollmentQuery,
 } from "@youlearn/types";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { dataTableFeatures } from "@/components/data-table/features";
 import { PendingIcon } from "@/components/icon";
-import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { LearnerDetailDialog } from "@/components/writer/learner-detail-dialog";
 import type { LearnerAction } from "@/components/writer/learner-row-actions";
@@ -29,14 +27,12 @@ import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
 type Props = CourseEnrollmentPage & {
 	courseId: string;
-	courseName: string;
 	/** Table state, read from the URL by the page. */
 	query: CourseEnrollmentQuery;
 };
 
 export function LearnersManager({
 	courseId,
-	courseName,
 	enrollments,
 	total,
 	query,
@@ -110,16 +106,21 @@ export function LearnersManager({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<Link
-				href={`/writer/courses/${courseId}`}
-				className="text-muted-foreground text-sm hover:underline"
-			>
-				← {courseName}
-			</Link>
-			<PageHeader
-				title="Apprenants"
-				description={`Qui suit « ${courseName} », jusqu'où, et le résultat à l'examen final.`}
-			>
+			<div className="flex flex-wrap items-start justify-between gap-2">
+				<LearnersToolbar
+					key={query.q ?? ""}
+					query={query}
+					onChange={navigate}
+					onReset={() =>
+						navigate({
+							q: undefined,
+							status: undefined,
+							sort: "startedAt",
+							order: "desc",
+							pageSize: DEFAULT_PAGE_SIZE,
+						})
+					}
+				/>
 				<Button
 					variant="outline"
 					disabled={isPending}
@@ -128,22 +129,7 @@ export function LearnersManager({
 					<PendingIcon pending={isPending} name="refresh" />
 					Actualiser
 				</Button>
-			</PageHeader>
-
-			<LearnersToolbar
-				key={query.q ?? ""}
-				query={query}
-				onChange={navigate}
-				onReset={() =>
-					navigate({
-						q: undefined,
-						status: undefined,
-						sort: "startedAt",
-						order: "desc",
-						pageSize: DEFAULT_PAGE_SIZE,
-					})
-				}
-			/>
+			</div>
 
 			<div className={isPending ? "opacity-60 transition-opacity" : undefined}>
 				<DataTable table={table} emptyMessage="Aucun apprenant." />

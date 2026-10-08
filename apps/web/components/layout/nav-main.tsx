@@ -5,6 +5,7 @@ import { Icon } from "@/components/icon";
 import {
 	SidebarGroup,
 	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -17,6 +18,8 @@ export function NavMain({
 		name: string;
 		url: string;
 		icon: IconName;
+		/** A count shown on the entry (hidden while the sidebar is collapsed). */
+		badge?: number;
 	}[];
 }) {
 	return (
@@ -31,6 +34,9 @@ export function NavMain({
 							<Icon name={item.icon} />
 							<span>{item.name}</span>
 						</SidebarMenuButton>
+						{item.badge !== undefined && (
+							<SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+						)}
 					</SidebarMenuItem>
 				))}
 			</SidebarMenu>

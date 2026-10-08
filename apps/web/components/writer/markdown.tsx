@@ -14,11 +14,9 @@ import { assetUrl } from "@/lib/asset-url";
  */
 export function Markdown({
 	courseId,
-	reviewToken,
 	children,
 }: {
 	courseId: string;
-	reviewToken?: string;
 	children: string;
 }) {
 	return (
@@ -27,7 +25,7 @@ export function Markdown({
 			rehypePlugins={[rehypeSlug]}
 			urlTransform={(url) =>
 				url.startsWith("asset:")
-					? assetUrl(courseId, url.slice("asset:".length), reviewToken)
+					? assetUrl(courseId, url.slice("asset:".length))
 					: defaultUrlTransform(url)
 			}
 			components={{

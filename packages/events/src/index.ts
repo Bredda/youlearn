@@ -18,7 +18,17 @@ export const EVENTS = {
 	group: ["create", "update", "delete"],
 	course: ["create", "update", "delete", "set-groups"],
 	asset: ["deprecate"],
-	revision: ["create", "set-status", "delete", "new-link", "revoke-link"],
+	revision: [
+		"create",
+		"set-status",
+		"delete",
+		// Review links no longer exist: these two stay so the rows already logged keep their labels.
+		"new-link",
+		"revoke-link",
+		"reviewer-add",
+		"reviewer-remove",
+		"verdict",
+	],
 	enrollment: ["start", "complete", "fail"],
 } as const;
 

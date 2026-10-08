@@ -43,7 +43,13 @@ const writerItems: {
 	{ name: "Parcours", url: "/writer/programs", icon: "programs" },
 	{ name: "Cours", url: "/writer/courses", icon: "courses" },
 ];
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+	reviewCount,
+	...props
+}: React.ComponentProps<typeof Sidebar> & {
+	/** Revisions waiting for the user's review: the "Relectures" entry only shows when there are some. */
+	reviewCount: number;
+}) {
 	const user = useUser();
 
 	return (
@@ -53,7 +59,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			{...props}
 		>
 			<SidebarContent>
-				<NavMain items={userItems} />
+				<NavMain
+					items={[
+						...userItems,
+						...(reviewCount > 0
+							? [
+									{
+										name: "Relectures",
+										url: "/reviews",
+										icon: "preview" as const,
+										badge: reviewCount,
+									},
+								]
+							: []),
+					]}
+				/>
 				{isAdmin(user.roles) && <NavAdmin items={adminItems} />}
 				{canWrite(user.roles) && <NavWriter items={writerItems} />}
 			</SidebarContent>

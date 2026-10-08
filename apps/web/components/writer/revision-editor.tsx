@@ -9,8 +9,11 @@ import {
 	diffContent,
 	formatDuration,
 } from "@youlearn/content";
-import type { WriterCourse, WriterRevisionDetail } from "@youlearn/types";
-import Link from "next/link";
+import type {
+	WriterCourse,
+	WriterRevision,
+	WriterRevisionDetail,
+} from "@youlearn/types";
 import { useRouter } from "next/navigation";
 import {
 	useCallback,
@@ -25,6 +28,9 @@ import { DiffSummary, RevisionDiff } from "@/components/content/revision-diff";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
+import { RemarksPanel } from "@/components/review/remarks-panel";
+import { ReviewState } from "@/components/review/review-state";
+import { OpenRemarksBadge } from "@/components/review/review-threads";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -41,8 +47,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { ChapterEditor } from "@/components/writer/chapter-editor";
+import {
+	CompareControl,
+	NO_COMPARISON,
+} from "@/components/writer/compare-control";
 import { ConfirmRemove } from "@/components/writer/confirm-remove";
 import { RevisionStatusDialog } from "@/components/writer/revision-status-dialog";
+import { RevisionSwitcher } from "@/components/writer/revision-switcher";
 import { DragHandle, SortableList } from "@/components/writer/sortable-list";
 import { callApi } from "@/lib/api-client";
 import {
@@ -52,6 +63,7 @@ import {
 	newFinalExam,
 } from "@/lib/content-editor";
 import { describeIssues, type EditorIssue } from "@/lib/content-issues";
+import { reviewWarnings } from "@/lib/review-summary";
 import {
 	REVISION_STATUS_LABELS,
 	REVISION_STATUS_VARIANTS,
@@ -121,21 +133,24 @@ const dateFormat = new Intl.DateTimeFormat("fr-FR", {
 });
 
 /**
- * Edits the chapters of a revision. Only a draft is editable: any other status shows the content read-only.
+ * Edits the chapters of a revision. A draft and a revision in review are editable (the writer fixes as the remarks come in): any other status shows the content read-only.
  * `base` (the parent revision) feeds the live diff: badges in the outline, inline diff in text blocks and a
  * panel listing every change.
  */
 export function RevisionEditor({
 	course,
 	revision,
+	revisions,
 	base,
 }: {
 	course: WriterCourse;
 	revision: WriterRevisionDetail;
+	/** Every revision of the course, for the switcher next to the name. */
+	revisions: WriterRevision[];
 	base: WriterRevisionDetail | null;
 }) {
 	const router = useRouter();
-	const readOnly = revision.status !== "draft";
+	const readOnly = revision.status !== "draft" && revision.status !== "preview";
 	// A revision in review can be published from here; that deprecates the published one, which is confirmed first.
 	const published = course.current.published;
 	const [confirmingPublish, setConfirmingPublish] = useState(false);
@@ -205,12 +220,14 @@ export function RevisionEditor({
 		return () => clearTimeout(timer);
 	}, [content, dirty, revision.id]);
 
+	// Offered on arrival only: while this page holds unsaved work (a change of comparison reloads the props, the
+	// content of which is a new object), the local copy is that very work.
 	useEffect(() => {
-		if (readOnly) return;
+		if (readOnly || dirty) return;
 		const saved = readLocalDraft(revision.id);
 		if (saved && !deepEqual(saved.content, revision.content))
 			setRestorable(saved);
-	}, [readOnly, revision.id, revision.content]);
+	}, [readOnly, dirty, revision.id, revision.content]);
 
 	function restore() {
 		if (!restorable) return;
@@ -320,20 +337,66 @@ export function RevisionEditor({
 	}
 
 	const shownIssues = issues.length > 0 ? issues : liveIssues;
-	const baseTitle = base
-		? `${base.key} (${REVISION_STATUS_LABELS[base.status].toLowerCase()})`
-		: undefined;
+
+	/** The comparison lives in the URL: the page loads the chosen revision, this one keeps its unsaved work. */
+	function compareWith(value: string) {
+		router.replace(`?compare=${encodeURIComponent(value)}`, { scroll: false });
+	}
 
 	return (
-		<div className="flex flex-col gap-4">
-			<Link
-				href={`/writer/courses/${course.id}`}
-				className="text-muted-foreground text-sm hover:underline"
-			>
-				← {course.name}
-			</Link>
+		// From md up the page is exactly the viewport (the header, its 1px border and the padding of the layout taken off): only the
+		// chapter scrolls, everything else stays in place. Below md it flows and scrolls as a normal page.
+		<div className="flex flex-col gap-4 md:h-[calc(100svh-var(--header-height)-2rem-1px)]">
 			<PageHeader
+				eyebrow={course.name}
 				title={revision.key}
+				titleAddon={
+					<RevisionSwitcher
+						courseId={course.id}
+						revisions={revisions}
+						currentId={revision.id}
+					/>
+				}
+				meta={
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+						<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
+							{REVISION_STATUS_LABELS[revision.status]}
+						</Badge>
+						<Badge variant="outline">
+							<Icon name="duration" />
+							{formatDuration(totalMinutes) || "Durée non estimée"}
+						</Badge>
+						{readOnly ? (
+							content.certifying && (
+								<Badge variant="outline">
+									<Icon name="certifying" /> Certifiant
+								</Badge>
+							)
+						) : (
+							<span
+								className="flex items-center gap-2"
+								title="Ajoute un examen final obligatoire, toujours en dernier chapitre"
+							>
+								<Switch
+									id="certifying"
+									size="sm"
+									checked={content.certifying === true}
+									onCheckedChange={(checked) =>
+										checked ? setCertifying(true) : setConfirmingUncertify(true)
+									}
+								/>
+								<Label htmlFor="certifying">Cours certifiant</Label>
+							</span>
+						)}
+						{!readOnly && missingDurations > 0 && (
+							<span className="text-amber-700 text-xs dark:text-amber-400">
+								{missingDurations} chapitre{missingDurations > 1 ? "s" : ""}{" "}
+								sans durée estimée : à renseigner avant de passer en relecture.
+							</span>
+						)}
+						<ReviewState revision={revision} inline />
+					</div>
+				}
 				description={
 					<>
 						<span className="whitespace-pre-wrap">
@@ -341,42 +404,31 @@ export function RevisionEditor({
 						</span>
 						{readOnly && (
 							<span className="mt-1 block">
-								Seul un brouillon est modifiable : pour corriger cette révision,
-								clonez-la en brouillon depuis la page du cours.
+								Seuls un brouillon ou une révision en relecture sont modifiables
+								: pour corriger cette révision, clonez-la en brouillon depuis la
+								page du cours.
 							</span>
 						)}
 					</>
 				}
 			>
-				<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
-					{REVISION_STATUS_LABELS[revision.status]}
-				</Badge>
-				{content.certifying && (
-					<Badge variant="outline">
-						<Icon name="certifying" /> Certifiant
-					</Badge>
-				)}
-				<Badge variant="outline">
-					<Icon name="duration" />
-					{formatDuration(totalMinutes) || "Durée non estimée"}
-				</Badge>
-				<Button
-					variant="outline"
-					nativeButton={false}
-					render={
-						<Link
-							href={`/writer/courses/${course.id}/compare?to=${revision.id}`}
-						/>
-					}
-				>
-					<Icon name="compare" />
-					Comparer
-				</Button>
+				<CompareControl
+					revisions={revisions}
+					currentId={revision.id}
+					parentId={revision.parentId}
+					value={base?.id ?? NO_COMPARISON}
+					onChange={compareWith}
+					summary={liveDiff ? <DiffSummary diff={liveDiff} /> : null}
+					showChanges={showChanges}
+					onToggleChanges={() => setShowChanges((value) => !value)}
+				/>
 				{revision.status === "preview" && (
 					<Button
 						disabled={publishing}
 						onClick={() =>
-							published ? setConfirmingPublish(true) : publishRevision(false)
+							published || reviewWarnings(revision.review).length > 0
+								? setConfirmingPublish(true)
+								: publishRevision(false)
 						}
 					>
 						<PendingIcon pending={publishing} name="publish" />
@@ -390,6 +442,7 @@ export function RevisionEditor({
 					revisionKey={revision.key}
 					to="published"
 					publishedKey={published?.key}
+					review={revision.review}
 					pending={publishing}
 					onConfirm={() => publishRevision(true)}
 					onClose={() => setConfirmingPublish(false)}
@@ -492,51 +545,15 @@ export function RevisionEditor({
 				</div>
 			)}
 
-			{!readOnly && (
-				<div className="flex flex-col gap-2 rounded-md border px-3 py-2">
-					<div className="flex flex-wrap items-center gap-3">
-						<Switch
-							id="certifying"
-							checked={content.certifying === true}
-							onCheckedChange={(checked) =>
-								checked ? setCertifying(true) : setConfirmingUncertify(true)
-							}
-						/>
-						<Label htmlFor="certifying">Cours certifiant</Label>
-						<span className="text-muted-foreground text-sm">
-							Ajoute un examen final obligatoire, toujours en dernier chapitre.
-						</span>
-					</div>
-					{missingDurations > 0 && (
-						<p className="text-amber-700 text-sm dark:text-amber-400">
-							{missingDurations} chapitre{missingDurations > 1 ? "s" : ""} sans
-							durée estimée : à renseigner avant de passer en relecture.
-						</p>
-					)}
-				</div>
-			)}
-
-			{base && liveDiff && (
-				<div className="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2">
-					<Switch
-						id="show-changes"
-						checked={showChanges}
-						onCheckedChange={setShowChanges}
-					/>
-					<Label htmlFor="show-changes">
-						Voir les modifications depuis {baseTitle}
-					</Label>
-					<span className="ml-auto text-muted-foreground text-sm">
-						<DiffSummary diff={liveDiff} />
-					</span>
-				</div>
-			)}
+			<RemarksPanel content={content} onSelectChapter={setSelectedId} />
 
 			{showChanges && liveDiff ? (
-				<RevisionDiff diff={liveDiff} courseId={course.id} />
+				<div className="relative min-h-0 flex-1 md:min-h-64 md:overflow-y-auto">
+					<RevisionDiff diff={liveDiff} courseId={course.id} />
+				</div>
 			) : (
-				<div className="grid gap-4 md:grid-cols-[16rem_1fr]">
-					<div className="flex min-w-0 flex-col gap-2">
+				<div className="grid min-h-0 flex-1 gap-4 md:min-h-64 md:grid-cols-[16rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
+					<div className="relative flex min-w-0 flex-col gap-2 md:overflow-y-auto">
 						{content.chapters.length === 0 && (
 							<p className="text-muted-foreground text-sm">
 								{readOnly
@@ -576,6 +593,7 @@ export function RevisionEditor({
 										>
 											{index + 1}. {chapter.title || "(sans titre)"}
 										</button>
+										<OpenRemarksBadge chapterId={chapter.id} />
 										{chapter.estimatedMinutes !== undefined && (
 											<span className="shrink-0 text-muted-foreground text-xs">
 												{formatDuration(chapter.estimatedMinutes)}
@@ -630,6 +648,7 @@ export function RevisionEditor({
 								>
 									{finalExam.title || "(sans titre)"}
 								</button>
+								<OpenRemarksBadge chapterId={finalExam.id} />
 								{finalExam.estimatedMinutes !== undefined && (
 									<span className="shrink-0 text-muted-foreground text-xs">
 										{formatDuration(finalExam.estimatedMinutes)}
@@ -656,25 +675,29 @@ export function RevisionEditor({
 						)}
 					</div>
 
-					{selected &&
-						(readOnly ? (
-							<ChapterView chapter={selected} courseId={course.id} />
-						) : (
-							<ChapterEditor
-								key={selected.id}
-								chapter={selected}
-								courseId={course.id}
-								baseChapter={base?.content.chapters.find(
-									(c) => c.id === selected.id,
-								)}
-								baseKey={base?.key}
-								dispatch={dispatch}
-							/>
-						))}
+					{/* The only part of the page that scrolls. `relative` keeps absolutely positioned content (the
+					    screen-reader texts) inside it: otherwise it escapes the clipping and stretches the page. */}
+					<div className="relative min-w-0 md:overflow-y-auto">
+						{selected &&
+							(readOnly ? (
+								<ChapterView chapter={selected} courseId={course.id} />
+							) : (
+								<ChapterEditor
+									key={selected.id}
+									chapter={selected}
+									courseId={course.id}
+									baseChapter={base?.content.chapters.find(
+										(c) => c.id === selected.id,
+									)}
+									baseKey={base?.key}
+									dispatch={dispatch}
+								/>
+							))}
+					</div>
 				</div>
 			)}
 			{!readOnly && (
-				<div className="sticky bottom-0 z-20 -mx-4 -mb-4 flex items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+				<div className="z-20 -mx-4 -mb-4 flex shrink-0 items-center gap-3 border-t bg-background px-4 py-3">
 					<span
 						aria-live="polite"
 						className="mr-auto text-muted-foreground text-sm"

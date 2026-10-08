@@ -4,5 +4,6 @@ export * from "./learner";
 export * from "./progress";
 export * from "./quiz";
 export * from "./quiz-draw";
+export * from "./review-target";
 export * from "./schema";
 export * from "./video";

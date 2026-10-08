@@ -1,4 +1,5 @@
 import type { Quiz } from "@youlearn/content";
+import type { ReactNode } from "react";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { Markdown } from "@/components/writer/markdown";
@@ -10,11 +11,12 @@ import { Markdown } from "@/components/writer/markdown";
 export function QuizView({
 	quiz,
 	courseId,
-	reviewToken,
+	annotate,
 }: {
 	quiz: Quiz;
 	courseId: string;
-	reviewToken?: string;
+	/** Extra content under each question (the review hangs its remarks there). */
+	annotate?: (questionId: string) => ReactNode;
 }) {
 	return (
 		<section className="mt-4 flex flex-col gap-3 rounded-md border p-3">
@@ -26,16 +28,18 @@ export function QuizView({
 			</header>
 			<ol className="flex flex-col gap-3">
 				{quiz.questions.map((question, index) => (
-					<li key={question.id} className="rounded-md border bg-muted/30 p-3">
+					<li
+						key={question.id}
+						className="group/block rounded-md border bg-muted/30 p-3"
+						data-annotate
+					>
 						<div className="mb-1 flex items-center gap-2 text-muted-foreground text-xs">
 							<span>Question {index + 1}</span>
 							<Badge variant="outline">
 								{question.type === "single" ? "Choix unique" : "Choix multiple"}
 							</Badge>
 						</div>
-						<Markdown courseId={courseId} reviewToken={reviewToken}>
-							{question.prompt}
-						</Markdown>
+						<Markdown courseId={courseId}>{question.prompt}</Markdown>
 						<ul className="mt-2 flex flex-col gap-1">
 							{question.options.map((option) => (
 								<li
@@ -58,11 +62,10 @@ export function QuizView({
 						</ul>
 						{question.explanation && (
 							<div className="mt-2 border-l-2 pl-3 text-muted-foreground text-sm">
-								<Markdown courseId={courseId} reviewToken={reviewToken}>
-									{question.explanation}
-								</Markdown>
+								<Markdown courseId={courseId}>{question.explanation}</Markdown>
 							</div>
 						)}
+						{annotate?.(question.id)}
 					</li>
 				))}
 			</ol>
