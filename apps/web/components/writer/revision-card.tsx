@@ -134,12 +134,6 @@ export function RevisionCard({
 									Relecteurs
 								</DropdownMenuItem>
 							)}
-							<DropdownMenuItem
-								render={<Link href={`${base}/compare?to=${revision.id}`} />}
-							>
-								<Icon name="compare" />
-								Comparer
-							</DropdownMenuItem>
 							{status === "preview" && (
 								<DropdownMenuItem
 									disabled={pending}

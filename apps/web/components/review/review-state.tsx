@@ -13,11 +13,11 @@ const STATE_VARIANTS = {
 /** Where the review of a revision stands: each reviewer's verdict and what is still open. */
 export function ReviewState({
 	revision,
-	compact = false,
+	inline = false,
 }: {
 	revision: WriterRevision;
-	/** One line instead of a block (the editor has little height to spare). */
-	compact?: boolean;
+	/** Flows with its surroundings, with no frame (the editor has little height to spare). */
+	inline?: boolean;
 }) {
 	if (revision.status !== "preview") return null;
 	const warnings = reviewWarnings(revision.review);
@@ -43,15 +43,22 @@ export function ReviewState({
 		</p>
 	);
 
-	if (compact)
+	// One line: what is blocking is a short count, the detail is in the tooltip (and in the publish confirmation).
+	if (inline)
 		return (
-			<section className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-1.5">
-				<h2 className="flex items-center gap-1.5 font-medium text-sm">
-					<Icon name="preview" /> État de la relecture
-				</h2>
+			// A fragment: each piece is a flex item of the row it sits in, so they wrap one by one.
+			<>
+				<span className="font-medium text-xs">Relecteurs :</span>
 				{verdicts}
-				{summary}
-			</section>
+				<span
+					className="text-muted-foreground text-xs"
+					title={warnings.length > 0 ? warnings.join(", ") : undefined}
+				>
+					{warnings.length === 0
+						? "Prêt à publier"
+						: `${warnings.length} point${warnings.length > 1 ? "s" : ""} à régler`}
+				</span>
+			</>
 		);
 	return (
 		<section className="flex flex-col gap-2 rounded-md border px-3 py-2">

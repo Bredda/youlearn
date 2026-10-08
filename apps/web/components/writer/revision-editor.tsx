@@ -14,7 +14,6 @@ import type {
 	WriterRevision,
 	WriterRevisionDetail,
 } from "@youlearn/types";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
 	useCallback,
@@ -48,6 +47,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { ChapterEditor } from "@/components/writer/chapter-editor";
+import {
+	CompareControl,
+	NO_COMPARISON,
+} from "@/components/writer/compare-control";
 import { ConfirmRemove } from "@/components/writer/confirm-remove";
 import { RevisionStatusDialog } from "@/components/writer/revision-status-dialog";
 import { RevisionSwitcher } from "@/components/writer/revision-switcher";
@@ -217,12 +220,14 @@ export function RevisionEditor({
 		return () => clearTimeout(timer);
 	}, [content, dirty, revision.id]);
 
+	// Offered on arrival only: while this page holds unsaved work (a change of comparison reloads the props, the
+	// content of which is a new object), the local copy is that very work.
 	useEffect(() => {
-		if (readOnly) return;
+		if (readOnly || dirty) return;
 		const saved = readLocalDraft(revision.id);
 		if (saved && !deepEqual(saved.content, revision.content))
 			setRestorable(saved);
-	}, [readOnly, revision.id, revision.content]);
+	}, [readOnly, dirty, revision.id, revision.content]);
 
 	function restore() {
 		if (!restorable) return;
@@ -332,9 +337,11 @@ export function RevisionEditor({
 	}
 
 	const shownIssues = issues.length > 0 ? issues : liveIssues;
-	const baseTitle = base
-		? `${base.key} (${REVISION_STATUS_LABELS[base.status].toLowerCase()})`
-		: undefined;
+
+	/** The comparison lives in the URL: the page loads the chosen revision, this one keeps its unsaved work. */
+	function compareWith(value: string) {
+		router.replace(`?compare=${encodeURIComponent(value)}`, { scroll: false });
+	}
 
 	return (
 		// From md up the page is exactly the viewport (the header, its 1px border and the padding of the layout taken off): only the
@@ -351,19 +358,43 @@ export function RevisionEditor({
 					/>
 				}
 				meta={
-					<div className="flex flex-wrap items-center gap-1.5">
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
 						<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
 							{REVISION_STATUS_LABELS[revision.status]}
 						</Badge>
-						{content.certifying && (
-							<Badge variant="outline">
-								<Icon name="certifying" /> Certifiant
-							</Badge>
-						)}
 						<Badge variant="outline">
 							<Icon name="duration" />
 							{formatDuration(totalMinutes) || "Durée non estimée"}
 						</Badge>
+						{readOnly ? (
+							content.certifying && (
+								<Badge variant="outline">
+									<Icon name="certifying" /> Certifiant
+								</Badge>
+							)
+						) : (
+							<span
+								className="flex items-center gap-2"
+								title="Ajoute un examen final obligatoire, toujours en dernier chapitre"
+							>
+								<Switch
+									id="certifying"
+									size="sm"
+									checked={content.certifying === true}
+									onCheckedChange={(checked) =>
+										checked ? setCertifying(true) : setConfirmingUncertify(true)
+									}
+								/>
+								<Label htmlFor="certifying">Cours certifiant</Label>
+							</span>
+						)}
+						{!readOnly && missingDurations > 0 && (
+							<span className="text-amber-700 text-xs dark:text-amber-400">
+								{missingDurations} chapitre{missingDurations > 1 ? "s" : ""}{" "}
+								sans durée estimée : à renseigner avant de passer en relecture.
+							</span>
+						)}
+						<ReviewState revision={revision} inline />
 					</div>
 				}
 				description={
@@ -381,18 +412,16 @@ export function RevisionEditor({
 					</>
 				}
 			>
-				<Button
-					variant="outline"
-					nativeButton={false}
-					render={
-						<Link
-							href={`/writer/courses/${course.id}/compare?to=${revision.id}`}
-						/>
-					}
-				>
-					<Icon name="compare" />
-					Comparer
-				</Button>
+				<CompareControl
+					revisions={revisions}
+					currentId={revision.id}
+					parentId={revision.parentId}
+					value={base?.id ?? NO_COMPARISON}
+					onChange={compareWith}
+					summary={liveDiff ? <DiffSummary diff={liveDiff} /> : null}
+					showChanges={showChanges}
+					onToggleChanges={() => setShowChanges((value) => !value)}
+				/>
 				{revision.status === "preview" && (
 					<Button
 						disabled={publishing}
@@ -516,52 +545,6 @@ export function RevisionEditor({
 				</div>
 			)}
 
-			<div className="flex flex-wrap items-stretch gap-2">
-				{!readOnly && (
-					<div className="flex flex-1 basis-96 flex-col gap-2 rounded-md border px-3 py-2">
-						<div className="flex flex-wrap items-center gap-3">
-							<Switch
-								id="certifying"
-								checked={content.certifying === true}
-								onCheckedChange={(checked) =>
-									checked ? setCertifying(true) : setConfirmingUncertify(true)
-								}
-							/>
-							<Label htmlFor="certifying">Cours certifiant</Label>
-							<span
-								className="text-muted-foreground text-sm"
-								title="Toujours en dernier chapitre"
-							>
-								Ajoute un examen final obligatoire.
-							</span>
-						</div>
-						{missingDurations > 0 && (
-							<p className="text-amber-700 text-sm dark:text-amber-400">
-								{missingDurations} chapitre{missingDurations > 1 ? "s" : ""}{" "}
-								sans durée estimée : à renseigner avant de passer en relecture.
-							</p>
-						)}
-					</div>
-				)}
-
-				{base && liveDiff && (
-					<div className="flex flex-1 basis-96 flex-wrap items-center gap-3 rounded-md border px-3 py-2">
-						<Switch
-							id="show-changes"
-							checked={showChanges}
-							onCheckedChange={setShowChanges}
-						/>
-						<Label htmlFor="show-changes">
-							Voir les modifications depuis {baseTitle}
-						</Label>
-						<span className="ml-auto text-muted-foreground text-sm">
-							<DiffSummary diff={liveDiff} />
-						</span>
-					</div>
-				)}
-			</div>
-
-			<ReviewState revision={revision} compact />
 			<RemarksPanel content={content} onSelectChapter={setSelectedId} />
 
 			{showChanges && liveDiff ? (

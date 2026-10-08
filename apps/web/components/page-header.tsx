@@ -31,7 +31,7 @@ export function PageHeader({
 					{leading}
 					<div className="min-w-0 flex-1">
 						{eyebrow && (
-							<p className="font-semibold text-muted-foreground text-xl">
+							<p className="truncate font-semibold text-muted-foreground text-xl">
 								{eyebrow}
 							</p>
 						)}

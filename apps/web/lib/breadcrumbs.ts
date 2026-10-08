@@ -7,7 +7,6 @@ export type CrumbNames = { course?: string; revision?: string };
 const COURSE_TABS: Record<string, string> = {
 	learners: "Apprenants",
 	history: "Révisions dépréciées",
-	compare: "Comparer",
 };
 
 /**
