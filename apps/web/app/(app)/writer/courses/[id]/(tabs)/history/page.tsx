@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { getWriterCourse, getWriterRevisions } from "@/lib/writer-data";
 
 // The revisions that were published and then replaced (see `RevisionHistory`).
-export const metadata: Metadata = { title: "Anciennes révisions" };
+export const metadata: Metadata = { title: "Révisions dépréciées" };
 
 export default async function HistoryPage(
 	props: PageProps<"/writer/courses/[id]/history">,

@@ -69,7 +69,7 @@ export function RevisionHistory({
 								colSpan={6}
 								className="h-24 text-center text-muted-foreground"
 							>
-								Aucune ancienne révision : une révision arrive ici quand une
+								Aucune révision dépréciée : une révision arrive ici quand une
 								autre la remplace.
 							</TableCell>
 						</TableRow>

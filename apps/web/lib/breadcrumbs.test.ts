@@ -46,7 +46,7 @@ describe("buildBreadcrumb", () => {
 		]);
 		expect(
 			buildBreadcrumb(["writer", "courses", "c1", "history"]).at(-1),
-		).toEqual({ label: "Anciennes révisions" });
+		).toEqual({ label: "Révisions dépréciées" });
 	});
 
 	it("names a revision by its key", () => {

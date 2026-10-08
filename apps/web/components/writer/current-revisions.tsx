@@ -38,7 +38,7 @@ export function CurrentRevisions({
 	);
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
 			{error && <FormError>{error}</FormError>}
 
 			<Section title="Actuellement publié">
@@ -58,7 +58,7 @@ export function CurrentRevisions({
 				)}
 			</Section>
 
-			<Separator className="max-w-4xl" />
+			<Separator />
 
 			<Section
 				title="Révision en cours"
@@ -93,7 +93,7 @@ export function CurrentRevisions({
 	);
 }
 
-/** A labelled block of the tab. Narrower than the page so the two revisions read as two distinct things. */
+/** A labelled block of the tab. The tab is narrower than the page and centered so the two revisions read as two distinct things. */
 function Section({
 	title,
 	status,
@@ -105,7 +105,7 @@ function Section({
 	children: React.ReactNode;
 }) {
 	return (
-		<section className="flex max-w-4xl flex-col gap-2">
+		<section className="flex flex-col gap-2">
 			<h2 className="flex items-center gap-2 font-medium text-sm">
 				{title}
 				{status && (

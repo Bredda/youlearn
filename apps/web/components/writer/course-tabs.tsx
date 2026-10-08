@@ -30,7 +30,7 @@ const TABS: {
 	{
 		value: "history",
 		segment: "history",
-		label: "Anciennes révisions",
+		label: "Révisions dépréciées",
 		icon: "history",
 		path: "/history",
 	},
