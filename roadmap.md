@@ -23,15 +23,15 @@ Le socle côté formateur est là ; ce qui manque pour boucler ce parcours, c'es
 
 ## Vue d'ensemble
 
-| # | Axe | Horizon | Statut |
-| --- | --- | --- | --- |
-| 1 | Socle du projet | Fait | Suivi du travail, images Docker et stack complète, CI et releases (premières exécutions à constater sur GitHub) |
-| 2 | Rédaction des cours | Fait | Révisions, éditeur, relecture, durées estimées et examen final disponibles côté formateur |
-| 3 | Parcours apprenant | Fait | Fiche du cours, inscription figée sur une révision, lecteur, verrouillage, quiz (tirage et correction côté serveur), examen final en une tentative, « Mes sessions » et suivi formateur |
-| 4 | Certification | Plus tard | Dépend de l'axe 3 ; conception arrêtée, rien d'écrit |
-| 5 | Programmes | Plus tard | Pas commencé |
-| 6 | Médias et fichiers lourds | Plus tard | Images seulement ; vidéos YouTube et Vimeo en lien |
-| 7 | Relecture et cycle de vie des révisions | En cours | Relecture : écrite, à valider à la main (`todo.md`). Cycle de vie des inscriptions face à une nouvelle révision : à cadrer après |
+| #   | Axe                                     | Horizon   | Statut                                                                                                                                                                                  |
+| --- | --------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Socle du projet                         | Fait      | Suivi du travail, images Docker et stack complète, CI et releases (premières exécutions à constater sur GitHub)                                                                         |
+| 2   | Rédaction des cours                     | Fait      | Révisions, éditeur, relecture, durées estimées et examen final disponibles côté formateur                                                                                               |
+| 3   | Parcours apprenant                      | Fait      | Fiche du cours, inscription figée sur une révision, lecteur, verrouillage, quiz (tirage et correction côté serveur), examen final en une tentative, « Mes sessions » et suivi formateur |
+| 4   | Certification                           | Plus tard | Dépend de l'axe 3 ; conception arrêtée, rien d'écrit                                                                                                                                    |
+| 5   | Programmes                              | Plus tard | Pas commencé                                                                                                                                                                            |
+| 6   | Médias et fichiers lourds               | Plus tard | Images seulement ; vidéos YouTube et Vimeo en lien                                                                                                                                      |
+| 7   | Relecture et cycle de vie des révisions | En cours  | Relecture : fait (relecteurs désignés, remarques, avis), à valider à la main. Pages formateur refaites. Cycle de vie des inscriptions face à une nouvelle révision : à cadrer           |
 
 ## 1. Socle du projet
 
@@ -45,7 +45,7 @@ Fait : un suivi du travail à trois niveaux (`roadmap.md` pour les grosses fonct
 
 **But :** un formateur écrit un cours, le fait relire et le publie en toute sécurité.
 
-Disponible : cours et groupes, révisions (brouillon, relecture, publié, déprécié), éditeur de chapitres (texte Markdown, vidéos, quiz n parmi m), images, lien de relecture, comparaison de révisions. Ajouté sur la branche `feat/graduation` : durée estimée par chapitre (obligatoire pour passer en relecture, totalisée par révision) et cours certifiant avec un examen final obligatoire, toujours en dernier chapitre.
+Disponible : cours et groupes, révisions (brouillon, relecture, publié, déprécié), éditeur de chapitres (texte Markdown, vidéos, quiz n parmi m), images, comparaison de révisions (la relecture est dans l'axe 7).
 
 **Terminé quand :** la branche est fusionnée et la documentation formateur décrit les durées et la certification.
 
@@ -85,11 +85,15 @@ Vidéos hébergées par l'application, envoi de gros fichiers par URL présigné
 
 **But :** que relire et publier une révision soit fluide pour le formateur, et que les apprenants déjà inscrits sur une révision précédente soient traités correctement.
 
-Relecture (écrite, à valider à la main) : une seule révision ouverte par cours, des relecteurs choisis parmi les utilisateurs sans nouveau rôle, un menu « Relectures » à la place du lien secret, des remarques ancrées sur les chapitres, blocs et questions, un avis par relecteur (périmé si le contenu change) et un contenu qui reste modifiable pendant la relecture ; publier avec une relecture inachevée demande une confirmation.
+Fait (PR #16) : une seule révision ouverte par cours (brouillon ou relecture) et une publiée ; des relecteurs choisis parmi les utilisateurs, sans nouveau rôle, qui lisent la révision depuis un menu « Relectures » (le lien secret est supprimé) ; des remarques ancrées sur la révision, un chapitre, un bloc ou une question, avec réponses et statut ; un avis par relecteur, périmé si le contenu change ; une révision qui reste modifiable pendant la relecture ; publier avec une relecture inachevée demande une confirmation. Côté interface formateur : la page d'un cours en trois onglets (révisions actuelles, apprenants, révisions dépréciées), un fil d'Ariane dans le header, une page de révision à hauteur fixe où seul le chapitre défile, un sélecteur de révision et un sélecteur de comparaison (aucune par défaut) qui remplacent la page de comparaison.
 
-Cycle de vie des inscriptions (à cadrer après) : que devient un apprenant qui a commencé ou terminé une révision quand une plus récente est publiée (migration de l'inscription en gardant les chapitres inchangés, refaire ce qui a changé, impact d'un changement déduit du diff ou déclaré à la publication).
+**À vérifier à la main** (tout le reste a été exercé contre la vraie base et par le rendu des pages, rien de cela dans un navigateur) : l'envoi d'une remarque, la réponse, « Marquer traitée », la citation du texte sélectionné et le bouton « Commenter » au survol ; les boutons d'avis côté relecteur ; la garde de la migration `0011` sur un cours ayant à la fois un brouillon et une relecture. Les révisions qui étaient en relecture avant la migration `0012` n'ont plus de relecteur : en ajouter depuis « Relecteurs ».
 
-**Terminé quand :** la relecture se fait sans repasser par le brouillon, et une publication ne laisse plus un apprenant sur une révision obsolète sans option claire.
+Pas de pastille de remarques par bloc dans l'éditeur (seulement par chapitre, plus le panneau groupé) et pas d'avertissement quand on change de révision avec des modifications non enregistrées : à reprendre si le besoin se confirme.
+
+Cycle de vie des inscriptions (à cadrer, c'est la suite) : que devient un apprenant qui a commencé ou terminé une révision quand une plus récente est publiée (migration de l'inscription en gardant les chapitres inchangés, refaire ce qui a changé, impact d'un changement déduit du diff ou déclaré à la publication).
+
+**Terminé quand :** la relecture se fait sans repasser par le brouillon (fait, à valider à la main), et une publication ne laisse plus un apprenant sur une révision obsolète sans option claire.
 
 ## Hors périmètre pour l'instant
 
