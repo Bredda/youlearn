@@ -15,6 +15,7 @@ import {
 	BookOpen01Icon,
 	Cancel01Icon,
 	CheckmarkCircle02Icon,
+	ChevronsDownUpIcon,
 	Clock01Icon,
 	CodeIcon,
 	Comment01Icon,
@@ -173,6 +174,8 @@ export const icons = {
 	sortDescending: ArrowDown01Icon,
 	sortable: UnfoldMoreIcon,
 	expand: UnfoldMoreIcon,
+	/** Open the list of the siblings of the current item, to switch to one of them. */
+	switchItem: ChevronsDownUpIcon,
 	firstPage: ArrowLeftDoubleIcon,
 	previousPage: ArrowLeft01Icon,
 	nextPage: ArrowRight01Icon,

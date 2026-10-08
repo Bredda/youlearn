@@ -9,7 +9,11 @@ import {
 	diffContent,
 	formatDuration,
 } from "@youlearn/content";
-import type { WriterCourse, WriterRevisionDetail } from "@youlearn/types";
+import type {
+	WriterCourse,
+	WriterRevision,
+	WriterRevisionDetail,
+} from "@youlearn/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -46,6 +50,7 @@ import { toast } from "@/components/ui/toast";
 import { ChapterEditor } from "@/components/writer/chapter-editor";
 import { ConfirmRemove } from "@/components/writer/confirm-remove";
 import { RevisionStatusDialog } from "@/components/writer/revision-status-dialog";
+import { RevisionSwitcher } from "@/components/writer/revision-switcher";
 import { DragHandle, SortableList } from "@/components/writer/sortable-list";
 import { callApi } from "@/lib/api-client";
 import {
@@ -132,10 +137,13 @@ const dateFormat = new Intl.DateTimeFormat("fr-FR", {
 export function RevisionEditor({
 	course,
 	revision,
+	revisions,
 	base,
 }: {
 	course: WriterCourse;
 	revision: WriterRevisionDetail;
+	/** Every revision of the course, for the switcher next to the name. */
+	revisions: WriterRevision[];
 	base: WriterRevisionDetail | null;
 }) {
 	const router = useRouter();
@@ -329,9 +337,35 @@ export function RevisionEditor({
 		: undefined;
 
 	return (
-		<div className="flex flex-col gap-4">
+		// From md up the page is exactly the viewport (the header, its 1px border and the padding of the layout taken off): only the
+		// chapter scrolls, everything else stays in place. Below md it flows and scrolls as a normal page.
+		<div className="flex flex-col gap-4 md:h-[calc(100svh-var(--header-height)-2rem-1px)]">
 			<PageHeader
+				eyebrow={course.name}
 				title={revision.key}
+				titleAddon={
+					<RevisionSwitcher
+						courseId={course.id}
+						revisions={revisions}
+						currentId={revision.id}
+					/>
+				}
+				meta={
+					<div className="flex flex-wrap items-center gap-1.5">
+						<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
+							{REVISION_STATUS_LABELS[revision.status]}
+						</Badge>
+						{content.certifying && (
+							<Badge variant="outline">
+								<Icon name="certifying" /> Certifiant
+							</Badge>
+						)}
+						<Badge variant="outline">
+							<Icon name="duration" />
+							{formatDuration(totalMinutes) || "Durée non estimée"}
+						</Badge>
+					</div>
+				}
 				description={
 					<>
 						<span className="whitespace-pre-wrap">
@@ -347,18 +381,6 @@ export function RevisionEditor({
 					</>
 				}
 			>
-				<Badge variant={REVISION_STATUS_VARIANTS[revision.status]}>
-					{REVISION_STATUS_LABELS[revision.status]}
-				</Badge>
-				{content.certifying && (
-					<Badge variant="outline">
-						<Icon name="certifying" /> Certifiant
-					</Badge>
-				)}
-				<Badge variant="outline">
-					<Icon name="duration" />
-					{formatDuration(totalMinutes) || "Durée non estimée"}
-				</Badge>
 				<Button
 					variant="outline"
 					nativeButton={false}
@@ -494,54 +516,61 @@ export function RevisionEditor({
 				</div>
 			)}
 
-			{!readOnly && (
-				<div className="flex flex-col gap-2 rounded-md border px-3 py-2">
-					<div className="flex flex-wrap items-center gap-3">
+			<div className="flex flex-wrap items-stretch gap-2">
+				{!readOnly && (
+					<div className="flex flex-1 basis-96 flex-col gap-2 rounded-md border px-3 py-2">
+						<div className="flex flex-wrap items-center gap-3">
+							<Switch
+								id="certifying"
+								checked={content.certifying === true}
+								onCheckedChange={(checked) =>
+									checked ? setCertifying(true) : setConfirmingUncertify(true)
+								}
+							/>
+							<Label htmlFor="certifying">Cours certifiant</Label>
+							<span
+								className="text-muted-foreground text-sm"
+								title="Toujours en dernier chapitre"
+							>
+								Ajoute un examen final obligatoire.
+							</span>
+						</div>
+						{missingDurations > 0 && (
+							<p className="text-amber-700 text-sm dark:text-amber-400">
+								{missingDurations} chapitre{missingDurations > 1 ? "s" : ""}{" "}
+								sans durée estimée : à renseigner avant de passer en relecture.
+							</p>
+						)}
+					</div>
+				)}
+
+				{base && liveDiff && (
+					<div className="flex flex-1 basis-96 flex-wrap items-center gap-3 rounded-md border px-3 py-2">
 						<Switch
-							id="certifying"
-							checked={content.certifying === true}
-							onCheckedChange={(checked) =>
-								checked ? setCertifying(true) : setConfirmingUncertify(true)
-							}
+							id="show-changes"
+							checked={showChanges}
+							onCheckedChange={setShowChanges}
 						/>
-						<Label htmlFor="certifying">Cours certifiant</Label>
-						<span className="text-muted-foreground text-sm">
-							Ajoute un examen final obligatoire, toujours en dernier chapitre.
+						<Label htmlFor="show-changes">
+							Voir les modifications depuis {baseTitle}
+						</Label>
+						<span className="ml-auto text-muted-foreground text-sm">
+							<DiffSummary diff={liveDiff} />
 						</span>
 					</div>
-					{missingDurations > 0 && (
-						<p className="text-amber-700 text-sm dark:text-amber-400">
-							{missingDurations} chapitre{missingDurations > 1 ? "s" : ""} sans
-							durée estimée : à renseigner avant de passer en relecture.
-						</p>
-					)}
-				</div>
-			)}
+				)}
+			</div>
 
-			<ReviewState revision={revision} />
+			<ReviewState revision={revision} compact />
 			<RemarksPanel content={content} onSelectChapter={setSelectedId} />
 
-			{base && liveDiff && (
-				<div className="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2">
-					<Switch
-						id="show-changes"
-						checked={showChanges}
-						onCheckedChange={setShowChanges}
-					/>
-					<Label htmlFor="show-changes">
-						Voir les modifications depuis {baseTitle}
-					</Label>
-					<span className="ml-auto text-muted-foreground text-sm">
-						<DiffSummary diff={liveDiff} />
-					</span>
-				</div>
-			)}
-
 			{showChanges && liveDiff ? (
-				<RevisionDiff diff={liveDiff} courseId={course.id} />
+				<div className="relative min-h-0 flex-1 md:min-h-64 md:overflow-y-auto">
+					<RevisionDiff diff={liveDiff} courseId={course.id} />
+				</div>
 			) : (
-				<div className="grid gap-4 md:grid-cols-[16rem_1fr]">
-					<div className="flex min-w-0 flex-col gap-2">
+				<div className="grid min-h-0 flex-1 gap-4 md:min-h-64 md:grid-cols-[16rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
+					<div className="relative flex min-w-0 flex-col gap-2 md:overflow-y-auto">
 						{content.chapters.length === 0 && (
 							<p className="text-muted-foreground text-sm">
 								{readOnly
@@ -663,25 +692,29 @@ export function RevisionEditor({
 						)}
 					</div>
 
-					{selected &&
-						(readOnly ? (
-							<ChapterView chapter={selected} courseId={course.id} />
-						) : (
-							<ChapterEditor
-								key={selected.id}
-								chapter={selected}
-								courseId={course.id}
-								baseChapter={base?.content.chapters.find(
-									(c) => c.id === selected.id,
-								)}
-								baseKey={base?.key}
-								dispatch={dispatch}
-							/>
-						))}
+					{/* The only part of the page that scrolls. `relative` keeps absolutely positioned content (the
+					    screen-reader texts) inside it: otherwise it escapes the clipping and stretches the page. */}
+					<div className="relative min-w-0 md:overflow-y-auto">
+						{selected &&
+							(readOnly ? (
+								<ChapterView chapter={selected} courseId={course.id} />
+							) : (
+								<ChapterEditor
+									key={selected.id}
+									chapter={selected}
+									courseId={course.id}
+									baseChapter={base?.content.chapters.find(
+										(c) => c.id === selected.id,
+									)}
+									baseKey={base?.key}
+									dispatch={dispatch}
+								/>
+							))}
+					</div>
 				</div>
 			)}
 			{!readOnly && (
-				<div className="sticky bottom-0 z-20 -mx-4 -mb-4 flex items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+				<div className="z-20 -mx-4 -mb-4 flex shrink-0 items-center gap-3 border-t bg-background px-4 py-3">
 					<span
 						aria-live="polite"
 						className="mr-auto text-muted-foreground text-sm"

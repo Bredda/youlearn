@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { RemarksProvider } from "@/components/review/review-threads";
 import { RevisionEditor } from "@/components/writer/revision-editor";
 import { apiFetch } from "@/lib/api";
+import { getWriterRevisions } from "@/lib/writer-data";
 
 export const metadata: Metadata = { title: "Révision" };
 
@@ -32,6 +33,7 @@ export default async function RevisionPage(
 	const { revision } = (await revisionResponse.json()) as {
 		revision: WriterRevisionDetail;
 	};
+	const revisions = await getWriterRevisions(id);
 
 	// What the editor compares against: the revision this one was cloned from (gone if it was deleted).
 	let base: WriterRevisionDetail | null = null;
@@ -59,7 +61,12 @@ export default async function RevisionPage(
 
 	return (
 		<RemarksProvider revisionId={revision.id} initial={remarks}>
-			<RevisionEditor course={course} revision={revision} base={base} />
+			<RevisionEditor
+				course={course}
+				revision={revision}
+				revisions={revisions}
+				base={base}
+			/>
 		</RemarksProvider>
 	);
 }

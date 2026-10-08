@@ -81,34 +81,38 @@ export function RemarksPanel({
 					{expanded ? "Masquer" : "Afficher"}
 				</Button>
 			</div>
-			{expanded &&
-				groupThreads(content, threads).map((group) => (
-					<div key={group.key} className="flex flex-col gap-2">
-						<div className="flex items-center gap-2">
-							<h3 className="font-medium text-sm">{group.title}</h3>
-							{group.chapterId && (
-								<Button
-									type="button"
-									variant="ghost"
-									size="sm"
-									onClick={() => {
-										const chapterId = group.chapterId;
-										if (chapterId) onSelectChapter(chapterId);
-									}}
-								>
-									<Icon name="open" /> Aller au chapitre
-								</Button>
-							)}
+			{expanded && (
+				// The page does not scroll: a long list scrolls inside the panel instead of pushing the chapter away.
+				<div className="relative flex max-h-[30svh] flex-col gap-3 overflow-y-auto">
+					{groupThreads(content, threads).map((group) => (
+						<div key={group.key} className="flex flex-col gap-2">
+							<div className="flex items-center gap-2">
+								<h3 className="font-medium text-sm">{group.title}</h3>
+								{group.chapterId && (
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onClick={() => {
+											const chapterId = group.chapterId;
+											if (chapterId) onSelectChapter(chapterId);
+										}}
+									>
+										<Icon name="open" /> Aller au chapitre
+									</Button>
+								)}
+							</div>
+							{group.items.map((thread) => (
+								<ThreadCard
+									key={thread.id}
+									thread={thread}
+									where={describeElement(content, thread.target)}
+								/>
+							))}
 						</div>
-						{group.items.map((thread) => (
-							<ThreadCard
-								key={thread.id}
-								thread={thread}
-								where={describeElement(content, thread.target)}
-							/>
-						))}
-					</div>
-				))}
+					))}
+				</div>
+			)}
 		</section>
 	);
 }

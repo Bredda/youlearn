@@ -2,19 +2,24 @@ import { Separator } from "@/components/ui/separator";
 
 /**
  * Heading of a page: title, optional description and, on the right, optional content (create / refresh buttons...),
- * followed by a separator so the page body starts clearly below it. `leading` sits before the title (a cover) and
+ * followed by a separator so the page body starts clearly below it. `leading` sits before the title (a cover),
+ * `eyebrow` above it (what it belongs to, in the same size but muted), `titleAddon` right after it (a switcher) and
  * `meta` under the description (tags, identifiers).
  */
 export function PageHeader({
 	title,
 	description,
 	leading,
+	eyebrow,
+	titleAddon,
 	meta,
 	children,
 }: {
 	title: string;
 	description?: React.ReactNode;
 	leading?: React.ReactNode;
+	eyebrow?: React.ReactNode;
+	titleAddon?: React.ReactNode;
 	meta?: React.ReactNode;
 	/** Actions or anything else to show next to the title. */
 	children?: React.ReactNode;
@@ -25,7 +30,15 @@ export function PageHeader({
 				<div className="flex min-w-0 flex-1 basis-64 items-start gap-4">
 					{leading}
 					<div className="min-w-0 flex-1">
-						<h1 className="font-semibold text-xl">{title}</h1>
+						{eyebrow && (
+							<p className="font-semibold text-muted-foreground text-xl">
+								{eyebrow}
+							</p>
+						)}
+						<div className="flex items-center gap-2">
+							<h1 className="font-semibold text-xl">{title}</h1>
+							{titleAddon}
+						</div>
 						{description && (
 							<p className="text-muted-foreground text-sm">{description}</p>
 						)}
