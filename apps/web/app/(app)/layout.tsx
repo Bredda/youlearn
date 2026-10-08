@@ -9,8 +9,11 @@ import { getCurrentUser } from "@/lib/session";
 
 export default async function AppLayout({
 	children,
+	breadcrumb,
 }: {
 	children: React.ReactNode;
+	/** The `@breadcrumb` slot, shown in the site header. */
+	breadcrumb: React.ReactNode;
 }) {
 	const user = await getCurrentUser();
 	if (!user) redirect("/auth/signin");
@@ -30,7 +33,7 @@ export default async function AppLayout({
 				defaultOpen={sidebarOpen}
 				className="flex-col [--header-height:calc(--spacing(14))]"
 			>
-				<SiteHeader />
+				<SiteHeader>{breadcrumb}</SiteHeader>
 				<div className="flex flex-1">
 					<AppSidebar reviewCount={reviewCount} />
 					<SidebarInset>

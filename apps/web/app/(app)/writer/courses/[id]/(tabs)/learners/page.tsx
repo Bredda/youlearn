@@ -1,4 +1,4 @@
-import type { CourseEnrollmentPage, WriterCourse } from "@youlearn/types";
+import type { CourseEnrollmentPage } from "@youlearn/types";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { LearnersManager } from "@/components/writer/learners-manager";
@@ -7,6 +7,7 @@ import {
 	learnersQueryToSearchParams,
 	parseLearnersQuery,
 } from "@/lib/learners-query";
+import { getWriterCourse } from "@/lib/writer-data";
 
 export const metadata: Metadata = { title: "Apprenants" };
 
@@ -16,18 +17,15 @@ export default async function LearnersPage(
 	const { id } = await props.params;
 	const query = parseLearnersQuery(await props.searchParams);
 
-	const [courseResponse, learnersResponse] = await Promise.all([
-		apiFetch(`/api/writer/courses/${encodeURIComponent(id)}`),
+	const [course, learnersResponse] = await Promise.all([
+		getWriterCourse(id),
 		apiFetch(
 			`/api/writer/courses/${encodeURIComponent(id)}/enrollments?${learnersQueryToSearchParams(query)}`,
 		),
 	]);
-	// 403 (not one of the groups of this writer) looks like a missing course.
-	if (courseResponse.status === 404 || courseResponse.status === 403)
-		notFound();
-	if (!courseResponse.ok || !learnersResponse.ok)
+	if (!course) notFound();
+	if (!learnersResponse.ok)
 		throw new Error("Impossible de charger les apprenants");
-	const { course } = (await courseResponse.json()) as { course: WriterCourse };
 	const page = (await learnersResponse.json()) as CourseEnrollmentPage;
 
 	// The last page no longer exists: go to the new last one.
@@ -39,12 +37,5 @@ export default async function LearnersPage(
 		);
 	}
 
-	return (
-		<LearnersManager
-			{...page}
-			courseId={course.id}
-			courseName={course.name}
-			query={query}
-		/>
-	);
+	return <LearnersManager {...page} courseId={course.id} query={query} />;
 }

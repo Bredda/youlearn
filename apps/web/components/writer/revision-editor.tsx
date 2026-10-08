@@ -330,12 +330,6 @@ export function RevisionEditor({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<Link
-				href={`/writer/courses/${course.id}`}
-				className="text-muted-foreground text-sm hover:underline"
-			>
-				← {course.name}
-			</Link>
 			<PageHeader
 				title={revision.key}
 				description={

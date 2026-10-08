@@ -20,7 +20,15 @@ Next.js and `@tanstack/react-table` are recent majors that differ from older doc
 
 ## Page headings
 
-Use `PageHeader` (`components/page-header.tsx`): `title`, optional `description` and, as children, the buttons shown on the right (create, refresh...). It draws the separator under the heading. Never write a page `<h1>` by hand.
+Use `PageHeader` (`components/page-header.tsx`): `title`, optional `description` and, as children, the buttons shown on the right (create, refresh...). It draws the separator under the heading. Never write a page `<h1>` by hand. `leading` (before the title, a cover) and `meta` (under the description: slug, tags) are optional slots.
+
+## Breadcrumb
+
+The site header shows a breadcrumb from a **parallel route** of the `(app)` layout (`app/(app)/@breadcrumb`): `[...path]/page.tsx` matches every path (an optional catch-all is refused by Next next to the page of "/", so the home page has its own empty `page.tsx`) and renders `AppBreadcrumb` from `lib/breadcrumbs.ts` (pure, tested: the only place that knows the labels and links; the area, and the current page, have no link) with the names of the course and revision read through `lib/breadcrumbs-server.ts`. Pages never declare their own: to give another area a breadcrumb, extend `buildBreadcrumb`. `lib/writer-data.ts` (`getWriterCourse`, `getWriterRevisions`) wraps the course reads in React `cache`, so the page, its layout and the breadcrumb share one API call per request. A new route directory is not always picked up by a running `next dev`: restart it if a fresh route answers 404.
+
+## Pages with tabs
+
+The pages of a course (`writer/courses/[id]`) share a layout in a route group, `(tabs)/layout.tsx` (heading + `CourseTabs`): the tabs are the shadcn `Tabs` (line variant) used as **navigation**, each `TabsTrigger` renders a `Link` and the active one comes from `useSelectedLayoutSegment()`, so every tab keeps its URL (and the server-side learners table keeps its URL state). The revision editor and the comparison live outside the group, without tabs. The "current revisions" tab shows `RevisionCard`s (published first, then the draft or review one) with the main actions as buttons in the card's `CardAction` and the rest in a menu; `useRevisionActions` holds what both revision tabs do with a revision (status changes with their confirmations, clone, reviewers, delete) and the dialogs it needs.
 
 ## Forms (always this pattern)
 

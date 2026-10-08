@@ -118,8 +118,8 @@ export function RevisionFormDialog({
 					<DialogHeader>
 						<DialogTitle>Nouvelle révision</DialogTitle>
 						<DialogDescription>
-							La révision démarre en brouillon. Un cours n'a qu'un brouillon à
-							la fois.
+							La révision démarre en brouillon. Un cours n'a qu'une révision en
+							cours (brouillon ou relecture) à la fois.
 						</DialogDescription>
 					</DialogHeader>
 					<FieldGroup>
