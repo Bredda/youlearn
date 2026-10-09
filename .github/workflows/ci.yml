@@ -1,12 +1,13 @@
 name: CI
 
-# The same checks as the pre-push hook, so a push that skipped it (--no-verify) or a pull request is still verified.
-# The Docker images are built here only on pull requests that touch what goes into them, and for real (pushed) by
-# release.yml: never again on a push to main, whose content a pull request already built.
+# The same checks as the pre-push hook, so a push that skipped it (--no-verify) is still verified. They only run on
+# pull requests: main is protected by a ruleset, so its content was always checked in the pull request that
+# brought it. A draft pull request is not checked until it is marked ready; a change that touches only documentation
+# runs no check; the Docker images are built only when something that goes into them changed, and for real (pushed)
+# by release.yml.
 on:
-  push:
-    branches: [main, dev]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # A newer push to the same branch makes the running check obsolete.
 concurrency:
@@ -17,18 +18,31 @@ permissions:
   contents: read
 
 jobs:
-  # Which parts of a pull request matter to the images (a documentation or workflow-free change builds nothing).
+  # Which parts of a pull request matter: the checks (anything but documentation and issue templates) and the images
+  # (what goes into them).
   changes:
     name: Changed files
-    if: github.event_name == 'pull_request'
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       pull-requests: read
     outputs:
-      images: ${{ steps.filter.outputs.images }}
+      code: ${{ steps.code.outputs.code }}
+      images: ${{ steps.images.outputs.images }}
     steps:
-      - id: filter
+      # "every": a file counts when it matches all the patterns, i.e. it is not excluded by one of them.
+      - id: code
+        uses: dorny/paths-filter@v4
+        with:
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!.github/ISSUE_TEMPLATE/**'
+
+      - id: images
         uses: dorny/paths-filter@v4
         with:
           filters: |
@@ -41,6 +55,8 @@ jobs:
               - '.github/workflows/ci.yml'
 
   check:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -79,7 +95,7 @@ jobs:
   # Every pull request is squash-merged, so its title becomes the commit message release-please reads.
   pr-title:
     name: Pull request title
-    if: github.event_name == 'pull_request'
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -89,9 +105,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # The images must keep building; they are only pushed by the release workflow. Skipped on pushes (nothing to
-  # compare with), when no file that goes into an image changed, and on the release pull request (version and
-  # changelog only: release.yml builds the images when it is merged).
+  # The images must keep building; they are only pushed by the release workflow. Skipped when no file that goes into
+  # an image changed, and on the release pull request (version and changelog only: release.yml builds the images
+  # when it is merged).
   docker:
     name: Docker image (${{ matrix.image }})
     needs: changes
@@ -115,12 +131,13 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-  # The only check to require on main. A skipped job (no image change, a push...) reports "skipped", and a skipped
-  # matrix job would leave its templated name pending forever, so the required check is this one, not the jobs above.
+  # The only check to require on main. A skipped job (documentation only, no image change...) reports "skipped", and
+  # a skipped matrix job would leave its templated name pending forever, so the required check is this one, not the
+  # jobs above. A draft pull request skips everything, but cannot be merged anyway.
   ci:
     name: CI
     if: ${{ always() }}
-    needs: [check, pr-title, docker]
+    needs: [changes, check, pr-title, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
