@@ -1,4 +1,4 @@
-import { chaptersMissingDuration } from "@youlearn/content";
+import { type ChangeImpact, chaptersMissingDuration } from "@youlearn/content";
 import type {
 	CourseContent,
 	ReviewerState,
@@ -32,6 +32,25 @@ export function previewBlocker(content: CourseContent): string | null {
 	const more = missing.length > 3 ? ` and ${missing.length - 3} more` : "";
 	return `Every chapter needs an estimated duration before review: missing for ${titles}${more}`;
 }
+
+/**
+ * Publishing over a published revision must say how much it matters to the learners already on the old one. Nothing
+ * is asked when it replaces nothing: no learner can be on a previous published revision then.
+ */
+export function impactBlocker(
+	replacesPublished: boolean,
+	impact: ChangeImpact | undefined,
+): string | null {
+	return replacesPublished && !impact
+		? "Say whether this publication is minor or major: learners already on the published revision are affected"
+		: null;
+}
+
+/** What gets stored on the published revision: the declared impact, only when it replaced a published one. */
+export const impactToStore = (
+	replacesPublished: boolean,
+	impact: ChangeImpact | undefined,
+): ChangeImpact | null => (replacesPublished ? (impact ?? null) : null);
 
 /** Statuses of a revision that is being worked on or reviewed: a course has at most one at a time. */
 export const OPEN_STATUSES: RevisionStatus[] = ["draft", "preview"];

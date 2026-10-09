@@ -1,6 +1,8 @@
 import type { CourseContent } from "@youlearn/types";
 import { describe, expect, it } from "vitest";
 import {
+	impactBlocker,
+	impactToStore,
 	isEditable,
 	MAX_REVIEWERS,
 	normalizeReviewerIds,
@@ -30,6 +32,22 @@ describe("revision workflow", () => {
 
 	it("has no way back from deprecated: it is cloned into a new draft instead", () => {
 		expect(TRANSITIONS.deprecated).toEqual([]);
+	});
+});
+
+describe("publication impact", () => {
+	it("asks for an impact only when a published revision gets replaced", () => {
+		expect(impactBlocker(true, undefined)).toMatch(/minor or major/);
+		expect(impactBlocker(true, "minor")).toBeNull();
+		expect(impactBlocker(true, "major")).toBeNull();
+		expect(impactBlocker(false, undefined)).toBeNull();
+	});
+
+	it("stores the impact only when it replaced a published revision", () => {
+		expect(impactToStore(true, "minor")).toBe("minor");
+		expect(impactToStore(true, "major")).toBe("major");
+		expect(impactToStore(false, "major")).toBeNull();
+		expect(impactToStore(false, undefined)).toBeNull();
 	});
 });
 

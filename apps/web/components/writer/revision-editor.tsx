@@ -10,6 +10,7 @@ import {
 	formatDuration,
 } from "@youlearn/content";
 import type {
+	ChangeImpact,
 	WriterCourse,
 	WriterRevision,
 	WriterRevisionDetail,
@@ -271,14 +272,17 @@ export function RevisionEditor({
 		}
 	}
 
-	async function publishRevision(confirm: boolean) {
+	async function publishRevision(
+		confirm: boolean,
+		changeImpact?: ChangeImpact,
+	) {
 		setPublishing(true);
 		setError(undefined);
 		setStale(false);
 		const message = await callApi(
 			"POST",
 			`/api/writer/courses/${course.id}/revisions/${revision.id}/status`,
-			{ to: "published", confirm },
+			{ to: "published", confirm, changeImpact },
 		);
 		setPublishing(false);
 		setConfirmingPublish(false);
@@ -439,12 +443,14 @@ export function RevisionEditor({
 
 			{confirmingPublish && (
 				<RevisionStatusDialog
+					courseId={course.id}
+					revisionId={revision.id}
 					revisionKey={revision.key}
 					to="published"
 					publishedKey={published?.key}
 					review={revision.review}
 					pending={publishing}
-					onConfirm={() => publishRevision(true)}
+					onConfirm={(changeImpact) => publishRevision(true, changeImpact)}
 					onClose={() => setConfirmingPublish(false)}
 				/>
 			)}

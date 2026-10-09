@@ -13,6 +13,7 @@ import {
 	findRevisionDetail,
 	generateRevisionKey,
 	listRevisions,
+	publishImpact,
 	removeReviewer,
 	saveContent,
 	searchReviewerCandidates,
@@ -49,6 +50,8 @@ const statusBody = z.object({
 	confirm: z.boolean().default(false),
 	/** The reviewers of a revision going to preview (replaces the current ones; left alone when omitted). */
 	reviewerIds: z.array(z.string().min(1)).max(100).optional(),
+	/** Required when publishing over a published revision: how much it matters to the learners on it. */
+	changeImpact: z.enum(schema.revisionChangeImpact.enumValues).optional(),
 });
 
 const reviewerParams = revisionParams.extend({ userId: z.string().min(1) });
@@ -159,7 +162,9 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 		"/api/writer/courses/:id/revisions/:revisionId/status",
 		async (request, reply) => {
 			const { id, revisionId } = revisionParams.parse(request.params);
-			const { to, confirm, reviewerIds } = statusBody.parse(request.body);
+			const { to, confirm, reviewerIds, changeImpact } = statusBody.parse(
+				request.body,
+			);
 			const access = await authorizeCourse(request, reply, id);
 			if (!access) return;
 			const { actor, course } = access;
@@ -170,6 +175,7 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 				to,
 				confirm,
 				reviewerIds,
+				changeImpact,
 			);
 			if (!result.ok)
 				return reply.code(result.status).send({
@@ -188,7 +194,12 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 						id: revisionId,
 						label: `${course.name} · ${result.key}`,
 					},
-					metadata: { courseId: id, from: result.from, to },
+					metadata: {
+						courseId: id,
+						from: result.from,
+						to,
+						...(result.changeImpact && { changeImpact: result.changeImpact }),
+					},
 				},
 				request.log,
 			);
@@ -239,6 +250,20 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 				);
 
 			return { revision: await findRevision(id, revisionId) };
+		},
+	);
+
+	// What publishing would do to the learners: feeds the minor / major choice of the confirmation.
+	app.get(
+		"/api/writer/courses/:id/revisions/:revisionId/publish-impact",
+		async (request, reply) => {
+			const { id, revisionId } = revisionParams.parse(request.params);
+			const access = await authorizeCourse(request, reply, id);
+			if (!access) return;
+			const result = await publishImpact(id, revisionId);
+			if (!result.ok)
+				return reply.code(result.status).send({ error: result.error });
+			return result.impact;
 		},
 	);
 

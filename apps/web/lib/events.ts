@@ -150,7 +150,13 @@ export function describeEvent({
 				typeof data.replacedBy === "string"
 					? ` (remplacée par ${data.replacedBy})`
 					: "";
-			return `Statut : ${label(data.from)} → ${label(data.to)}${replacedBy}`;
+			const impact =
+				data.changeImpact === "major"
+					? ", impact majeur"
+					: data.changeImpact === "minor"
+						? ", impact mineur"
+						: "";
+			return `Statut : ${label(data.from)} → ${label(data.to)}${impact}${replacedBy}`;
 		}
 		case "revision.create": {
 			const parts = [
