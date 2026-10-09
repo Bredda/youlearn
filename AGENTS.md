@@ -60,7 +60,7 @@ Dependency direction: `content` (pure leaf) and `config` <- `db` (it types the `
 
 Everything lives on GitHub: issues, labels and the [YouLearn Project](https://github.com/users/Bredda/projects/8). Write issues, comments and PRs in English. Use `gh issue` / `gh project` (the token needs the `project` scope).
 
-- **Roadmap**: one issue labelled `epic` per axis, with native sub-issues; the vision, principles and out-of-scope list are in the pinned issue "Vision, principles and out of scope".
+- **Roadmap**: one issue labelled `epic` per big feature (titled `Epic: ...`, no numbering), with native sub-issues; the vision, principles and out-of-scope list are in the pinned issue "Vision, principles and out of scope".
 - **Plan in progress**: an issue labelled `plan` (template `.github/ISSUE_TEMPLATE/plan.md`: goal, decisions with a recommendation, phases with a **Verify** line each, "Done when"), Project status *In progress*, child of its epic. Read it before starting a feature and work it top to bottom, one commit per phase. Tick a task only once its Verify line passes, and say what could not be verified. If the plan turns out wrong, fix it first. Confirm a decision with the user before the tasks that depend on it; with no answer, apply the recommendation and say so. Reference the issue in PRs (`Closes #N`); when the plan is done, close it and update its epic.
 - **Backlog**: issues labelled `idea` (status *Backlog*, sorted by `area/*` labels, `needs-triage` when unsorted). Do not pick from it unless asked; a scoped idea becomes a `plan`.
 - Project statuses: Backlog, Next, In progress, In review, Done.

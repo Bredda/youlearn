@@ -7,7 +7,7 @@ labels: plan
 
 ## Goal
 
-<!-- What this feature delivers, and the roadmap axis (parent epic) it belongs to. -->
+<!-- What this feature delivers, and the epic (parent issue) it belongs to. -->
 
 ## Where we are
 
