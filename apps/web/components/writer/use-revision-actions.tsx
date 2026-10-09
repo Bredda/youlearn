@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+	ChangeImpact,
 	RevisionStatus,
 	WriterCourse,
 	WriterRevision,
@@ -62,7 +63,15 @@ export function useRevisionActions({
 		revision: WriterRevision,
 		to: RevisionStatus,
 		confirm = false,
-	) => run(callApi("POST", `${api}/${revision.id}/status`, { to, confirm }));
+		changeImpact?: ChangeImpact,
+	) =>
+		run(
+			callApi("POST", `${api}/${revision.id}/status`, {
+				to,
+				confirm,
+				changeImpact,
+			}),
+		);
 
 	/** Publishing over a published revision and deprecating both retire a live revision: ask first. */
 	function changeStatus(revision: WriterRevision, to: RevisionStatus) {
@@ -136,12 +145,16 @@ export function useRevisionActions({
 
 			{confirming && (
 				<RevisionStatusDialog
+					courseId={course.id}
+					revisionId={confirming.revision.id}
 					revisionKey={confirming.revision.key}
 					to={confirming.to}
 					publishedKey={published?.key}
 					review={confirming.revision.review}
 					pending={pending}
-					onConfirm={() => setStatus(confirming.revision, confirming.to, true)}
+					onConfirm={(changeImpact) =>
+						setStatus(confirming.revision, confirming.to, true, changeImpact)
+					}
 					onClose={() => setConfirming(undefined)}
 				/>
 			)}

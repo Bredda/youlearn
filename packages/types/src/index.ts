@@ -7,6 +7,7 @@ import type {
 	LearnerQuestion,
 	QuestionCorrection,
 	ReviewTarget,
+	UpdateSummary,
 } from "@youlearn/content";
 import type { schema } from "@youlearn/db";
 import type { EventFilter } from "@youlearn/events";
@@ -132,7 +133,9 @@ export type NewCourseRevision = typeof schema.courseRevision.$inferInsert;
 
 export type {
 	Block,
+	ChangeImpact,
 	Chapter,
+	ChapterImpact,
 	ChapterKind,
 	ChapterState,
 	CourseContent,
@@ -140,6 +143,8 @@ export type {
 	Question,
 	QuestionOption,
 	Quiz,
+	UpdateChapter,
+	UpdateSummary,
 	VideoBlock,
 } from "@youlearn/content";
 
@@ -158,6 +163,7 @@ export type WriterRevision = Pick<
 	| "purpose"
 	| "durationMinutes"
 	| "certifying"
+	| "changeImpact"
 > & {
 	createdAt: string;
 	updatedAt: string;
@@ -185,6 +191,16 @@ export type ReviewSummary = {
 	pending: number;
 	stale: number;
 	openThreads: number;
+};
+
+/** What publishing a revision would do to the learners, shown to the writer before they choose minor or major. */
+export type PublishImpact = {
+	/** The published revision it would replace; null for a first publication, which asks for no impact. */
+	replaces: { id: string; key: string } | null;
+	/** Enrollments in progress on the course, whatever their revision. */
+	learnersInProgress: number;
+	/** The chapters as a `major` publication would treat them; null when nothing is replaced. */
+	summary: UpdateSummary | null;
 };
 
 /** A revision with its content, as opened in the editor. */

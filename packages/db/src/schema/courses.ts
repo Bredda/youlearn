@@ -103,6 +103,12 @@ export const revisionStatus = pgEnum("revision_status", [
 	"deprecated",
 ]);
 
+/** What a publication means to the learners already on the previous revision (see `ChangeImpact` in `@youlearn/content`). */
+export const revisionChangeImpact = pgEnum("revision_change_impact", [
+	"minor",
+	"major",
+]);
+
 /**
  * One version of a course. A course has at most one open revision (`draft` or `preview`) and one `published`
  * revision at the same time (any number of `deprecated` ones), and a published revision never changes.
@@ -121,6 +127,11 @@ export const courseRevision = pgTable(
 		status: revisionStatus().notNull().default("draft"),
 		/** Why this revision exists, written by whoever creates it (mandatory, also when cloning). */
 		purpose: text().notNull(),
+		/**
+		 * Declared by the writer when this revision replaces a published one. Null when it replaced nothing (or was
+		 * published before the field existed): a revision without one counts as `major`.
+		 */
+		changeImpact: revisionChangeImpact(),
 		content: jsonb()
 			.$type<CourseContent>()
 			.notNull()

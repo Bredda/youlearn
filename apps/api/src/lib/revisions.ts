@@ -1,7 +1,13 @@
-import { courseDurationMinutes } from "@youlearn/content";
+import {
+	type ChangeImpact,
+	courseDurationMinutes,
+	diffContent,
+	updateSummary,
+} from "@youlearn/content";
 import {
 	and,
 	asc,
+	count,
 	db,
 	desc,
 	eq,
@@ -16,6 +22,7 @@ import {
 import type {
 	CourseContent,
 	MyReview,
+	PublishImpact,
 	ReviewBase,
 	ReviewerRef,
 	ReviewVerdict,
@@ -30,6 +37,8 @@ import {
 } from "unique-names-generator";
 import type { CourseActor } from "./courses";
 import {
+	impactBlocker,
+	impactToStore,
 	isEditable,
 	normalizeReviewerIds,
 	openRevisionBlocker,
@@ -145,6 +154,7 @@ async function toWriterRevisions(rows: Revision[]): Promise<WriterRevision[]> {
 			purpose: row.purpose,
 			durationMinutes: row.durationMinutes,
 			certifying: row.certifying,
+			changeImpact: row.changeImpact,
 			createdAt: row.createdAt.toISOString(),
 			updatedAt: row.updatedAt.toISOString(),
 			contributors: contributors
@@ -362,10 +372,14 @@ export async function changeStatus(
 	confirm: boolean,
 	/** The reviewers of a revision going to preview; left as they are when omitted. */
 	reviewerIds?: string[],
+	/** How much a publication over a published revision matters to the learners on it. */
+	changeImpact?: ChangeImpact,
 ): Promise<
 	Outcome<{
 		from: RevisionStatus;
 		key: string;
+		/** The impact stored on the revision when it was just published over another one. */
+		changeImpact: ChangeImpact | null;
 		deprecated: Ref | null;
 		reviewers: ReviewerChanges;
 	}>
@@ -437,6 +451,18 @@ export async function changeStatus(
 				error: `Revision ${occupant.key} is already ${to}`,
 			};
 
+		const impactMissing =
+			to === "published"
+				? impactBlocker(deprecated !== null, changeImpact)
+				: null;
+		if (impactMissing)
+			return {
+				ok: false,
+				status: 409,
+				code: "IMPACT_REQUIRED",
+				error: impactMissing,
+			};
+
 		// Publishing a revision whose review is not finished is allowed, but not without being told.
 		let warnings: string[] = [];
 		if (to === "published" && revision.status === "preview") {
@@ -492,7 +518,12 @@ export async function changeStatus(
 				.where(eq(courseRevision.id, deprecated.id));
 		await tx
 			.update(courseRevision)
-			.set({ status: to })
+			.set({
+				status: to,
+				...(to === "published" && {
+					changeImpact: impactToStore(deprecated !== null, changeImpact),
+				}),
+			})
 			.where(eq(courseRevision.id, revision.id));
 
 		const reviewers = wanted
@@ -503,6 +534,10 @@ export async function changeStatus(
 			ok: true,
 			from: revision.status,
 			key: revision.key,
+			changeImpact:
+				to === "published"
+					? impactToStore(deprecated !== null, changeImpact)
+					: null,
 			reviewers,
 			deprecated:
 				to === "published" && deprecated
@@ -510,6 +545,51 @@ export async function changeStatus(
 					: null,
 		};
 	});
+}
+
+/**
+ * What publishing a revision in review would do, so the writer can pick minor or major knowingly: the revision it
+ * replaces, how many learners are mid-course and which chapters a major change would send back.
+ */
+export async function publishImpact(
+	courseId: string,
+	revisionId: string,
+): Promise<Outcome<{ impact: PublishImpact }>> {
+	const rows = await db
+		.select()
+		.from(courseRevision)
+		.where(eq(courseRevision.courseId, courseId));
+	const revision = rows.find((r) => r.id === revisionId);
+	if (!revision) return { ok: false, status: 404, error: "Revision not found" };
+	if (revision.status !== "preview")
+		return {
+			ok: false,
+			status: 409,
+			error: "Only a revision in review can be published",
+		};
+	const replaced = rows.find((r) => r.status === "published") ?? null;
+	const [{ n } = { n: 0 }] = await db
+		.select({ n: count() })
+		.from(schema.enrollment)
+		.where(
+			and(
+				eq(schema.enrollment.courseId, courseId),
+				eq(schema.enrollment.status, "in_progress"),
+			),
+		);
+	return {
+		ok: true,
+		impact: {
+			replaces: replaced && { id: replaced.id, key: replaced.key },
+			learnersInProgress: n,
+			summary: replaced
+				? updateSummary(
+						diffContent(replaced.content, revision.content),
+						"major",
+					)
+				: null,
+		},
+	};
 }
 
 /** Only revisions that were never published can go away: the others are history. */
