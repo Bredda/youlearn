@@ -19,6 +19,7 @@ const FOLLOWED: Record<EnrollmentStatus, { icon: IconName; label: string }> = {
 	completed: { icon: "done", label: "Terminée" },
 	in_progress: { icon: "inProgress", label: "En cours" },
 	failed: { icon: "alert", label: "Échec à l'examen final" },
+	superseded: { icon: "history", label: "Suivie, puis mise à jour" },
 };
 
 /**

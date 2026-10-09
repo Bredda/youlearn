@@ -30,7 +30,7 @@ const sortColumns = {
 
 /** The status of the user's most recent enrollment on the course, whatever its revision (null: never started). */
 const latestStatus = (actor: CourseActor) =>
-	sql<EnrollmentStatus | null>`(select ${enrollment.status} from ${enrollment} where ${enrollment.userId} = ${actor.id} and ${enrollment.courseId} = ${course.id} order by ${enrollment.startedAt} desc limit 1)`;
+	sql<EnrollmentStatus | null>`(select ${enrollment.status} from ${enrollment} where ${enrollment.userId} = ${actor.id} and ${enrollment.courseId} = ${course.id} and ${enrollment.status} <> 'superseded' order by ${enrollment.startedAt} desc limit 1)`;
 
 /**
  * What a learner sees: living courses with a published revision that are tagged "Commun" or with one of the
