@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # check=skip=SecretsUsedInArgOrEnv
 # Build from the repository root: docker build -f apps/web/Dockerfile .
-# `API_URL` is baked in at build time (Next.js freezes the rewrites to the API), see todo.md / backlog.md.
+# `API_URL` is baked in at build time (Next.js freezes the rewrites to the API), see issue #32.
 
 FROM node:24-slim AS build
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH HUSKY=0 CI=true NEXT_TELEMETRY_DISABLED=1

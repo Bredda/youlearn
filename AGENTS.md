@@ -56,9 +56,20 @@ pnpm --filter @youlearn/auth seed:admin   # same seed the API runs at startup
 
 Dependency direction: `content` (pure leaf) and `config` <- `db` (it types the `content` jsonb with `content`) <- `events` <- `auth` <- `types` (type-only imports) <- `api` / `web`; `storage` depends only on `config` and is used by `api`. Do not create cycles.
 
-## Work tracking (written in French)
+## Work tracking (GitHub, written in English)
 
-Three files at the repo root: `roadmap.md` (the big features to come, by axis and horizon), `todo.md` (the executable plan of the feature in progress, with decisions, phases and **Vérif.** lines; its "Mode d'emploi" explains how to work it) and `backlog.md` (unscheduled ideas). Read `todo.md` before starting a feature; do not pick from the backlog unless asked. When a plan is finished, set it to "Aucun" and update the status in `roadmap.md`.
+Everything lives on GitHub: issues, labels and the [YouLearn Project](https://github.com/users/Bredda/projects/8). Write issues, comments and PRs in English. Use `gh issue` / `gh project` (the token needs the `project` scope).
+
+- **Roadmap**: one issue labelled `epic` per axis, with native sub-issues; the vision, principles and out-of-scope list are in the pinned issue "Vision, principles and out of scope".
+- **Plan in progress**: an issue labelled `plan` (template `.github/ISSUE_TEMPLATE/plan.md`: goal, decisions with a recommendation, phases with a **Verify** line each, "Done when"), Project status *In progress*, child of its epic. Read it before starting a feature and work it top to bottom, one commit per phase. Tick a task only once its Verify line passes, and say what could not be verified. If the plan turns out wrong, fix it first. Confirm a decision with the user before the tasks that depend on it; with no answer, apply the recommendation and say so. Reference the issue in PRs (`Closes #N`); when the plan is done, close it and update its epic.
+- **Backlog**: issues labelled `idea` (status *Backlog*, sorted by `area/*` labels, `needs-triage` when unsorted). Do not pick from it unless asked; a scoped idea becomes a `plan`.
+- Project statuses: Backlog, Next, In progress, In review, Done.
+
+## Branches and pull requests
+
+- Trunk-based: never push to `main` (a ruleset requires a pull request and the `CI` check, squash merge only, branch deleted after merge). Branch from `main`: `feat/...`, `fix/...`, `docs/...`, `ci/...`.
+- **One pull request per issue** (for a plan: one per phase), small and green. Changing the tracking (issues, Project) needs no pull request.
+- The squash commit is the history and the changelog line: the **PR title** is a Conventional Commit worded as the outcome (`feat(web): lock the next chapter behind a blocking quiz`), and the body carries `Closes #N`. `feat`, `fix`, `perf` and `refactor` show in the changelog; `docs`, `chore`, `ci`, `test`, `build`, `style` do not. A change that really spans several outcomes keeps one PR but lists them in a `BEGIN_COMMIT_OVERRIDE` / `END_COMMIT_OVERRIDE` block of the PR body (release-please reads it).
 
 ## Skills (read before working in the area)
 

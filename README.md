@@ -14,6 +14,10 @@ each user. There is no sign-up: administrators create the accounts.
 
 User documentation (in French) lives in [`docs/`](docs/README.md).
 
+## Roadmap and work tracking
+
+The roadmap, the plan in progress and the backlog are GitHub issues in the [YouLearn Project](https://github.com/users/Bredda/projects/8); the vision and principles are in the pinned issue.
+
 ## Stack
 
 - **pnpm 12 + Turborepo** monorepo, TypeScript everywhere.
