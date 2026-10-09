@@ -1,6 +1,7 @@
 export * from "./diff";
 export * from "./duration";
 export * from "./learner";
+export * from "./migration";
 export * from "./progress";
 export * from "./quiz";
 export * from "./quiz-draw";
