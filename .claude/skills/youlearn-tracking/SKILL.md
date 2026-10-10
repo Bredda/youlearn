@@ -29,7 +29,7 @@ $T audit --fix                      # also applies the safe fixes (closed -> Don
 ## Lifecycle (the agent does these, they are not left to chance)
 
 1. **Start**: set the issue to *In progress* before the first commit. A `plan` stays *In progress* for all its phases. Only one plan is in progress at a time; an epic is *In progress* while any child is.
-2. **Open a pull request**: the body says `Closes #N` (one per line) for each issue the PR completes, and `Refs #N` for a phase of a plan (the plan stays open) or an issue that is only touched. Keywords go in the body, never the title. Issues closed by the PR move to *In review*; `Refs` ones do not move.
+2. **Open a pull request**: set the status *after* the PR exists (a workflow of the Project reacts to the link), and the body says `Closes #N` (one per line) for each issue the PR completes, and `Refs #N` for a phase of a plan (the plan stays open) or an issue that is only touched. Keywords go in the body, never the title. Issues closed by the PR move to *In review*; `Refs` ones do not move.
 3. **Merge** (the user merges; when they say so, or at the start of a session, run `audit`): `Closes` issues close by themselves; the Project then needs *Done*, which `audit --fix` sets if the Project's own workflow did not. Then, in the plan, **tick the boxes of the phase that was merged** (tick on merge, not when the PR opens: a plan describes what is on `main`) and say what was not verified.
 4. **Last phase of a plan**: that PR says `Closes #<plan>`. After the merge, check the plan's epic: if all its sub-issues are done, close it with a comment and set it to *Done*.
 5. **Closing without a PR** (an idea dropped, an issue made obsolete): `gh issue close <n> --reason "not planned"` (or `completed`) **with a comment** saying why and linking what replaces it, then set it to *Done*.
@@ -43,7 +43,13 @@ Run `tracking.sh audit` at the start of a session, when the user says something 
 
 ## Project workflows (the GitHub UI, not scriptable)
 
-The Project's built-in workflows cover the human side: **Item closed -> Done** and **Item added to the project -> Backlog** should be enabled, plus **Pull request merged -> Done** (already on). They cannot be changed through the API, only listed. The audit is the safety net when one of them is off or races with the script.
+The Project's built-in workflows cannot be changed through the API, only listed (and deleted). Settings to have in *Project > Workflows*:
+
+- **Item closed** -> Status *Done*, and **Pull request merged** -> *Done* (the human side of closing).
+- **Item added to the project** -> Status *Backlog*.
+- **Pull request linked to issue**: it must set *In review*, or be off. It was found setting *Done* the moment a PR with `Closes #N` was opened (the status of #76 changed one second after the PR, under the user's identity), which makes an open issue look finished. Whatever it does, the order is: open the PR first, set *In review* afterwards, and run `audit --fix`, which puts such an issue back to *In review*.
+
+The audit is the safety net when a workflow is off or races with the script.
 
 ## Rate limit
 

@@ -88,11 +88,12 @@ audit() {
 		if [ "$st" = CLOSED ] && [ "$s" != Done ]; then
 			if [ $fix = 1 ]; then set_status "$n" Done >/dev/null; report "#$n was closed but '$s': set to Done"
 			else report "#$n is closed but its status is '$s' (should be Done)"; fi
-		elif [ "$st" = OPEN ] && [ "$s" = Done ]; then
-			report "#$n is open but its status is Done: reopen it or close it"
 		elif [ "$st" = OPEN ] && [ -n "${closing[$n]:-}" ] && [ "$s" != "In review" ]; then
+			# Includes Done: the Project's "Pull request linked to issue" workflow can set it as soon as the PR is opened.
 			if [ $fix = 1 ]; then set_status "$n" "In review" >/dev/null; report "#$n has an open PR that closes it (${closing[$n]# }): set to In review (was '$s')"
 			else report "#$n has an open PR that closes it (${closing[$n]# }) but its status is '$s' (should be In review)"; fi
+		elif [ "$st" = OPEN ] && [ "$s" = Done ]; then
+			report "#$n is open but its status is Done: reopen it or close it"
 		elif [ "$st" = OPEN ] && [ "$s" = "In review" ] && [ -z "${closing[$n]:-}" ]; then
 			report "#$n is In review but no open PR closes it: back to In progress, or is Closes missing in the PR body?"
 		fi
