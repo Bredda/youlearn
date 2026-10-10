@@ -11,7 +11,17 @@ import {
 	type QuizAnswers,
 	toLearnerContent,
 } from "@youlearn/content";
-import { and, asc, db, desc, eq, inArray, isNull, schema } from "@youlearn/db";
+import {
+	and,
+	asc,
+	db,
+	desc,
+	eq,
+	inArray,
+	isNull,
+	ne,
+	schema,
+} from "@youlearn/db";
 import type {
 	AttemptResult,
 	AttemptSummary,
@@ -77,7 +87,7 @@ async function findPublished(actor: CourseActor, courseId: string) {
 	return row;
 }
 
-/** The learner's latest enrollment on a course, a failed one included. */
+/** The learner's latest enrollment on a course, a failed one included, a superseded one not (its successor is newer). */
 async function findLatestEnrollment(userId: string, courseId: string) {
 	const [row] = await db
 		.select({
@@ -88,7 +98,11 @@ async function findLatestEnrollment(userId: string, courseId: string) {
 		.from(enrollment)
 		.innerJoin(courseRevision, eq(courseRevision.id, enrollment.revisionId))
 		.where(
-			and(eq(enrollment.userId, userId), eq(enrollment.courseId, courseId)),
+			and(
+				eq(enrollment.userId, userId),
+				eq(enrollment.courseId, courseId),
+				ne(enrollment.status, "superseded"),
+			),
 		)
 		.orderBy(desc(enrollment.startedAt))
 		.limit(1);

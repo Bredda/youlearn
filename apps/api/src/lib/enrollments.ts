@@ -7,6 +7,7 @@ import {
 	eq,
 	ilike,
 	isNull,
+	ne,
 	or,
 	schema,
 	sql,
@@ -63,7 +64,14 @@ export async function listMyEnrollments(
 		.from(enrollment)
 		.innerJoin(course, eq(course.id, enrollment.courseId))
 		.innerJoin(courseRevision, eq(courseRevision.id, enrollment.revisionId))
-		.where(and(eq(enrollment.userId, actor.id), isNull(course.deletedAt)))
+		// A superseded enrollment is history of the one that continues it: listed alone it would be a duplicate.
+		.where(
+			and(
+				eq(enrollment.userId, actor.id),
+				ne(enrollment.status, "superseded"),
+				isNull(course.deletedAt),
+			),
+		)
 		.orderBy(
 			sql`case when ${enrollment.status} = 'in_progress' then 0 else 1 end`,
 			desc(enrollment.startedAt),
@@ -146,6 +154,8 @@ export async function listCourseEnrollments(
 	const search = q ? `%${escapeLike(q)}%` : undefined;
 	const where = and(
 		eq(enrollment.courseId, courseId),
+		// The learner's current enrollment stands for the ones it continues (see `enrollment.previousEnrollmentId`).
+		ne(enrollment.status, "superseded"),
 		status ? eq(enrollment.status, status) : undefined,
 		search
 			? or(ilike(user.name, search), ilike(user.email, search))

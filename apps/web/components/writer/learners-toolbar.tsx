@@ -7,7 +7,10 @@ import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ENROLLMENT_STATUS_LABELS } from "@/lib/enrollments";
+import {
+	ENROLLMENT_STATUS_LABELS,
+	LISTED_ENROLLMENT_STATUSES,
+} from "@/lib/enrollments";
 import { DEFAULT_PAGE_SIZE } from "@/lib/users-query";
 
 // Remounted by the parent (`key`) when the search term changes from the outside, so the form follows the URL.
@@ -71,9 +74,7 @@ export function LearnersToolbar({
 				label="Tous les statuts"
 				className="w-56"
 				value={query.status}
-				options={(
-					Object.keys(ENROLLMENT_STATUS_LABELS) as EnrollmentStatus[]
-				).map((status) => ({
+				options={LISTED_ENROLLMENT_STATUSES.map((status) => ({
 					value: status,
 					label: ENROLLMENT_STATUS_LABELS[status],
 				}))}

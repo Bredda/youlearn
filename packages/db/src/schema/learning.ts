@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { QuizAnswers, QuizDraw } from "@youlearn/content";
 import { sql } from "drizzle-orm";
 import {
+	type AnyPgColumn,
 	boolean,
 	index,
 	integer,
@@ -20,12 +21,17 @@ export const enrollmentStatus = pgEnum("enrollment_status", [
 	"in_progress",
 	"completed",
 	"failed",
+	"superseded",
 ]);
 
 /**
  * A learner following a course. It pins the revision published at enrollment time (`revisionId`), which a later
  * publication never changes: progress and the future certificate refer to what was actually followed. A failed
  * enrollment (final exam missed) stays as history and the learner starts over with a new one.
+ *
+ * Moving to a newer revision does not move the enrollment: it creates a new one that points back at the old one
+ * (`previousEnrollmentId`), which becomes `superseded` and stays as history. A superseded enrollment is never
+ * listed on its own: its successor is the learner's current enrollment.
  */
 export const enrollment = pgTable(
 	"enrollment",
@@ -46,6 +52,22 @@ export const enrollment = pgTable(
 		startedAt: timestamp().notNull().defaultNow(),
 		/** Set when the status leaves `in_progress`. */
 		finishedAt: timestamp(),
+		/** The enrollment this one continues after a move to a newer revision. */
+		previousEnrollmentId: text().references((): AnyPgColumn => enrollment.id, {
+			onDelete: "set null",
+		}),
+		/**
+		 * The published revision whose update the learner chose to postpone: the offer does not open by itself again
+		 * until another revision is published.
+		 */
+		updatePostponedRevisionId: text().references(() => courseRevision.id, {
+			onDelete: "set null",
+		}),
+		/**
+		 * When the learner saw the notice of an automatic move to a newer revision. Null on such an enrollment means
+		 * the notice is still pending; a move the learner chose themselves is created already acknowledged.
+		 */
+		noticeAckedAt: timestamp(),
 		createdAt: timestamp().notNull().defaultNow(),
 		updatedAt: timestamp()
 			.notNull()
@@ -53,10 +75,11 @@ export const enrollment = pgTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
-		// One enrollment per learner and course, except the failed ones (history).
+		// One enrollment per learner and course, except the ones kept as history (failed, superseded). Written with the
+		// values the enum already had: Postgres refuses to use a value in the transaction that adds it.
 		uniqueIndex("enrollment_active_idx")
 			.on(table.userId, table.courseId)
-			.where(sql`${table.status} <> 'failed'`),
+			.where(sql`${table.status} in ('in_progress', 'completed')`),
 		index("enrollment_course_id_idx").on(table.courseId),
 		index("enrollment_revision_id_idx").on(table.revisionId),
 	],
