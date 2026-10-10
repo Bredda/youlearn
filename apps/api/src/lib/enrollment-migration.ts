@@ -86,6 +86,7 @@ export async function loadPublishedRevisions(
 			key: courseRevision.key,
 			purpose: courseRevision.purpose,
 			status: courseRevision.status,
+			publishedAt: courseRevision.publishedAt,
 			updatedAt: courseRevision.updatedAt,
 			changeImpact: courseRevision.changeImpact,
 		})
@@ -96,8 +97,13 @@ export async function loadPublishedRevisions(
 				inArray(courseRevision.status, ["published", "deprecated"]),
 			),
 		);
-	cache.revisions.set(courseId, rows);
-	return rows;
+	// A published or deprecated revision always has its publication date; the fallback is for a row nobody backfilled.
+	const revisions = rows.map(({ publishedAt, updatedAt, ...revision }) => ({
+		...revision,
+		publishedAt: publishedAt ?? updatedAt,
+	}));
+	cache.revisions.set(courseId, revisions);
+	return revisions;
 }
 
 async function contentOf(

@@ -44,10 +44,18 @@ export function UpdateNotice({
 				<AlertTitle>Ce cours a été mis à jour</AlertTitle>
 				<AlertDescription>
 					<p>
-						La révision « {notice.toRevisionKey} » remplace la révision «{" "}
-						{notice.fromRevisionKey} ». Votre progression est conservée.
+						Vous êtes passé de la révision « {notice.fromRevisionKey} » à la
+						révision « {notice.toRevisionKey} ». Votre progression est
+						conservée.
 					</p>
-					<p className="italic">{notice.purpose}</p>
+					<ul className="mt-1 flex flex-col gap-1">
+						{notice.revisions.map((revision) => (
+							<li key={revision.key}>
+								<span className="font-medium">{revision.key}</span> :{" "}
+								<span className="whitespace-pre-wrap">{revision.purpose}</span>
+							</li>
+						))}
+					</ul>
 					<Button
 						className="mt-2"
 						variant="outline"

@@ -6,8 +6,7 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { EnrollButton } from "@/components/learn/enroll-button";
 import { EnrollmentSummary } from "@/components/learn/enrollment-summary";
-import { RevisionHistory } from "@/components/learn/revision-history";
-import { UpdateAvailable } from "@/components/learn/update-available";
+import { RevisionControl } from "@/components/learn/revision-control";
 import { UpdateNotice } from "@/components/learn/update-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -50,9 +49,21 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 						{category}
 					</Badge>
 				))}
-				<RevisionHistory
-					currentKey={course.revisionKey}
+				<RevisionControl
+					// The revision they follow (or followed), not necessarily the latest; a learner who failed starts again
+					// on the latest, and one who has not started is on it too.
+					followedKey={
+						enrollment && enrollment.status !== "failed"
+							? enrollment.revisionKey
+							: course.revisionKey
+					}
+					publishedKey={course.revisionKey}
 					revisions={course.revisions}
+					enrollment={
+						enrollment?.update
+							? { id: enrollment.id, update: enrollment.update }
+							: undefined
+					}
 				/>
 			</div>
 
@@ -107,26 +118,6 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 							>
 								<Icon name="start" /> Continuer le cours
 							</Button>
-							{enrollment.update && (
-								<section className="flex flex-col gap-2 rounded-md border-2 border-primary bg-primary/10 p-3">
-									<h2 className="flex items-center gap-2 font-semibold text-sm">
-										<Icon name="refresh" className="size-4" />
-										Une nouvelle version du cours est disponible
-									</h2>
-									<p className="text-sm">
-										Vous suivez la révision {enrollment.revisionKey}, la
-										révision {course.revisionKey} est publiée.{" "}
-										{enrollment.update.level === "minor"
-											? "Votre progression est conservée."
-											: "Passer dessus conserve ce que vous avez fait sur les chapitres inchangés."}
-									</p>
-									<UpdateAvailable
-										enrollmentId={enrollment.id}
-										update={enrollment.update}
-										autoOpen
-									/>
-								</section>
-							)}
 							<p className="text-muted-foreground text-sm">
 								Commencé le{" "}
 								{startedFormat.format(new Date(enrollment.startedAt))}
@@ -172,15 +163,6 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 							)}
 						</section>
 					)}
-					{enrollment &&
-						enrollment.status !== "failed" &&
-						enrollment.outdated &&
-						!enrollment.update && (
-							<p className="text-muted-foreground text-sm">
-								Une version plus récente du cours a été publiée. Vous continuez
-								la version {enrollment.revisionKey}, celle de votre inscription.
-							</p>
-						)}
 				</aside>
 			</div>
 		</div>

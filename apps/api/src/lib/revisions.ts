@@ -527,6 +527,7 @@ export async function changeStatus(
 				status: to,
 				...(to === "published" && {
 					changeImpact: impactToStore(deprecated !== null, changeImpact),
+					publishedAt: new Date(),
 				}),
 			})
 			.where(eq(courseRevision.id, revision.id));

@@ -5,11 +5,13 @@ import type {
 	EnrollmentUpdate,
 	LearnerEnrollment,
 	UpdateOffer,
+	UpdateRevision,
 } from "@youlearn/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { FormError } from "@/components/form-error";
 import { Icon, PendingIcon } from "@/components/icon";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -23,6 +25,41 @@ import { callApi, fetchApi } from "@/lib/api-client";
 
 const plural = (n: number, one: string, many: string) =>
 	`${n} ${n > 1 ? many : one}`;
+
+/**
+ * The revisions published since the learner's, in order: several can have come while they were away, and each says
+ * why it exists and whether it was a correction or a change that matters.
+ */
+export function RevisionList({ revisions }: { revisions: UpdateRevision[] }) {
+	return (
+		<section className="flex flex-col gap-1">
+			<h3 className="font-medium text-sm">
+				{revisions.length > 1
+					? `${revisions.length} révisions depuis la vôtre`
+					: "Cette révision"}
+			</h3>
+			<ol className="flex flex-col gap-2">
+				{revisions.map((revision) => (
+					<li key={revision.key} className="rounded-md border p-2 text-sm">
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="font-medium">{revision.key}</span>
+							{revision.impact && (
+								<Badge
+									variant={revision.impact === "major" ? "default" : "outline"}
+								>
+									{revision.impact === "major" ? "Majeure" : "Mineure"}
+								</Badge>
+							)}
+						</div>
+						<p className="whitespace-pre-wrap text-muted-foreground">
+							{revision.purpose}
+						</p>
+					</li>
+				))}
+			</ol>
+		</section>
+	);
+}
 
 /** A group of chapters of the update, under what happens to them. */
 function ChapterGroup({
@@ -56,7 +93,7 @@ function ChapterGroup({
  * The choice of moving to the revision published now: what it is for, what is kept and what is redone. "Plus tard"
  * (and closing the dialog, which means the same) only puts it off: the learner can open it again from the button.
  */
-function UpdateDialog({
+export function UpdateDialog({
 	enrollmentId,
 	onClose,
 }: {
@@ -120,7 +157,7 @@ function UpdateDialog({
 					</DialogTitle>
 					<DialogDescription>
 						{update
-							? `Révision « ${update.targetRevisionKey} »`
+							? `Vous passeriez sur la révision « ${update.targetRevisionKey} »`
 							: "Chargement…"}
 					</DialogDescription>
 				</DialogHeader>
@@ -133,7 +170,7 @@ function UpdateDialog({
 				)}
 				{update && counts && (
 					<div className="flex flex-col gap-3">
-						<p className="text-sm">{update.purpose}</p>
+						<RevisionList revisions={update.revisions} />
 						<p className="rounded-md border border-dashed bg-muted/50 px-3 py-2 text-sm">
 							{update.level === "minor"
 								? "Mise à jour mineure : votre progression est conservée."

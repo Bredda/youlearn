@@ -132,6 +132,11 @@ export const courseRevision = pgTable(
 		 * published before the field existed): a revision without one counts as `major`.
 		 */
 		changeImpact: revisionChangeImpact(),
+		/**
+		 * When the revision became the published one. It orders the publications of a course: `updatedAt` also moves
+		 * when a revision is deprecated, which happens in the same transaction as the publication that replaces it.
+		 */
+		publishedAt: timestamp(),
 		content: jsonb()
 			.$type<CourseContent>()
 			.notNull()
