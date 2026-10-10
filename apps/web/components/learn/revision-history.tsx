@@ -46,8 +46,10 @@ export function RevisionHistory({
 				<SheetHeader>
 					<SheetTitle>Révisions du cours</SheetTitle>
 					<SheetDescription>
-						Du plus récent au plus ancien. Le cours que vous suivez reste dans
-						la révision de votre inscription.
+						Du plus récent au plus ancien. Une icône marque les révisions que
+						vous suivez ou avez suivies. Quand une nouvelle révision est
+						publiée, le cours vous propose de passer dessus : ce que vous avez
+						déjà fait sur les chapitres inchangés est conservé.
 					</SheetDescription>
 				</SheetHeader>
 				<ol className="flex flex-col gap-3 overflow-y-auto p-4">

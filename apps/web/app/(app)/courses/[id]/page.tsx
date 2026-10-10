@@ -108,11 +108,24 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 								<Icon name="start" /> Continuer le cours
 							</Button>
 							{enrollment.update && (
-								<UpdateAvailable
-									enrollmentId={enrollment.id}
-									update={enrollment.update}
-									autoOpen
-								/>
+								<section className="flex flex-col gap-2 rounded-md border-2 border-primary bg-primary/10 p-3">
+									<h2 className="flex items-center gap-2 font-semibold text-sm">
+										<Icon name="refresh" className="size-4" />
+										Une nouvelle version du cours est disponible
+									</h2>
+									<p className="text-sm">
+										Vous suivez la révision {enrollment.revisionKey}, la
+										révision {course.revisionKey} est publiée.{" "}
+										{enrollment.update.level === "minor"
+											? "Votre progression est conservée."
+											: "Passer dessus conserve ce que vous avez fait sur les chapitres inchangés."}
+									</p>
+									<UpdateAvailable
+										enrollmentId={enrollment.id}
+										update={enrollment.update}
+										autoOpen
+									/>
+								</section>
 							)}
 							<p className="text-muted-foreground text-sm">
 								Commencé le{" "}

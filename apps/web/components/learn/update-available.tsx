@@ -197,12 +197,8 @@ export function UpdateAvailable({
 	const [open, setOpen] = useState(autoOpen && !update.postponed);
 	return (
 		<>
-			<Button
-				variant={update.postponed ? "outline" : "default"}
-				size={size}
-				className="self-start"
-				onClick={() => setOpen(true)}
-			>
+			{/* Always the primary button: putting it off must not make the way back easy to miss. */}
+			<Button size={size} className="self-start" onClick={() => setOpen(true)}>
 				<Icon name="refresh" /> Nouvelle version disponible
 			</Button>
 			{open && (
