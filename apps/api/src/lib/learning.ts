@@ -34,6 +34,7 @@ import type {
 } from "@youlearn/types";
 import { visibleTo } from "./catalog";
 import { type CourseActor, canViewCourse, findCourse } from "./courses";
+import { type Migration, migrateEnrollment } from "./enrollment-migration";
 import { finalExamScore } from "./enrollments";
 import { isUniqueViolation } from "./groups";
 
@@ -259,6 +260,47 @@ async function findOwned(actor: CourseActor, enrollmentId: string) {
 }
 
 type Executor = Pick<typeof db, "select" | "selectDistinct">;
+
+export type MigrateResult =
+	| {
+			ok: true;
+			enrollment: LearnerEnrollment;
+			migration: Migration;
+			courseName: string;
+	  }
+	| { ok: false; reason: "NOT_FOUND" | "NOT_ACTIVE" | "UP_TO_DATE" };
+
+/**
+ * The learner moves to the revision published now: a new enrollment continues the old one, with the chapters the
+ * update keeps (see `migrateEnrollment`). Whatever the level, the learner decides.
+ */
+export async function migrateOwnEnrollment(
+	actor: CourseActor,
+	enrollmentId: string,
+): Promise<MigrateResult> {
+	const owned = await findOwned(actor, enrollmentId);
+	if (!owned) return { ok: false, reason: "NOT_FOUND" };
+	const outcome = await db.transaction((tx) =>
+		migrateEnrollment(tx, enrollmentId, { automatic: false }),
+	);
+	if (!outcome.ok)
+		return {
+			ok: false,
+			reason:
+				outcome.reason === "NOT_AUTOMATIC" ? "UP_TO_DATE" : outcome.reason,
+		};
+	return {
+		ok: true,
+		enrollment: toLearnerEnrollment(
+			outcome.enrollment,
+			outcome.migration.toRevision.key,
+			outcome.migration.toRevision.id,
+			null,
+		),
+		migration: outcome.migration,
+		courseName: owned.course.name,
+	};
+}
 
 /** The chapters the learner finished and those whose quiz they passed. */
 async function loadProgress(

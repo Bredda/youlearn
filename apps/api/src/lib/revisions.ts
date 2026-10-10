@@ -36,6 +36,7 @@ import {
 	uniqueNamesGenerator,
 } from "unique-names-generator";
 import type { CourseActor } from "./courses";
+import { type Migration, migrateEligible } from "./enrollment-migration";
 import {
 	impactBlocker,
 	impactToStore,
@@ -382,6 +383,10 @@ export async function changeStatus(
 		changeImpact: ChangeImpact | null;
 		deprecated: Ref | null;
 		reviewers: ReviewerChanges;
+		/** Learners moved to this revision by a minor publication, in the same transaction. */
+		migrations: Migration[];
+		/** Enrollments a minor publication could not move: they stay where they are and can still move by choice. */
+		migrationFailures: string[];
 	}>
 > {
 	return db.transaction(async (tx) => {
@@ -530,14 +535,23 @@ export async function changeStatus(
 			? await replaceReviewers(tx, revision.id, wanted)
 			: { added: [], removed: [] };
 
+		// A minor publication moves the learners in progress by itself; a major one leaves the choice to them.
+		const stored =
+			to === "published"
+				? impactToStore(deprecated !== null, changeImpact)
+				: null;
+		const moved =
+			stored === "minor"
+				? await migrateEligible(tx, courseId, revision.id)
+				: { migrations: [], failed: [] };
+
 		return {
 			ok: true,
 			from: revision.status,
 			key: revision.key,
-			changeImpact:
-				to === "published"
-					? impactToStore(deprecated !== null, changeImpact)
-					: null,
+			changeImpact: stored,
+			migrations: moved.migrations,
+			migrationFailures: moved.failed,
 			reviewers,
 			deprecated:
 				to === "published" && deprecated
