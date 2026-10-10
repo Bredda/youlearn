@@ -7,6 +7,8 @@ import { Icon } from "@/components/icon";
 import { EnrollButton } from "@/components/learn/enroll-button";
 import { EnrollmentSummary } from "@/components/learn/enrollment-summary";
 import { RevisionHistory } from "@/components/learn/revision-history";
+import { UpdateAvailable } from "@/components/learn/update-available";
+import { UpdateNotice } from "@/components/learn/update-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -91,6 +93,12 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 						/>
 					)}
 					{!enrollment && <EnrollButton courseId={course.id} />}
+					{enrollment?.notice && (
+						<UpdateNotice
+							enrollmentId={enrollment.id}
+							notice={enrollment.notice}
+						/>
+					)}
 					{enrollment?.status === "in_progress" && (
 						<>
 							<Button
@@ -99,6 +107,13 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 							>
 								<Icon name="start" /> Continuer le cours
 							</Button>
+							{enrollment.update && (
+								<UpdateAvailable
+									enrollmentId={enrollment.id}
+									update={enrollment.update}
+									autoOpen
+								/>
+							)}
 							<p className="text-muted-foreground text-sm">
 								Commencé le{" "}
 								{startedFormat.format(new Date(enrollment.startedAt))}
@@ -146,7 +161,8 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 					)}
 					{enrollment &&
 						enrollment.status !== "failed" &&
-						enrollment.outdated && (
+						enrollment.outdated &&
+						!enrollment.update && (
 							<p className="text-muted-foreground text-sm">
 								Une version plus récente du cours a été publiée. Vous continuez
 								la version {enrollment.revisionKey}, celle de votre inscription.

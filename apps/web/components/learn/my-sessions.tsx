@@ -2,6 +2,7 @@ import type { MyEnrollment } from "@youlearn/types";
 import Link from "next/link";
 import { CoverPlaceholder } from "@/components/catalog/cover-placeholder";
 import { Icon } from "@/components/icon";
+import { UpdateAvailable } from "@/components/learn/update-available";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,11 +106,26 @@ function Session({ enrollment }: { enrollment: MyEnrollment }) {
 						chapitres terminés ({percent} %)
 					</span>
 				</div>
-				{enrollment.outdated && enrollment.status !== "failed" && (
-					<p className="text-muted-foreground text-xs">
-						Une version plus récente du cours existe : vous suivez la vôtre.
+				{enrollment.update && (
+					<UpdateAvailable
+						enrollmentId={enrollment.id}
+						update={enrollment.update}
+						size="sm"
+					/>
+				)}
+				{enrollment.notice && (
+					<p className="flex items-center gap-1 text-muted-foreground text-xs">
+						<Icon name="notifications" className="size-3.5" /> Mis à jour vers
+						la révision {enrollment.notice.toRevisionKey}.
 					</p>
 				)}
+				{enrollment.outdated &&
+					!enrollment.update &&
+					enrollment.status !== "failed" && (
+						<p className="text-muted-foreground text-xs">
+							Une version plus récente du cours existe : vous suivez la vôtre.
+						</p>
+					)}
 				<div className="mt-auto">
 					{enrollment.status === "failed" ? (
 						<Button

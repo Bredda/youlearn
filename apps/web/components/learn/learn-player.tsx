@@ -13,6 +13,8 @@ import {
 	QuizStartButton,
 } from "@/components/learn/quiz-runner";
 import { ReadingEnd, ReadingGate } from "@/components/learn/reading-gate";
+import { UpdateAvailable } from "@/components/learn/update-available";
+import { UpdateNotice } from "@/components/learn/update-notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -98,6 +100,13 @@ export function LearnPlayer({
 						>
 							<Icon name="open" /> Fiche du cours
 						</Button>
+						{enrollment.update && (
+							<UpdateAvailable
+								enrollmentId={enrollment.id}
+								update={enrollment.update}
+								autoOpen
+							/>
+						)}
 					</div>
 					{chapters.length > 0 && (
 						<nav
@@ -172,7 +181,13 @@ export function LearnPlayer({
 							</Button>
 						</div>
 					)}
-					{enrollment.outdated && (
+					{enrollment.notice && (
+						<UpdateNotice
+							enrollmentId={enrollment.id}
+							notice={enrollment.notice}
+						/>
+					)}
+					{enrollment.outdated && !enrollment.update && (
 						<p className="rounded-md border border-dashed bg-muted/50 px-3 py-2 text-sm">
 							Une version plus récente de ce cours a été publiée. Vous suivez la
 							révision {enrollment.revisionKey}, celle de votre inscription.
