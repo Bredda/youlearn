@@ -538,6 +538,8 @@ export type CourseEnrollmentQuery = {
 	/** Searches the learner's name and email. */
 	q?: string;
 	status?: EnrollmentStatus;
+	/** Only the learners in progress on a revision older than the published one (`CourseEnrollment.outdated`). */
+	outdated?: boolean;
 	sort: CourseEnrollmentSort;
 	order: "asc" | "desc";
 	page: number;

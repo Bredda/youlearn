@@ -115,6 +115,7 @@ export function LearnersManager({
 						navigate({
 							q: undefined,
 							status: undefined,
+							outdated: undefined,
 							sort: "startedAt",
 							order: "desc",
 							pageSize: DEFAULT_PAGE_SIZE,

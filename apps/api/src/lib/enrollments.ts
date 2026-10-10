@@ -175,13 +175,17 @@ export async function listCourseEnrollments(
 	courseId: string,
 	query: CourseEnrollmentQuery,
 ): Promise<CourseEnrollmentPage> {
-	const { q, status, sort, order, page, pageSize } = query;
+	const { q, status, outdated, sort, order, page, pageSize } = query;
 	const search = q ? `%${escapeLike(q)}%` : undefined;
 	const where = and(
 		eq(enrollment.courseId, courseId),
 		// The learner's current enrollment stands for the ones it continues (see `enrollment.previousEnrollmentId`).
 		ne(enrollment.status, "superseded"),
 		status ? eq(enrollment.status, status) : undefined,
+		// In progress on a revision that is not the published one: what `CourseEnrollment.outdated` says.
+		outdated
+			? sql`${enrollment.status} = 'in_progress' and ${publishedRevisionId} is not null and ${enrollment.revisionId} <> ${publishedRevisionId}`
+			: undefined,
 		search
 			? or(ilike(user.name, search), ilike(user.email, search))
 			: undefined,

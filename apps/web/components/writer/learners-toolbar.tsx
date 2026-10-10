@@ -32,6 +32,7 @@ export function LearnersToolbar({
 		typed ||
 			query.q ||
 			query.status ||
+			query.outdated ||
 			query.sort !== "startedAt" ||
 			query.order !== "desc" ||
 			query.pageSize !== DEFAULT_PAGE_SIZE,
@@ -80,6 +81,16 @@ export function LearnersToolbar({
 				}))}
 				onChange={(status) =>
 					onChange({ status: status as EnrollmentStatus | undefined })
+				}
+			/>
+
+			<FilterSelect
+				label="Toutes les révisions"
+				className="w-56"
+				value={query.outdated ? "outdated" : undefined}
+				options={[{ value: "outdated", label: "Pas à jour" }]}
+				onChange={(value) =>
+					onChange({ outdated: value === "outdated" ? true : undefined })
 				}
 			/>
 

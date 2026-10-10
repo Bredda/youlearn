@@ -15,6 +15,11 @@ const detailParams = courseParams.extend({ enrollmentId: z.string().min(1) });
 const listQuery = z.object({
 	q: z.string().trim().max(100).optional(),
 	status: z.enum(["in_progress", "completed", "failed"]).optional(),
+	// Query strings carry text: only the learners behind, or everybody.
+	outdated: z
+		.enum(["true", "false"])
+		.optional()
+		.transform((value) => value === "true"),
 	sort: z.enum(["startedAt", "learner", "status"]).default("startedAt"),
 	order: z.enum(["asc", "desc"]).default("desc"),
 	page: z.coerce.number().int().min(1).default(1),
