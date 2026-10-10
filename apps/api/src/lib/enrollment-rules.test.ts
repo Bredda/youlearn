@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
 	type PublishedRevision,
+	revisionsAfter,
+	revisionsBetween,
 	revisionsSince,
 	updateLevelFor,
 	updateOfferFor,
@@ -9,9 +11,46 @@ import {
 const revision = (
 	id: string,
 	status: "published" | "deprecated",
-	updatedAt: number,
+	publishedAt: number,
 	changeImpact: PublishedRevision["changeImpact"] = null,
-): PublishedRevision => ({ id, status, updatedAt, changeImpact });
+): PublishedRevision => ({ id, status, publishedAt, changeImpact });
+
+const ids = (list: PublishedRevision[]) => list.map((r) => r.id);
+
+describe("revisionsAfter", () => {
+	const revisions = [
+		revision("c", "published", 6, "minor"),
+		revision("a", "deprecated", 2),
+		revision("b", "deprecated", 5, "major"),
+	];
+
+	it("lists what was published after a revision, oldest first, whatever the order given", () => {
+		expect(ids(revisionsAfter(revisions, "a"))).toEqual(["b", "c"]);
+		expect(ids(revisionsAfter(revisions, "b"))).toEqual(["c"]);
+		expect(revisionsAfter(revisions, "c")).toEqual([]);
+	});
+
+	it("is empty for an unknown revision", () => {
+		expect(revisionsAfter(revisions, "nope")).toEqual([]);
+	});
+
+	it("does not need the revisions to have different update times, only publication times", () => {
+		// Two revisions deprecated and published in the same transaction share a millisecond of `updatedAt`, not of
+		// `publishedAt`: the order comes from the publication.
+		expect(
+			ids(
+				revisionsAfter(
+					[
+						revision("a", "deprecated", 1),
+						revision("b", "deprecated", 2),
+						revision("c", "published", 3),
+					],
+					"a",
+				),
+			),
+		).toEqual(["b", "c"]);
+	});
+});
 
 describe("revisionsSince", () => {
 	it("is empty for a learner on the published revision", () => {
@@ -23,31 +62,13 @@ describe("revisionsSince", () => {
 		expect(updateLevelFor(revisions, "b")).toBeNull();
 	});
 
-	it("lists what was published after the learner's revision, oldest first", () => {
-		const revisions = [
-			revision("c", "published", 6, "minor"),
-			revision("a", "deprecated", 2),
-			revision("b", "deprecated", 5, "major"),
-		];
-		expect(revisionsSince(revisions, "a").map((r) => r.id)).toEqual(["b", "c"]);
-		expect(revisionsSince(revisions, "b").map((r) => r.id)).toEqual(["c"]);
-	});
-
 	it("ignores the revisions published before the learner's one", () => {
 		const revisions = [
 			revision("z", "deprecated", 1, "major"),
 			revision("a", "deprecated", 4),
 			revision("b", "published", 5, "minor"),
 		];
-		expect(revisionsSince(revisions, "a").map((r) => r.id)).toEqual(["b"]);
-	});
-
-	it("counts the revision published in the same millisecond as the deprecation", () => {
-		const revisions = [
-			revision("a", "deprecated", 7),
-			revision("b", "published", 7, "minor"),
-		];
-		expect(revisionsSince(revisions, "a").map((r) => r.id)).toEqual(["b"]);
+		expect(ids(revisionsSince(revisions, "a"))).toEqual(["b"]);
 	});
 
 	it("is empty when nothing is published now or the revision is unknown", () => {
@@ -66,19 +87,40 @@ describe("revisionsSince", () => {
 					{
 						id: "a",
 						status: "deprecated",
-						updatedAt: new Date(2),
+						publishedAt: new Date(2),
 						changeImpact: null,
 					},
 					{
 						id: "b",
 						status: "published",
-						updatedAt: new Date(3),
+						publishedAt: new Date(3),
 						changeImpact: "minor",
 					},
 				],
 				"a",
 			),
 		).toHaveLength(1);
+	});
+});
+
+describe("revisionsBetween", () => {
+	const revisions = [
+		revision("a", "deprecated", 1),
+		revision("b", "deprecated", 2, "minor"),
+		revision("c", "deprecated", 3, "minor"),
+		revision("d", "published", 4, "major"),
+	];
+
+	it("is what a learner went through, the revision they ended on included", () => {
+		expect(ids(revisionsBetween(revisions, "a", "c"))).toEqual(["b", "c"]);
+		expect(ids(revisionsBetween(revisions, "a", "b"))).toEqual(["b"]);
+		expect(ids(revisionsBetween(revisions, "b", "d"))).toEqual(["c", "d"]);
+	});
+
+	it("is empty when the end is not after the start", () => {
+		expect(revisionsBetween(revisions, "c", "b")).toEqual([]);
+		expect(revisionsBetween(revisions, "c", "c")).toEqual([]);
+		expect(revisionsBetween(revisions, "a", "nope")).toEqual([]);
 	});
 });
 
@@ -142,13 +184,40 @@ describe("updateOfferFor", () => {
 		});
 	});
 
-	it("remembers a postponement for the revision published now only", () => {
+	it("remembers a postponement for the revision published now", () => {
 		expect(
 			updateOfferFor(revisions, learner({ updatePostponedRevisionId: "c" })),
 		).toEqual({ level: "major", postponed: true });
-		// Postponed for an older target: a newer revision brings the offer back.
+	});
+
+	it("keeps it postponed when only minor revisions came after", () => {
+		// Put off at b (major); c, a typo fix, does not bring the dialog back.
 		expect(
 			updateOfferFor(revisions, learner({ updatePostponedRevisionId: "b" })),
+		).toEqual({ level: "major", postponed: true });
+	});
+
+	it("brings the offer back when a major revision came after", () => {
+		const more = [
+			...revisions.slice(0, 2),
+			revision("c", "deprecated", 3, "minor"),
+			revision("d", "published", 4, "major"),
+		];
+		expect(
+			updateOfferFor(more, learner({ updatePostponedRevisionId: "c" })),
+		).toEqual({ level: "major", postponed: false });
+		// A revision without a declared impact counts as major too.
+		expect(
+			updateOfferFor(
+				[...revisions.slice(0, 2), revision("c", "published", 3)],
+				learner({ updatePostponedRevisionId: "b" }),
+			),
+		).toEqual({ level: "major", postponed: false });
+	});
+
+	it("forgets a postponement of an unknown revision", () => {
+		expect(
+			updateOfferFor(revisions, learner({ updatePostponedRevisionId: "gone" })),
 		).toEqual({ level: "major", postponed: false });
 	});
 

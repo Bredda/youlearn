@@ -398,12 +398,24 @@ export type UpdateOffer = {
 	postponed: boolean;
 };
 
-/** A minor publication moved the learner to a newer revision by itself: what they are told. */
+/** A revision a learner goes through when the course moves on, with what its writer said about it. */
+export type UpdateRevision = {
+	key: string;
+	/** Why it exists, as its writer wrote it. */
+	purpose: string;
+	/** How much its publication mattered to the learners on the previous one (null: it replaced nothing). */
+	impact: ChangeImpact | null;
+};
+
+/**
+ * Minor publications moved the learner to a newer revision by themselves, and they have not acknowledged it yet:
+ * from the revision they last knew to the one they are on, with every revision they went through (several can have
+ * been published since they last came).
+ */
 export type EnrollmentNotice = {
 	fromRevisionKey: string;
 	toRevisionKey: string;
-	/** Why the new revision exists, as its writer wrote it. */
-	purpose: string;
+	revisions: UpdateRevision[];
 };
 
 /**
@@ -412,7 +424,8 @@ export type EnrollmentNotice = {
  */
 export type EnrollmentUpdate = UpdateOffer & {
 	targetRevisionKey: string;
-	purpose: string;
+	/** Every revision published since the learner's, the target included, oldest first. */
+	revisions: UpdateRevision[];
 	summary: UpdateSummary;
 };
 
@@ -422,6 +435,8 @@ export type LearnerRevision = {
 	status: "published" | "deprecated";
 	/** Why the revision exists, as its writer wrote it. */
 	purpose: string;
+	/** How much its publication mattered to the learners on the previous one (null: it replaced nothing). */
+	impact: ChangeImpact | null;
 	/** The learner's latest enrollment on this revision, null when they never followed it. */
 	enrollmentStatus: EnrollmentStatus | null;
 };

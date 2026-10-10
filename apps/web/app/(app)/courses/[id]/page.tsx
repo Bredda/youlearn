@@ -6,7 +6,8 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { EnrollButton } from "@/components/learn/enroll-button";
 import { EnrollmentSummary } from "@/components/learn/enrollment-summary";
-import { RevisionHistory } from "@/components/learn/revision-history";
+import { RevisionControl } from "@/components/learn/revision-control";
+import { UpdateNotice } from "@/components/learn/update-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,9 +49,21 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 						{category}
 					</Badge>
 				))}
-				<RevisionHistory
-					currentKey={course.revisionKey}
+				<RevisionControl
+					// The revision they follow (or followed), not necessarily the latest; a learner who failed starts again
+					// on the latest, and one who has not started is on it too.
+					followedKey={
+						enrollment && enrollment.status !== "failed"
+							? enrollment.revisionKey
+							: course.revisionKey
+					}
+					publishedKey={course.revisionKey}
 					revisions={course.revisions}
+					enrollment={
+						enrollment?.update
+							? { id: enrollment.id, update: enrollment.update }
+							: undefined
+					}
 				/>
 			</div>
 
@@ -91,6 +104,12 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 						/>
 					)}
 					{!enrollment && <EnrollButton courseId={course.id} />}
+					{enrollment?.notice && (
+						<UpdateNotice
+							enrollmentId={enrollment.id}
+							notice={enrollment.notice}
+						/>
+					)}
 					{enrollment?.status === "in_progress" && (
 						<>
 							<Button
@@ -144,14 +163,6 @@ export default async function CoursePage(props: PageProps<"/courses/[id]">) {
 							)}
 						</section>
 					)}
-					{enrollment &&
-						enrollment.status !== "failed" &&
-						enrollment.outdated && (
-							<p className="text-muted-foreground text-sm">
-								Une version plus récente du cours a été publiée. Vous continuez
-								la version {enrollment.revisionKey}, celle de votre inscription.
-							</p>
-						)}
 				</aside>
 			</div>
 		</div>

@@ -1,12 +1,17 @@
-import { db, eq, inArray, schema } from "@youlearn/db";
-import type { EnrollmentNotice, UpdateOffer } from "@youlearn/types";
+import { db, eq, schema } from "@youlearn/db";
+import type {
+	EnrollmentNotice,
+	UpdateOffer,
+	UpdateRevision,
+} from "@youlearn/types";
 import {
 	loadPublishedRevisions,
 	newMigrationCache,
+	type Revision,
 } from "./enrollment-migration";
-import { updateOfferFor } from "./enrollment-rules";
+import { revisionsBetween, updateOfferFor } from "./enrollment-rules";
 
-const { courseRevision, enrollment } = schema;
+const { enrollment } = schema;
 
 type EnrollmentRow = typeof enrollment.$inferSelect;
 
@@ -46,51 +51,70 @@ export async function loadEnrollmentExtras(
 		courseIds.map((courseId) => loadPublishedRevisions(db, courseId, cache)),
 	);
 
-	// A notice names the revision the learner was moved from: the one of the enrollment this one continues.
-	const noticed = rows.filter(
-		(row) =>
-			row.noticeAckedAt === null &&
-			row.previousEnrollmentId !== null &&
-			row.status !== "superseded",
-	);
-	const previous = noticed.length
-		? await db
-				.select({ id: enrollment.id, revisionKey: courseRevision.key })
-				.from(enrollment)
-				.innerJoin(courseRevision, eq(courseRevision.id, enrollment.revisionId))
-				.where(
-					inArray(
-						enrollment.id,
-						noticed.flatMap((row) =>
-							row.previousEnrollmentId ? [row.previousEnrollmentId] : [],
-						),
-					),
-				)
-		: [];
-	const previousKey = new Map(previous.map((row) => [row.id, row.revisionKey]));
-
 	for (const row of rows) {
 		const revisions = cache.revisions.get(row.courseId) ?? [];
-		const own = revisions.find((revision) => revision.id === row.revisionId);
-		const fromKey = row.previousEnrollmentId
-			? previousKey.get(row.previousEnrollmentId)
-			: undefined;
 		extras.set(row.id, {
 			update: updateOfferFor(revisions, row),
-			notice:
-				row.noticeAckedAt === null &&
-				own &&
-				fromKey !== undefined &&
-				row.status !== "superseded"
-					? {
-							fromRevisionKey: fromKey,
-							toRevisionKey: own.key,
-							purpose: own.purpose,
-						}
-					: null,
+			notice: await noticeFor(row, revisions),
 		});
 	}
 	return extras;
+}
+
+/**
+ * The revision a learner last knew, when minor publications moved them since: the revision of the first enrollment of
+ * the run of automatic moves they have not acknowledged. Several publications can have moved them while they were
+ * away, each creating an enrollment that continues the previous one, and only the last is looked at.
+ */
+async function findNoticeOrigin(
+	previousEnrollmentId: string,
+): Promise<string | undefined> {
+	let current = previousEnrollmentId;
+	for (let hops = 0; hops < 50; hops++) {
+		const [row] = await db
+			.select({
+				revisionId: enrollment.revisionId,
+				previousEnrollmentId: enrollment.previousEnrollmentId,
+				noticeAckedAt: enrollment.noticeAckedAt,
+			})
+			.from(enrollment)
+			.where(eq(enrollment.id, current));
+		if (!row) return undefined;
+		// The first enrollment, or one whose own move the learner acknowledged: that revision is what they knew.
+		if (row.previousEnrollmentId === null || row.noticeAckedAt !== null)
+			return row.revisionId;
+		current = row.previousEnrollmentId;
+	}
+	return undefined;
+}
+
+const toUpdateRevision = (revision: Revision): UpdateRevision => ({
+	key: revision.key,
+	purpose: revision.purpose,
+	impact: revision.changeImpact,
+});
+
+async function noticeFor(
+	row: ExtrasInput,
+	revisions: readonly Revision[],
+): Promise<EnrollmentNotice | null> {
+	if (
+		row.noticeAckedAt !== null ||
+		row.previousEnrollmentId === null ||
+		row.status === "superseded"
+	)
+		return null;
+	const originId = await findNoticeOrigin(row.previousEnrollmentId);
+	const origin = revisions.find((revision) => revision.id === originId);
+	const own = revisions.find((revision) => revision.id === row.revisionId);
+	if (!origin || !own) return null;
+	return {
+		fromRevisionKey: origin.key,
+		toRevisionKey: own.key,
+		revisions: revisionsBetween(revisions, origin.id, own.id).map(
+			toUpdateRevision,
+		),
+	};
 }
 
 /**

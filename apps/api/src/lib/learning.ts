@@ -41,7 +41,7 @@ import {
 	type Migration,
 	migrateEnrollment,
 } from "./enrollment-migration";
-import { updateOfferFor } from "./enrollment-rules";
+import { revisionsSince, updateOfferFor } from "./enrollment-rules";
 import {
 	type EnrollmentExtras,
 	findSuccessorId,
@@ -88,7 +88,8 @@ async function findPublished(actor: CourseActor, courseId: string) {
 			imageAssetId: course.imageAssetId,
 			revisionId: courseRevision.id,
 			revisionKey: courseRevision.key,
-			publishedAt: courseRevision.updatedAt,
+			publishedAt: courseRevision.publishedAt,
+			updatedAt: courseRevision.updatedAt,
 			durationMinutes: courseRevision.durationMinutes,
 			certifying: courseRevision.certifying,
 			content: courseRevision.content,
@@ -136,14 +137,14 @@ export async function findLearnerCourse(
 	if (!published) return undefined;
 	const [latest, revisions, followed] = await Promise.all([
 		findLatestEnrollment(actor.id, courseId),
-		// Only what was published: a draft or a revision in review is somebody's unfinished work. Deprecating bumps
-		// `updatedAt` and only one revision is published at a time, so this is the publication order.
+		// Only what was published: a draft or a revision in review is somebody's unfinished work.
 		db
 			.select({
 				id: courseRevision.id,
 				key: courseRevision.key,
 				status: courseRevision.status,
 				purpose: courseRevision.purpose,
+				changeImpact: courseRevision.changeImpact,
 			})
 			.from(courseRevision)
 			.where(
@@ -152,7 +153,7 @@ export async function findLearnerCourse(
 					inArray(courseRevision.status, ["published", "deprecated"]),
 				),
 			)
-			.orderBy(desc(courseRevision.updatedAt)),
+			.orderBy(desc(courseRevision.publishedAt)),
 		db
 			.select({
 				revisionId: enrollment.revisionId,
@@ -169,7 +170,8 @@ export async function findLearnerCourse(
 	for (const entry of followed)
 		if (!enrollmentOf.has(entry.revisionId))
 			enrollmentOf.set(entry.revisionId, entry.status);
-	const { content, revisionId, revisionKey, publishedAt, ...rest } = published;
+	const { content, revisionId, revisionKey, publishedAt, updatedAt, ...rest } =
+		published;
 	return {
 		...rest,
 		revisionKey,
@@ -178,10 +180,11 @@ export async function findLearnerCourse(
 				key: revision.key,
 				status: revision.status === "published" ? "published" : "deprecated",
 				purpose: revision.purpose,
+				impact: revision.changeImpact,
 				enrollmentStatus: enrollmentOf.get(revision.id) ?? null,
 			}),
 		),
-		publishedAt: publishedAt.toISOString(),
+		publishedAt: (publishedAt ?? updatedAt).toISOString(),
 		chapters: content.chapters.map((chapter) => ({
 			id: chapter.id,
 			title: chapter.title,
@@ -336,10 +339,19 @@ export async function findEnrollmentUpdate(
 	const offer = updateOfferFor(revisions, owned.enrollment);
 	const target = revisions.find((revision) => revision.status === "published");
 	if (!offer || !target) return null;
+	// One offer for the whole distance, however many revisions came since: the chapters are the difference between the
+	// learner's revision and the published one, and the revisions are listed so that none of them goes unmentioned.
 	return {
 		...offer,
 		targetRevisionKey: target.key,
-		purpose: target.purpose,
+		// What the learner goes through, in the order it was published: several can have come since they were last here.
+		revisions: revisionsSince(revisions, owned.enrollment.revisionId).map(
+			(revision) => ({
+				key: revision.key,
+				purpose: revision.purpose,
+				impact: revision.changeImpact,
+			}),
+		),
 		summary: await buildUpdateSummary(
 			db,
 			owned.enrollment.revisionId,
