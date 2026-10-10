@@ -6,6 +6,7 @@ import {
 	desc,
 	eq,
 	ilike,
+	inArray,
 	isNull,
 	ne,
 	or,
@@ -17,6 +18,7 @@ import type {
 	CourseEnrollmentDetail,
 	CourseEnrollmentPage,
 	CourseEnrollmentQuery,
+	EnrollmentMove,
 	MyEnrollment,
 } from "@youlearn/types";
 import { type CourseActor, canViewCourse, findCourse } from "./courses";
@@ -28,6 +30,7 @@ const {
 	course,
 	courseRevision,
 	enrollment,
+	event,
 	quizAttempt,
 	user,
 } = schema;
@@ -121,6 +124,8 @@ const toCourseEnrollment = (row: {
 	learnerEmail: string;
 	status: CourseEnrollment["status"];
 	revisionKey: string;
+	revisionId: string;
+	currentRevisionId: string | null;
 	startedAt: Date;
 	finishedAt: Date | null;
 	completedChapters: number;
@@ -136,6 +141,10 @@ const toCourseEnrollment = (row: {
 	},
 	status: row.status,
 	revisionKey: row.revisionKey,
+	outdated:
+		row.status === "in_progress" &&
+		row.currentRevisionId !== null &&
+		row.currentRevisionId !== row.revisionId,
 	startedAt: row.startedAt.toISOString(),
 	finishedAt: row.finishedAt?.toISOString() ?? null,
 	completedChapters: row.completedChapters,
@@ -151,6 +160,8 @@ const courseEnrollmentColumns = {
 	learnerEmail: user.email,
 	status: enrollment.status,
 	revisionKey: courseRevision.key,
+	revisionId: enrollment.revisionId,
+	currentRevisionId: publishedRevisionId,
 	startedAt: enrollment.startedAt,
 	finishedAt: enrollment.finishedAt,
 	completedChapters,
@@ -195,6 +206,67 @@ export async function listCourseEnrollments(
 	return { enrollments: rows.map(toCourseEnrollment), total, page, pageSize };
 }
 
+/**
+ * The moves of a learner between revisions that led to this enrollment, oldest first. The chain of enrollments says
+ * between which revisions and when; the event log, which has no foreign key to them, says whether it was automatic
+ * and what it sent back (missing when the event could not be recorded).
+ */
+async function findMoves(enrollmentId: string): Promise<EnrollmentMove[]> {
+	const chain: {
+		id: string;
+		previousEnrollmentId: string | null;
+		revisionKey: string;
+		createdAt: Date;
+	}[] = [];
+	let current: string | null = enrollmentId;
+	for (let hops = 0; current !== null && hops < 50; hops++) {
+		const [row] = await db
+			.select({
+				id: enrollment.id,
+				previousEnrollmentId: enrollment.previousEnrollmentId,
+				revisionKey: courseRevision.key,
+				createdAt: enrollment.createdAt,
+				finishedAt: enrollment.finishedAt,
+			})
+			.from(enrollment)
+			.innerJoin(courseRevision, eq(courseRevision.id, enrollment.revisionId))
+			.where(eq(enrollment.id, current));
+		if (!row) break;
+		chain.push(row);
+		current = row.previousEnrollmentId;
+	}
+	// `chain` is newest first: each entry that has a previous one is the result of a move from the entry after it.
+	const moved = chain.slice(0, -1);
+	if (moved.length === 0) return [];
+	const events = await db
+		.select({ targetId: event.targetId, metadata: event.metadata })
+		.from(event)
+		.where(
+			and(
+				eq(event.type, "enrollment.migrate"),
+				inArray(
+					event.targetId,
+					moved.map((entry) => entry.id),
+				),
+			),
+		);
+	const trace = new Map(events.map((e) => [e.targetId, e.metadata ?? {}]));
+	return moved
+		.map((entry, index): EnrollmentMove => {
+			const before = chain[index + 1];
+			const metadata = trace.get(entry.id);
+			return {
+				fromRevisionKey: before?.revisionKey ?? "",
+				toRevisionKey: entry.revisionKey,
+				at: entry.createdAt.toISOString(),
+				automatic:
+					typeof metadata?.automatic === "boolean" ? metadata.automatic : null,
+				redone: typeof metadata?.redone === "number" ? metadata.redone : null,
+			};
+		})
+		.reverse();
+}
+
 /** One learner's enrollment with its chapters and every quiz attempt (the traces of a failure). */
 export async function findCourseEnrollmentDetail(
 	courseId: string,
@@ -226,6 +298,7 @@ export async function findCourseEnrollmentDetail(
 
 	return {
 		...toCourseEnrollment(row),
+		moves: await findMoves(enrollmentId),
 		chapters: row.content.chapters.map((chapter) => ({
 			id: chapter.id,
 			title: chapter.title,
