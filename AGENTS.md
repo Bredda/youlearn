@@ -61,9 +61,9 @@ Dependency direction: `content` (pure leaf) and `config` <- `db` (it types the `
 Everything lives on GitHub: issues, labels and the [YouLearn Project](https://github.com/users/Bredda/projects/8). Write issues, comments and PRs in English. Use `gh issue` / `gh project` (the token needs the `project` scope).
 
 - **Roadmap**: one issue labelled `epic` per big feature (titled `Epic: ...`, no numbering), with native sub-issues; the vision, principles and out-of-scope list are in the pinned issue "Vision, principles and out of scope".
-- **Plan in progress**: an issue labelled `plan` (template `.github/ISSUE_TEMPLATE/plan.md`: goal, decisions with a recommendation, phases with a **Verify** line each, "Done when"), Project status *In progress*, child of its epic. Read it before starting a feature and work it top to bottom, one commit per phase. Tick a task only once its Verify line passes, and say what could not be verified. If the plan turns out wrong, fix it first. Confirm a decision with the user before the tasks that depend on it; with no answer, apply the recommendation and say so. Reference the issue in PRs (`Closes #N`); when the plan is done, close it and update its epic.
+- **Plan in progress**: an issue labelled `plan` (template `.github/ISSUE_TEMPLATE/plan.md`: goal, decisions with a recommendation, phases with a **Verify** line each, "Done when"), Project status *In progress*, child of its epic. Read it before starting a feature and work it top to bottom, one pull request per phase. Tick a phase's boxes when its PR is merged and its Verify lines passed (say what could not be verified). If the plan turns out wrong, fix it first. Confirm a decision with the user before the tasks that depend on it; with no answer, apply the recommendation and say so. A phase's PR says `Refs #<plan>`; the last one says `Closes #<plan>`, and then the epic is checked and closed if all its children are done.
 - **Backlog**: issues labelled `idea` (status *Backlog*, sorted by `area/*` labels, `needs-triage` when unsorted). Do not pick from it unless asked; a scoped idea becomes a `plan`.
-- Project statuses: Backlog, Next, In progress, In review, Done.
+- Project statuses: Backlog, Next, In progress, In review, Done. **The agent keeps them in step with reality** (start -> In progress, PR that closes it open -> In review, merged or closed -> Done) with `.claude/skills/youlearn-tracking/tracking.sh`, and runs its `audit` at the start of a session and whenever the user says something was merged. Invoke the `youlearn-tracking` skill before touching an issue's status or closing one.
 
 ## Branches and pull requests
 
@@ -80,6 +80,7 @@ Detailed conventions live in project skills (`.claude/skills/`), loaded when the
 | `youlearn-ui` | anything under `apps/web`: pages, forms, tables, dialogs, icons, page headings |
 | `youlearn-api` | API routes, `packages/db` schema and migrations, events, shared types, auth rules, seeds |
 | `youlearn-courses` | courses, revisions, chapters/blocks/quizzes, content diff, files and images, review links, group visibility |
+| `youlearn-tracking` | starting or finishing work on an issue, opening or merging a PR, creating or closing an issue, statuses of the Project |
 
 ## Architecture rules (always apply)
 
