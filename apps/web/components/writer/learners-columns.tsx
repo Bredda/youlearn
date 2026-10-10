@@ -67,7 +67,7 @@ export function createLearnerColumns({
 					</span>
 					{row.original.outdated && (
 						<Badge
-							variant="outline"
+							variant="destructive"
 							title="Une révision plus récente est publiée : l'apprenant n'est pas passé dessus"
 						>
 							Pas à jour
