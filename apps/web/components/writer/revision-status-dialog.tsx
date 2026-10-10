@@ -1,6 +1,5 @@
 "use client";
 
-import { countImpacts } from "@youlearn/content";
 import type {
 	ChangeImpact,
 	PublishImpact,
@@ -43,45 +42,15 @@ const IMPACTS: { value: ChangeImpact; title: string; description: string }[] = [
 const plural = (n: number, one: string, many: string) =>
 	`${n} ${n > 1 ? many : one}`;
 
-/** A group of chapters of the change, under what happens to the learners who follow them. */
-function ChapterGroup({
-	title,
-	hint,
-	titles,
-}: {
-	title: string;
-	hint?: string;
-	titles: string[];
-}) {
-	if (titles.length === 0) return null;
-	return (
-		<section className="flex min-w-0 flex-col gap-1 rounded-md border p-3">
-			<h4 className="font-medium text-sm">
-				{title} <span className="text-muted-foreground">({titles.length})</span>
-			</h4>
-			{hint && <p className="text-muted-foreground text-xs">{hint}</p>}
-			<ul className="max-h-32 list-disc overflow-y-auto pl-5 text-sm">
-				{titles.map((chapterTitle, index) => (
-					// A title is not unique, and the list never changes while the dialog is open.
-					// biome-ignore lint/suspicious/noArrayIndexKey: see above
-					<li key={index}>{chapterTitle}</li>
-				))}
-			</ul>
-		</section>
-	);
-}
-
-/** What the writer needs to choose between minor and major: who is mid-course and what changes for them. */
+/** What the writer needs to choose between minor and major: how many learners are mid-course. */
 function ImpactChoice({
 	courseId,
 	revisionId,
-	replacedKey,
 	value,
 	onChange,
 }: {
 	courseId: string;
 	revisionId: string;
-	replacedKey: string;
 	value: ChangeImpact | undefined;
 	onChange: (value: ChangeImpact) => void;
 }) {
@@ -99,11 +68,6 @@ function ImpactChoice({
 		};
 	}, [courseId, revisionId]);
 
-	const chapters = (wanted: string) =>
-		impact?.summary?.chapters
-			.filter((chapter) => chapter.impact === wanted)
-			.map((chapter) => chapter.title) ?? [];
-	const counts = impact?.summary ? countImpacts(impact.summary) : null;
 	const learners = impact?.learnersInProgress;
 
 	return (
@@ -148,46 +112,6 @@ function ImpactChoice({
 					</Label>
 				))}
 			</RadioGroup>
-
-			{counts && (
-				<div className="flex flex-col gap-2">
-					<h3 className="font-medium text-sm">
-						Changements par rapport à la révision « {replacedKey} »
-					</h3>
-					{counts.redo + counts.added + counts.removed === 0 ? (
-						<p className="text-muted-foreground text-sm">
-							Aucun chapitre n'est modifié, ajouté ou supprimé.
-						</p>
-					) : (
-						<div className="grid gap-2 sm:grid-cols-2">
-							<ChapterGroup
-								title={
-									value === "major"
-										? "À refaire par les apprenants"
-										: "Modifiés"
-								}
-								hint={
-									value === "minor"
-										? "Leur contenu ou leur quiz a changé : la progression est conservée."
-										: "Leur contenu ou leur quiz a changé."
-								}
-								titles={chapters("redo")}
-							/>
-							<ChapterGroup
-								title="Nouveaux chapitres"
-								hint="À faire par tous, y compris ceux qui sont déjà en cours."
-								titles={chapters("added")}
-							/>
-							<ChapterGroup title="Supprimés" titles={chapters("removed")} />
-							<ChapterGroup
-								title="Inchangés"
-								hint="La progression est conservée."
-								titles={chapters("kept")}
-							/>
-						</div>
-					)}
-				</div>
-			)}
 		</section>
 	);
 }
@@ -271,11 +195,10 @@ export function RevisionStatusDialog({
 					</section>
 				)}
 
-				{needsImpact && publishedKey && (
+				{needsImpact && (
 					<ImpactChoice
 						courseId={courseId}
 						revisionId={revisionId}
-						replacedKey={publishedKey}
 						value={impact}
 						onChange={setImpact}
 					/>
