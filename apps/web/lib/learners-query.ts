@@ -8,6 +8,12 @@ const schema = z.object({
 		.enum(["in_progress", "completed", "failed"])
 		.optional()
 		.catch(undefined),
+	// Only ever present as `outdated=true` in the URL.
+	outdated: z
+		.literal("true")
+		.optional()
+		.catch(undefined)
+		.transform((value) => (value === "true" ? true : undefined)),
 	sort: z.enum(["startedAt", "learner", "status"]).catch("startedAt"),
 	order: z.enum(["asc", "desc"]).catch("desc"),
 	page: z.coerce.number().int().min(1).catch(1),
@@ -38,6 +44,7 @@ export function learnersQueryToSearchParams(
 	const params = new URLSearchParams();
 	if (query.q) params.set("q", query.q);
 	if (query.status) params.set("status", query.status);
+	if (query.outdated) params.set("outdated", "true");
 	if (query.sort !== "startedAt") params.set("sort", query.sort);
 	if (query.order !== "desc") params.set("order", query.order);
 	if (query.page > 1) params.set("page", String(query.page));

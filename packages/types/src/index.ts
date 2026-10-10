@@ -538,6 +538,8 @@ export type CourseEnrollmentQuery = {
 	/** Searches the learner's name and email. */
 	q?: string;
 	status?: EnrollmentStatus;
+	/** Only the learners in progress on a revision older than the published one (`CourseEnrollment.outdated`). */
+	outdated?: boolean;
 	sort: CourseEnrollmentSort;
 	order: "asc" | "desc";
 	page: number;
@@ -551,6 +553,8 @@ export type CourseEnrollment = {
 	status: EnrollmentStatus;
 	/** The revision the learner follows. */
 	revisionKey: string;
+	/** In progress on a revision that is no longer the published one: they have not moved to the newer one. */
+	outdated: boolean;
 	startedAt: string;
 	finishedAt: string | null;
 	completedChapters: number;
@@ -568,7 +572,21 @@ export type CourseEnrollmentPage = {
 	pageSize: number;
 };
 
+/** A move of a learner from one revision of the course to a newer one. */
+export type EnrollmentMove = {
+	fromRevisionKey: string;
+	toRevisionKey: string;
+	/** When the learner left the old revision. */
+	at: string;
+	/** Made by a minor publication (true) or chosen by the learner (false); null when the event log has no trace of it. */
+	automatic: boolean | null;
+	/** Chapters the move sent back; null when the event log has no trace of it. */
+	redone: number | null;
+};
+
 export type CourseEnrollmentDetail = CourseEnrollment & {
+	/** The revisions the learner went through before this one, oldest first (none when they never moved). */
+	moves: EnrollmentMove[];
 	chapters: {
 		id: string;
 		title: string;

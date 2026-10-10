@@ -84,6 +84,42 @@ export function LearnerDetailDialog({
 					)}
 					{detail && (
 						<>
+							{(detail.moves.length > 0 || detail.outdated) && (
+								<section className="flex flex-col gap-1">
+									<h3 className="font-medium text-sm">Révisions suivies</h3>
+									{detail.moves.length > 0 && (
+										<ol className="flex flex-col gap-1 text-sm">
+											{detail.moves.map((move) => (
+												<li
+													key={`${move.at}-${move.toRevisionKey}`}
+													className="flex flex-wrap items-baseline gap-x-2"
+												>
+													<span className="font-medium">
+														{move.fromRevisionKey} → {move.toRevisionKey}
+													</span>
+													<span className="text-muted-foreground text-xs">
+														{dateTime.format(new Date(move.at))}
+														{move.automatic === null
+															? ""
+															: move.automatic
+																? " · automatique (publication mineure)"
+																: " · choisi par l'apprenant"}
+														{move.redone
+															? ` · ${move.redone} chapitre${move.redone > 1 ? "s" : ""} à refaire`
+															: ""}
+													</span>
+												</li>
+											))}
+										</ol>
+									)}
+									{detail.outdated && (
+										<p className="text-muted-foreground text-sm">
+											Une révision plus récente est publiée : l'apprenant est
+											encore sur la révision {detail.revisionKey}.
+										</p>
+									)}
+								</section>
+							)}
 							<section className="flex flex-col gap-1">
 								<h3 className="font-medium text-sm">Chapitres</h3>
 								<ol className="flex flex-col gap-1">

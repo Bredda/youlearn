@@ -61,9 +61,19 @@ export function createLearnerColumns({
 			header: "Révision",
 			enableSorting: false,
 			cell: ({ row }) => (
-				<span className="text-muted-foreground text-xs">
-					{row.original.revisionKey}
-				</span>
+				<div className="flex flex-wrap items-center gap-1">
+					<span className="text-muted-foreground text-xs">
+						{row.original.revisionKey}
+					</span>
+					{row.original.outdated && (
+						<Badge
+							variant="destructive"
+							title="Une révision plus récente est publiée : l'apprenant n'est pas passé dessus"
+						>
+							Pas à jour
+						</Badge>
+					)}
+				</div>
 			),
 		}),
 		helper.display({
