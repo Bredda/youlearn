@@ -26,6 +26,9 @@ si le cours est dans Commun).
 
 **Chapitre** : une unité d'un cours, faite de blocs dans l'ordre voulu et, éventuellement, d'un quiz qui la conclut.
 
+**Impact** : ce que le formateur déclare en publiant une révision sur un cours déjà publié. **Mineur** (correction) : les
+apprenants en cours passent dessus automatiquement ; **majeur** : chacun choisit, et les chapitres modifiés sont à refaire.
+
 **Lien de relecture** : adresse qui permet à toute personne connectée de lire une révision en relecture, tant qu'elle y
 reste.
 
@@ -33,6 +36,11 @@ reste.
 
 **Quiz** : questions qui concluent un chapitre. L'apprenant répond à *n* questions tirées parmi les *m* du quiz. Un quiz
 **bloquant** exige un taux de réussite pour passer au chapitre suivant.
+
+**Mise à jour** : le passage d'un apprenant de la révision qu'il suit à une révision plus récente, en gardant ce qu'il a déjà
+fait sur les chapitres inchangés.
+
+**Pas à jour** : se dit d'un apprenant en cours sur une révision plus ancienne que la publiée.
 
 **Publiée** : statut de la révision que voient les apprenants. Elle ne change plus.
 

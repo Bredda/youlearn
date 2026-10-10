@@ -57,7 +57,9 @@ Règles :
   Tant qu'un brouillon existe, **Nouvelle révision** est désactivé.
 - Toute nouvelle révision (y compris un clone) demande son **but** : un texte obligatoire qui dit ce que la révision change
   ou apporte. Il apparaît dans la liste des révisions, dans l'éditeur, dans la comparaison et pour les relecteurs.
-- **Publier** une révision alors qu'une autre est déjà publiée **déprécie** la première : une confirmation vous le dit.
+- **Publier** une révision alors qu'une autre est déjà publiée **déprécie** la première : une confirmation vous le dit et
+  vous demande l'**impact** de la publication sur les apprenants déjà en cours (voir
+  [Publier une nouvelle révision d'un cours déjà publié](#publier-une-nouvelle-révision-dun-cours-déjà-publié)).
 - **Déprécier** une révision publiée retire le cours du catalogue tant qu'aucune autre n'est publiée : une confirmation
   est demandée.
 - Pour corriger une révision publiée, on ne la modifie pas : **Cloner en brouillon** (ou **Restaurer en brouillon** pour une
@@ -72,6 +74,54 @@ Une révision en **relecture** peut aussi être publiée depuis sa propre page (
 quand une autre révision est déjà publiée).
 
 Dans la liste des cours, la colonne **Révisions** indique « Aucune révision » pour un cours qui vient d'être créé.
+
+## Publier une nouvelle révision d'un cours déjà publié
+
+Des apprenants peuvent être en train de suivre la révision publiée. La fenêtre de confirmation de **Publier** vous
+demande donc ce que la publication change pour eux. Pour une **première publication**, il n'y a rien à choisir : personne
+ne peut être sur une révision précédente.
+
+La fenêtre contient :
+
+- **La relecture n'est pas terminée** (en rouge, si c'est le cas) : la liste de ce qui reste (remarques ouvertes,
+  relecteurs sans avis, avis périmés ou demandant des modifications). Il faut activer **Je publie malgré une relecture
+  non terminée** pour pouvoir confirmer.
+- **Impact sur les apprenants en cours** : le nombre d'apprenants en cours sur le cours, puis un choix obligatoire (aucun
+  n'est présélectionné) :
+
+| Impact | À choisir pour | Ce qui arrive aux apprenants en cours |
+|---|---|---|
+| **Mineur : correction ou ajustement** | une coquille, une reformulation, un lien corrigé | ils passent **automatiquement** à la nouvelle révision, sans rien refaire, et en sont informés |
+| **Majeur : contenu ou quiz modifiés** | un changement de fond : contenu, quiz, chapitres ajoutés ou retirés | chacun **choisit** de passer à la nouvelle révision ou de terminer l'ancienne |
+
+Comment cela se passe pour l'apprenant :
+
+- **Passer à la nouvelle révision** conserve les chapitres terminés et les quiz réussis des chapitres **inchangés**. Sont à
+  refaire les chapitres dont le **contenu** (texte, vidéo) ou le **quiz** (réglages, questions, réponses, explications) a
+  changé, et les chapitres ajoutés ; ceux que vous avez retirés disparaissent. Un simple changement de titre, de durée ou
+  d'ordre ne fait rien refaire.
+- Un impact **mineur** ne fait **rien refaire**, même si le texte d'un chapitre a changé : choisissez **Majeur** dès qu'un
+  apprenant doit revoir quelque chose.
+- Si **plusieurs révisions** sont publiées pendant qu'un apprenant est absent, il n'a qu'**une seule** proposition : les
+  mineures l'ont déjà fait passer dessus au fur et à mesure, et dès qu'une majeure est dans la série, il garde la main
+  pour toute la distance (les chapitres à refaire sont la différence entre sa révision et la dernière).
+- Une inscription **terminée** ou **en échec** n'est jamais déplacée.
+
+Votre choix est enregistré avec la révision et inscrit dans le **journal** (Changement de statut, « impact majeur » ou
+« impact mineur »). Chaque passage d'un apprenant à une révision plus récente y figure aussi (**Mise à jour du cours**).
+
+## Suivre les apprenants d'un cours
+
+L'onglet **Apprenants** d'un cours liste les personnes inscrites, leur statut, la **Révision** qu'elles suivent, leur
+progression et leur score à l'examen final.
+
+- Un badge rouge **Pas à jour** signale un apprenant encore **en cours** sur une révision plus ancienne que la publiée :
+  il n'est pas encore passé dessus.
+- Le filtre **Toutes les révisions** → **Pas à jour** ne garde que ces apprenants (il se combine avec la recherche et le
+  statut, et **Réinitialiser** l'enlève).
+- Le détail d'un apprenant (menu **Actions** → **Voir le détail**) ajoute une section **Révisions suivies** quand il est passé d'une révision
+  à une autre : de laquelle à laquelle, la date, si c'était **automatique** (publication mineure) ou **choisi par
+  l'apprenant**, et combien de chapitres ont dû être refaits.
 
 ## Écrire le contenu
 
@@ -146,5 +196,4 @@ Il faut taper le nom du cours pour confirmer.
 ## Pas encore disponible
 
 La gestion des parcours (entrée **Parcours** du menu formateur), l'hébergement de vidéos (seuls les liens YouTube et Vimeo
-sont intégrés) et les fichiers volumineux ne sont pas encore disponibles. Le déroulement d'un quiz côté apprenant (tirage,
-tentatives, blocage du chapitre suivant) n'existe pas encore : les réglages que vous saisissez seront appliqués à ce moment-là.
+sont intégrés) et les fichiers volumineux ne sont pas encore disponibles.
