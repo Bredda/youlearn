@@ -36,6 +36,34 @@ export function revisionsSince(
 	return later.some((revision) => revision.status === "published") ? later : [];
 }
 
+/** What an enrollment says about its own place in that history. */
+export type EnrollmentPosition = {
+	status: string;
+	revisionId: string;
+	/** The published revision whose update the learner chose to postpone. */
+	updatePostponedRevisionId: string | null;
+};
+
+/**
+ * What the learner can be offered: the level of the move to the published revision, and whether they already put it
+ * off. Only an enrollment in progress is offered anything: a finished one stays what it was.
+ */
+export function updateOfferFor(
+	revisions: readonly PublishedRevision[],
+	enrollment: EnrollmentPosition,
+): { level: ChangeImpact; postponed: boolean } | null {
+	if (enrollment.status !== "in_progress") return null;
+	const level = updateLevelFor(revisions, enrollment.revisionId);
+	if (!level) return null;
+	const published = revisions.find((r) => r.status === "published");
+	return {
+		level,
+		postponed:
+			published !== undefined &&
+			enrollment.updatePostponedRevisionId === published.id,
+	};
+}
+
 /**
  * How much it matters to a learner to move to the revision published now: `minor` only when every revision published
  * since theirs was, `major` otherwise (a revision published without a declared impact counts as major), null when

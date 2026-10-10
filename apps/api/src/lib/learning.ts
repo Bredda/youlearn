@@ -26,6 +26,7 @@ import type {
 	AttemptResult,
 	AttemptSummary,
 	EnrollmentStatus,
+	EnrollmentUpdate,
 	EnrollmentView,
 	LearnerAttempt,
 	LearnerCourse,
@@ -34,7 +35,19 @@ import type {
 } from "@youlearn/types";
 import { visibleTo } from "./catalog";
 import { type CourseActor, canViewCourse, findCourse } from "./courses";
-import { type Migration, migrateEnrollment } from "./enrollment-migration";
+import {
+	buildUpdateSummary,
+	loadPublishedRevisions,
+	type Migration,
+	migrateEnrollment,
+} from "./enrollment-migration";
+import { updateOfferFor } from "./enrollment-rules";
+import {
+	type EnrollmentExtras,
+	findSuccessorId,
+	loadEnrollmentExtras,
+	NO_EXTRAS,
+} from "./enrollment-update";
 import { finalExamScore } from "./enrollments";
 import { isUniqueViolation } from "./groups";
 
@@ -49,6 +62,7 @@ const toLearnerEnrollment = (
 	/** The revision published now, if any. */
 	currentRevisionId: string | undefined,
 	finalExamScore: number | null,
+	extras: EnrollmentExtras & { successorId?: string | null } = NO_EXTRAS,
 ): LearnerEnrollment => ({
 	id: row.id,
 	status: row.status,
@@ -58,6 +72,9 @@ const toLearnerEnrollment = (
 	finalExamScore,
 	outdated:
 		currentRevisionId !== undefined && currentRevisionId !== row.revisionId,
+	update: extras.update,
+	notice: extras.notice,
+	successorId: extras.successorId ?? null,
 });
 
 /** The course and its published revision, when the learner may open it (same rule as the catalog). */
@@ -177,6 +194,9 @@ export async function findLearnerCourse(
 					latest.revisionKey,
 					revisionId,
 					latest.finalExamScore,
+					(await loadEnrollmentExtras([latest.enrollment])).get(
+						latest.enrollment.id,
+					),
 				)
 			: null,
 	};
@@ -302,6 +322,72 @@ export async function migrateOwnEnrollment(
 	};
 }
 
+/**
+ * What moving to the published revision would do, for the player's dialog. Undefined when the enrollment is not the
+ * caller's; null when there is nothing to offer (not in progress, or already on the published revision).
+ */
+export async function findEnrollmentUpdate(
+	actor: CourseActor,
+	enrollmentId: string,
+): Promise<EnrollmentUpdate | null | undefined> {
+	const owned = await findOwned(actor, enrollmentId);
+	if (!owned) return undefined;
+	const revisions = await loadPublishedRevisions(db, owned.course.id);
+	const offer = updateOfferFor(revisions, owned.enrollment);
+	const target = revisions.find((revision) => revision.status === "published");
+	if (!offer || !target) return null;
+	return {
+		...offer,
+		targetRevisionKey: target.key,
+		purpose: target.purpose,
+		summary: await buildUpdateSummary(
+			db,
+			owned.enrollment.revisionId,
+			target.id,
+			offer.level,
+		),
+	};
+}
+
+/** The learner puts the offer off: it is not put in front of them again until another revision is published. */
+export async function postponeUpdate(
+	actor: CourseActor,
+	enrollmentId: string,
+): Promise<"OK" | "NOT_FOUND" | "NOT_ACTIVE" | "UP_TO_DATE"> {
+	const owned = await findOwned(actor, enrollmentId);
+	if (!owned) return "NOT_FOUND";
+	if (owned.enrollment.status !== "in_progress") return "NOT_ACTIVE";
+	const revisions = await loadPublishedRevisions(db, owned.course.id);
+	const target = revisions.find((revision) => revision.status === "published");
+	if (!target || !updateOfferFor(revisions, owned.enrollment))
+		return "UP_TO_DATE";
+	await db
+		.update(enrollment)
+		.set({ updatePostponedRevisionId: target.id })
+		.where(
+			and(
+				eq(enrollment.id, enrollmentId),
+				eq(enrollment.status, "in_progress"),
+			),
+		);
+	return "OK";
+}
+
+/** The learner has seen the notice of the move that was made for them. Harmless when repeated. */
+export async function acknowledgeNotice(
+	actor: CourseActor,
+	enrollmentId: string,
+): Promise<"OK" | "NOT_FOUND"> {
+	if (!(await findOwned(actor, enrollmentId))) return "NOT_FOUND";
+	await db
+		.update(enrollment)
+		.set({ noticeAckedAt: new Date() })
+		.where(
+			and(eq(enrollment.id, enrollmentId), isNull(enrollment.noticeAckedAt)),
+		);
+	return "OK";
+}
+
 /** The chapters the learner finished and those whose quiz they passed. */
 async function loadProgress(
 	executor: Executor,
@@ -355,12 +441,19 @@ export async function findEnrollmentView(
 	]);
 	const chapterStatesById = chapterStates(row.revision.content, progress);
 	const learnerContent = toLearnerContent(row.revision.content);
+	const [extras, successorId] = await Promise.all([
+		loadEnrollmentExtras([row.enrollment]),
+		row.enrollment.status === "superseded"
+			? findSuccessorId(row.enrollment.id)
+			: null,
+	]);
 	return {
 		enrollment: toLearnerEnrollment(
 			row.enrollment,
 			row.revision.key,
 			current?.id,
 			attempts.find((attempt) => attempt.finalExam)?.score ?? null,
+			{ ...(extras.get(row.enrollment.id) ?? NO_EXTRAS), successorId },
 		),
 		course: {
 			id: row.course.id,

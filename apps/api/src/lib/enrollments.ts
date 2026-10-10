@@ -20,6 +20,7 @@ import type {
 	MyEnrollment,
 } from "@youlearn/types";
 import { type CourseActor, canViewCourse, findCourse } from "./courses";
+import { loadEnrollmentExtras, NO_EXTRAS } from "./enrollment-update";
 import { escapeLike } from "./sql";
 
 const {
@@ -57,6 +58,9 @@ export async function listMyEnrollments(
 			certifying: courseRevision.certifying,
 			startedAt: enrollment.startedAt,
 			finishedAt: enrollment.finishedAt,
+			previousEnrollmentId: enrollment.previousEnrollmentId,
+			noticeAckedAt: enrollment.noticeAckedAt,
+			updatePostponedRevisionId: enrollment.updatePostponedRevisionId,
 			currentRevisionId: publishedRevisionId,
 			completedChapters,
 			totalChapters,
@@ -84,14 +88,24 @@ export async function listMyEnrollments(
 		const target = await findCourse(courseId);
 		visible.set(courseId, target !== undefined && canViewCourse(actor, target));
 	}
-	return rows
-		.filter((row) => visible.get(row.courseId))
-		.map(({ revisionId, currentRevisionId, ...row }) => ({
+	const shown = rows.filter((row) => visible.get(row.courseId));
+	const extras = await loadEnrollmentExtras(shown);
+	return shown.map(
+		({
+			revisionId,
+			currentRevisionId,
+			previousEnrollmentId,
+			noticeAckedAt,
+			updatePostponedRevisionId,
+			...row
+		}) => ({
 			...row,
 			startedAt: row.startedAt.toISOString(),
 			finishedAt: row.finishedAt?.toISOString() ?? null,
 			outdated: currentRevisionId !== null && currentRevisionId !== revisionId,
-		}));
+			...(extras.get(row.id) ?? NO_EXTRAS),
+		}),
+	);
 }
 
 const sortColumns = {
