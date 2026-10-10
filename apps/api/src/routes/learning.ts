@@ -1,6 +1,7 @@
 import { recordEvent } from "@youlearn/events/server";
 import type {
 	AttemptResult,
+	EnrollmentUpdate,
 	EnrollmentView,
 	LearnerAttempt,
 	LearnerCourse,
@@ -12,10 +13,13 @@ import { getCourseActor } from "../lib/courses";
 import { migrationMetadata } from "../lib/enrollment-migration";
 import { listMyEnrollments } from "../lib/enrollments";
 import {
+	acknowledgeNotice,
 	completeChapter,
+	findEnrollmentUpdate,
 	findEnrollmentView,
 	findLearnerCourse,
 	migrateOwnEnrollment,
+	postponeUpdate,
 	startAttempt,
 	startEnrollment,
 	submitAttempt,
@@ -118,6 +122,59 @@ export const learningRoutes: FastifyPluginAsync = async (app) => {
 			const view = await findEnrollmentView(await getCourseActor(request), id);
 			if (!view) return reply.code(404).send({ error: "Enrollment not found" });
 			return view;
+		},
+	);
+
+	// What moving to the published revision would do, chapter by chapter (null: nothing to offer).
+	app.get(
+		"/api/enrollments/:id/update",
+		{ preHandler: app.requireAuth },
+		async (
+			request,
+			reply,
+		): Promise<{ update: EnrollmentUpdate | null } | undefined> => {
+			const { id } = idParams.parse(request.params);
+			const update = await findEnrollmentUpdate(
+				await getCourseActor(request),
+				id,
+			);
+			if (update === undefined)
+				return reply.code(404).send({ error: "Enrollment not found" });
+			return { update };
+		},
+	);
+
+	// "Later": the offer is not put in front of the learner again until another revision is published.
+	app.post(
+		"/api/enrollments/:id/update/postpone",
+		{ preHandler: app.requireAuth },
+		async (request, reply) => {
+			const { id } = idParams.parse(request.params);
+			const result = await postponeUpdate(await getCourseActor(request), id);
+			if (result === "NOT_FOUND")
+				return reply.code(404).send({ error: "Enrollment not found" });
+			if (result !== "OK")
+				return reply.code(409).send({
+					error:
+						result === "NOT_ACTIVE"
+							? "This enrollment is no longer in progress"
+							: "There is no update to postpone",
+					code: result,
+				});
+			return reply.code(204).send();
+		},
+	);
+
+	// The learner has seen the notice of the move that was made for them.
+	app.post(
+		"/api/enrollments/:id/notice/ack",
+		{ preHandler: app.requireAuth },
+		async (request, reply) => {
+			const { id } = idParams.parse(request.params);
+			const result = await acknowledgeNotice(await getCourseActor(request), id);
+			if (result === "NOT_FOUND")
+				return reply.code(404).send({ error: "Enrollment not found" });
+			return reply.code(204).send();
 		},
 	);
 

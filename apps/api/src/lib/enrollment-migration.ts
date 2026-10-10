@@ -14,8 +14,10 @@ import { type PublishedRevision, updateLevelFor } from "./enrollment-rules";
 const { chapterProgress, courseRevision, enrollment, quizAttempt } = schema;
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+/** What the reads need: the database itself or a transaction. */
+type Reader = Pick<typeof db, "select">;
 type EnrollmentRow = typeof enrollment.$inferSelect;
-type Revision = PublishedRevision & { key: string };
+export type Revision = PublishedRevision & { key: string; purpose: string };
 
 /** What one move from a revision to the one published now did, for the event log and the response. */
 export type Migration = {
@@ -70,10 +72,11 @@ export const newMigrationCache = (): MigrationCache => ({
 	summaries: new Map(),
 });
 
-async function publishedRevisions(
-	tx: Tx,
+/** The revisions of a course that were published, the published one and the deprecated ones. */
+export async function loadPublishedRevisions(
+	tx: Reader,
 	courseId: string,
-	cache: MigrationCache,
+	cache: MigrationCache = newMigrationCache(),
 ): Promise<Revision[]> {
 	const known = cache.revisions.get(courseId);
 	if (known) return known;
@@ -81,6 +84,7 @@ async function publishedRevisions(
 		.select({
 			id: courseRevision.id,
 			key: courseRevision.key,
+			purpose: courseRevision.purpose,
 			status: courseRevision.status,
 			updatedAt: courseRevision.updatedAt,
 			changeImpact: courseRevision.changeImpact,
@@ -97,7 +101,7 @@ async function publishedRevisions(
 }
 
 async function contentOf(
-	tx: Tx,
+	tx: Reader,
 	revisionId: string,
 	cache: MigrationCache,
 ): Promise<CourseContent> {
@@ -110,6 +114,29 @@ async function contentOf(
 	if (!row) throw new Error(`Revision ${revisionId} not found`);
 	cache.contents.set(revisionId, row.content);
 	return row.content;
+}
+
+/**
+ * What moving from a revision to a newer one does to each chapter, as a learner may see it (no content, no quiz).
+ * Computed once per pair of revisions and level when a cache is shared.
+ */
+export async function buildUpdateSummary(
+	tx: Reader,
+	fromRevisionId: string,
+	toRevisionId: string,
+	level: ChangeImpact,
+	cache: MigrationCache = newMigrationCache(),
+): Promise<UpdateSummary> {
+	const key = `${fromRevisionId}>${toRevisionId}>${level}`;
+	const known = cache.summaries.get(key);
+	if (known) return known;
+	const [from, to] = await Promise.all([
+		contentOf(tx, fromRevisionId, cache),
+		contentOf(tx, toRevisionId, cache),
+	]);
+	const summary = updateSummary(diffContent(from, to), level);
+	cache.summaries.set(key, summary);
+	return summary;
 }
 
 /**
@@ -136,7 +163,7 @@ export async function migrateEnrollment(
 	if (!old) return { ok: false, reason: "NOT_FOUND" };
 	if (old.status !== "in_progress") return { ok: false, reason: "NOT_ACTIVE" };
 
-	const revisions = await publishedRevisions(tx, old.courseId, cache);
+	const revisions = await loadPublishedRevisions(tx, old.courseId, cache);
 	const target = revisions.find((revision) => revision.status === "published");
 	const level = updateLevelFor(revisions, old.revisionId);
 	if (!target || !level || target.id === old.revisionId)
@@ -145,16 +172,13 @@ export async function migrateEnrollment(
 		return { ok: false, reason: "NOT_AUTOMATIC" };
 	const source = revisions.find((revision) => revision.id === old.revisionId);
 
-	const summaryKey = `${old.revisionId}>${target.id}>${level}`;
-	let summary = cache.summaries.get(summaryKey);
-	if (!summary) {
-		const [from, to] = await Promise.all([
-			contentOf(tx, old.revisionId, cache),
-			contentOf(tx, target.id, cache),
-		]);
-		summary = updateSummary(diffContent(from, to), level);
-		cache.summaries.set(summaryKey, summary);
-	}
+	const summary = await buildUpdateSummary(
+		tx,
+		old.revisionId,
+		target.id,
+		level,
+		cache,
+	);
 
 	const [finished, passing] = await Promise.all([
 		tx

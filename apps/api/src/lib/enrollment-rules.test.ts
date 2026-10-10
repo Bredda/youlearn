@@ -3,6 +3,7 @@ import {
 	type PublishedRevision,
 	revisionsSince,
 	updateLevelFor,
+	updateOfferFor,
 } from "./enrollment-rules";
 
 const revision = (
@@ -112,5 +113,48 @@ describe("updateLevelFor", () => {
 				"a",
 			),
 		).toBe("major");
+	});
+});
+
+describe("updateOfferFor", () => {
+	const revisions = [
+		revision("a", "deprecated", 1),
+		revision("b", "deprecated", 2, "major"),
+		revision("c", "published", 3, "minor"),
+	];
+	const learner = (
+		overrides: Partial<Parameters<typeof updateOfferFor>[1]> = {},
+	) => ({
+		status: "in_progress",
+		revisionId: "a",
+		updatePostponedRevisionId: null,
+		...overrides,
+	});
+
+	it("offers the move with its level", () => {
+		expect(updateOfferFor(revisions, learner())).toEqual({
+			level: "major",
+			postponed: false,
+		});
+		expect(updateOfferFor(revisions, learner({ revisionId: "b" }))).toEqual({
+			level: "minor",
+			postponed: false,
+		});
+	});
+
+	it("remembers a postponement for the revision published now only", () => {
+		expect(
+			updateOfferFor(revisions, learner({ updatePostponedRevisionId: "c" })),
+		).toEqual({ level: "major", postponed: true });
+		// Postponed for an older target: a newer revision brings the offer back.
+		expect(
+			updateOfferFor(revisions, learner({ updatePostponedRevisionId: "b" })),
+		).toEqual({ level: "major", postponed: false });
+	});
+
+	it("offers nothing to a learner who is up to date or who is no longer in progress", () => {
+		expect(updateOfferFor(revisions, learner({ revisionId: "c" }))).toBeNull();
+		for (const status of ["completed", "failed", "superseded"])
+			expect(updateOfferFor(revisions, learner({ status }))).toBeNull();
 	});
 });

@@ -1,5 +1,6 @@
 import type { Role } from "@youlearn/auth/roles";
 import type {
+	ChangeImpact,
 	ChapterKind,
 	ChapterState,
 	CourseContent,
@@ -382,6 +383,37 @@ export type LearnerEnrollment = {
 	finalExamScore: number | null;
 	/** A more recent revision has been published since the learner started. */
 	outdated: boolean;
+	/** The move to the published revision the learner can choose; null when there is none (or they are not in progress). */
+	update: UpdateOffer | null;
+	/** The move that was made for them and they have not acknowledged yet. */
+	notice: EnrollmentNotice | null;
+	/** Set on a superseded enrollment: the one that continues it now, where a stale page should go. */
+	successorId: string | null;
+};
+
+/** The learner's choice of moving to the revision published now, as the player and the lists announce it. */
+export type UpdateOffer = {
+	level: ChangeImpact;
+	/** They chose "later" for this revision: it is not put in front of them again until another is published. */
+	postponed: boolean;
+};
+
+/** A minor publication moved the learner to a newer revision by itself: what they are told. */
+export type EnrollmentNotice = {
+	fromRevisionKey: string;
+	toRevisionKey: string;
+	/** Why the new revision exists, as its writer wrote it. */
+	purpose: string;
+};
+
+/**
+ * What moving to the published revision means for a learner: the chapters to redo, keep, add or drop. Titles and
+ * impacts only, never any content or quiz.
+ */
+export type EnrollmentUpdate = UpdateOffer & {
+	targetRevisionKey: string;
+	purpose: string;
+	summary: UpdateSummary;
 };
 
 /** A revision that was published, as the course sheet lists it to learners (never a draft or one in review). */
@@ -478,6 +510,8 @@ export type MyEnrollment = {
 	finishedAt: string | null;
 	/** A more recent revision has been published since. */
 	outdated: boolean;
+	update: UpdateOffer | null;
+	notice: EnrollmentNotice | null;
 	completedChapters: number;
 	totalChapters: number;
 };
