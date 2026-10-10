@@ -9,11 +9,13 @@ import type {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { getCourseActor } from "../lib/courses";
+import { migrationMetadata } from "../lib/enrollment-migration";
 import { listMyEnrollments } from "../lib/enrollments";
 import {
 	completeChapter,
 	findEnrollmentView,
 	findLearnerCourse,
+	migrateOwnEnrollment,
 	startAttempt,
 	startEnrollment,
 	submitAttempt,
@@ -116,6 +118,43 @@ export const learningRoutes: FastifyPluginAsync = async (app) => {
 			const view = await findEnrollmentView(await getCourseActor(request), id);
 			if (!view) return reply.code(404).send({ error: "Enrollment not found" });
 			return view;
+		},
+	);
+
+	// Moves the learner to the revision published now (see `migrateEnrollment`).
+	app.post(
+		"/api/enrollments/:id/migrate",
+		{ preHandler: app.requireAuth },
+		async (request, reply) => {
+			const { id } = idParams.parse(request.params);
+			const actor = await getCourseActor(request);
+			const result = await migrateOwnEnrollment(actor, id);
+			if (!result.ok) {
+				if (result.reason === "NOT_FOUND")
+					return reply.code(404).send({ error: "Enrollment not found" });
+				return reply.code(409).send({
+					error:
+						result.reason === "NOT_ACTIVE"
+							? "This enrollment is no longer in progress"
+							: "This enrollment is already on the latest revision",
+					code: result.reason,
+				});
+			}
+			const { migration } = result;
+			await recordEvent(
+				{
+					type: "enrollment.migrate",
+					actor: { id: actor.id, label: actor.label },
+					target: {
+						type: "enrollment",
+						id: migration.toEnrollmentId,
+						label: result.courseName,
+					},
+					metadata: migrationMetadata(migration),
+				},
+				request.log,
+			);
+			return reply.code(201).send({ enrollment: result.enrollment });
 		},
 	);
 

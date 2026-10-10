@@ -42,6 +42,7 @@ export const EVENT_LABELS: Record<EventType, string> = {
 	"enrollment.start": "Inscription",
 	"enrollment.complete": "Cours terminé",
 	"enrollment.fail": "Échec à l'examen final",
+	"enrollment.migrate": "Mise à jour du cours",
 };
 
 /** Self-sufficient wording for the table, where the feature is not shown next to the badge. */
@@ -73,6 +74,7 @@ export const EVENT_BADGE_LABELS: Record<EventType, string> = {
 	"enrollment.start": "Inscription à un cours",
 	"enrollment.complete": "Cours terminé",
 	"enrollment.fail": "Échec à l'examen final",
+	"enrollment.migrate": "Passage à une révision plus récente",
 };
 
 /** Rows may carry a type that no longer exists in the registry: show it as is. */
@@ -181,6 +183,13 @@ export function describeEvent({
 			const score =
 				typeof data.score === "number" ? ` ; score ${data.score} %` : "";
 			return `Révision ${data.revisionKey ?? "—"}${score}`;
+		}
+		case "enrollment.migrate": {
+			const redone =
+				typeof data.redone === "number" && data.redone > 0
+					? ` ; ${data.redone} chapitre${data.redone > 1 ? "s" : ""} à refaire`
+					: "";
+			return `Révision ${data.from ?? "—"} → ${data.to ?? "—"} (${data.automatic === true ? "automatique" : "choisie par l'apprenant"}${redone})`;
 		}
 		case "enrollment.start":
 			return data.restart === true

@@ -4,6 +4,7 @@ import { recordEvent } from "@youlearn/events/server";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { authorizeCourse } from "../../lib/courses";
+import { migrationMetadata } from "../../lib/enrollment-migration";
 import {
 	addReviewer,
 	changeStatus,
@@ -227,6 +228,25 @@ export const writerRevisionRoutes: FastifyPluginAsync = async (app) => {
 						metadata: { courseId: id, reviewer: reviewer.name },
 					},
 					request.log,
+				);
+			// A minor publication moved the learners in progress: one event per learner, done by the system.
+			for (const migration of result.migrations)
+				await recordEvent(
+					{
+						type: "enrollment.migrate",
+						target: {
+							type: "enrollment",
+							id: migration.toEnrollmentId,
+							label: course.name,
+						},
+						metadata: migrationMetadata(migration),
+					},
+					request.log,
+				);
+			if (result.migrationFailures.length > 0)
+				request.log.error(
+					{ enrollments: result.migrationFailures },
+					"Learners could not be moved to the new revision",
 				);
 			// Publishing took the place of another revision: log it too, or the history would not explain it.
 			if (result.deprecated)

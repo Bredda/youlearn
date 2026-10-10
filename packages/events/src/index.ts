@@ -29,7 +29,7 @@ export const EVENTS = {
 		"reviewer-remove",
 		"verdict",
 	],
-	enrollment: ["start", "complete", "fail"],
+	enrollment: ["start", "complete", "fail", "migrate"],
 } as const;
 
 export type EventFeature = keyof typeof EVENTS;
