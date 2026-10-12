@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/Bredda/youlearn/compare/v0.1.1...v0.2.0) (2026-10-10)
+
+
+### Features
+
+* **api:** ask writers whether a publication is minor or major ([#62](https://github.com/Bredda/youlearn/issues/62)) ([a3d33e9](https://github.com/Bredda/youlearn/commit/a3d33e9008c5682362fbd8e5809fca2fb628bd52))
+* **api:** move learners in progress to a newer revision ([#78](https://github.com/Bredda/youlearn/issues/78)) ([eab1cd9](https://github.com/Bredda/youlearn/commit/eab1cd9714e618d6675741fb979b013f36a6661c))
+* **api:** offer learners the update to a newer revision ([#79](https://github.com/Bredda/youlearn/issues/79)) ([867dd19](https://github.com/Bredda/youlearn/commit/867dd19cad65876c35bb6f150d264c8fa7639cd8))
+* offer learners the update to a newer revision ([#80](https://github.com/Bredda/youlearn/issues/80)) ([98b6f35](https://github.com/Bredda/youlearn/commit/98b6f357180ef65b62c99426f595b2e8374e6c1d))
+* review rework and writer course pages UX ([#16](https://github.com/Bredda/youlearn/issues/16)) ([3238903](https://github.com/Bredda/youlearn/commit/3238903cc65dd71fb38731e9d079ff71b61f3cff))
+* show writers which learners are behind and how they moved ([#82](https://github.com/Bredda/youlearn/issues/82)) ([fd5ca8b](https://github.com/Bredda/youlearn/commit/fd5ca8b63189fca737f1aa1925fec48298d30758))
+* **web:** make the publish dialog clearer ([#81](https://github.com/Bredda/youlearn/issues/81)) ([05c9f5d](https://github.com/Bredda/youlearn/commit/05c9f5df2a0c50d4f803089533a140391ee23d0a))
+
 ## [0.1.1](https://github.com/Bredda/youlearn/compare/v0.1.0...v0.1.1) (2026-10-04)
 
 
